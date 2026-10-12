@@ -76,7 +76,7 @@ Requires Node 22 or later. A Cloudflare account is not needed for local developm
 
 On Windows, keep the full path of `practice/tally` under about 120 characters (for example, clone into
 `C:\src\ai-tools-training`). The local D1 database is stored about 125 characters deeper, under
-`.wrangler/state/v3/d1/`, and past the 260-character Windows path limit `npm run db:migrate` fails with
+`.wrangler/state/v3/d1/`, and past the 260-character Windows path limit, `npm run db:migrate` fails with
 `internal error`, which also stops `npm run dev` and `npm run e2e`.
 
 ```bash

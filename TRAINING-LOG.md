@@ -37,7 +37,8 @@ Open before the next day:
 ## Day 01: 2026-10-14
 
 Goal: mental model and Claude basics; run the app from a clean clone; seed bugs for Days 2-3.
-Left over from the previous day: the Day 00 sign-in, GitLab push and CI items are still open.
+Left over from the previous day: the Day 00 sign-in, GitLab push and CI items and the Day 11 role choice are still
+open.
 Shipped (merge requests, artifacts, screenshots):
 - Clean clone of `develop` verified: `npm ci`, typecheck, 103 unit and API tests and 6 e2e tests pass.
 - Bug seeding (Prompt A) run in an isolated subagent: five `source::seeded` tickets in `tickets/backlog/`
