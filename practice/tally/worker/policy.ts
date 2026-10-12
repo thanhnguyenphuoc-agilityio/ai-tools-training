@@ -20,8 +20,7 @@ export function requireCanEditMember(me: Identity, memberId: string): void {
 
 /** Expenses: the author or the owner. */
 export function requireCanDeleteExpense(me: Identity, expense: { created_by: string | null }): void {
-  if (me.isOwner) return;
-  if (!me.memberId || me.memberId !== expense.created_by) {
+  if (me.memberId && me.memberId !== expense.created_by && !me.isOwner) {
     throw new ApiError(403, 'DELETE_NOT_ALLOWED', 'only the author or the group owner can delete this');
   }
 }
