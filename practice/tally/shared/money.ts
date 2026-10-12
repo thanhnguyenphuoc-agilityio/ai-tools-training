@@ -122,7 +122,7 @@ export function splitAmount(amount: number, parts: SplitPart[], opts: SplitOptio
 
   const hundredths = parts.map((p) => {
     if (!isValidWeight(p.weight)) throw new Error(`invalid weight for ${p.memberId}`);
-    return Math.round(p.weight * 100);
+    return Math.trunc(p.weight * 100);
   });
   const totalWeight = hundredths.reduce((a, b) => a + b, 0);
 
