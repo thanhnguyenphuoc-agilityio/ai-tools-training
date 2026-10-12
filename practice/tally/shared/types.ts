@@ -1,0 +1,87 @@
+// JSON shapes exchanged between the Worker API and the web app.
+import banks from './banks.json';
+
+export interface Bank {
+  bin: string;
+  shortName: string;
+}
+
+/** Banks that accept VietQR transfers, from api.vietqr.io/v2/banks. */
+export const BANKS: Bank[] = banks;
+
+export function findBank(bin: string | null | undefined): Bank | undefined {
+  return bin ? BANKS.find((b) => b.bin === bin) : undefined;
+}
+
+export interface BankDetails {
+  bankBin: string | null;
+  accountNo: string | null;
+  accountName: string | null;
+}
+
+export interface MemberDto extends BankDetails {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  /** Someone uses this member on a device. Unclaimed members were added by name. */
+  claimed: boolean;
+}
+
+export interface ExpenseDto {
+  id: string;
+  payerId: string;
+  amount: number;
+  description: string;
+  spentOn: string; // YYYY-MM-DD as picked by the user, no timezone
+  splitMode: 'equal' | 'weight';
+  shares: { memberId: string; weight: number; amount: number }[];
+  createdBy: string | null; // member id of the author
+  createdAt: string; // ISO timestamp (UTC)
+}
+
+export interface TransferDto {
+  id: string;
+  fromId: string;
+  toId: string;
+  amount: number;
+  status: 'sent' | 'confirmed';
+  createdAt: string;
+  confirmedAt: string | null;
+}
+
+export interface Me {
+  memberId: string | null;
+  isOwner: boolean;
+}
+
+export interface GroupDto {
+  code: string;
+  name: string;
+  /** ISO 4217 code; every amount in the group is in its minor units. */
+  currency: string;
+  /** Rounding unit for new expenses, in minor units (see shared/currency.ts). */
+  roundTo: number;
+  createdAt: string;
+  lastActivityAt: string;
+  /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
+  currencyLocked: boolean;
+  members: MemberDto[];
+  expenses: ExpenseDto[];
+  transfers: TransferDto[];
+  me: Me;
+}
+
+export interface CreateGroupResponse {
+  code: string;
+  /** Shown once. The server only stores its hash. */
+  ownerKey: string;
+}
+
+export interface NewExpense {
+  payerId: string;
+  amount: number;
+  description: string;
+  spentOn: string;
+  splitMode: 'equal' | 'weight';
+  participants: { memberId: string; weight: number }[];
+}

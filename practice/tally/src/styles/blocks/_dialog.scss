@@ -1,0 +1,22 @@
+@use '../abstracts' as *;
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: end center;
+  padding: space(4);
+  background: var(--color-backdrop);
+
+  // Bottom sheet on phones, centered from `sm` up.
+  @include up(sm) {
+    place-items: center;
+  }
+
+  &__panel {
+    width: min(420px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+  }
+}

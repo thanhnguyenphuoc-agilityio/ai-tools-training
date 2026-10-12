@@ -1,0 +1,15 @@
+@use '../styles/abstracts' as *;
+
+.expense-form {
+  &__participant {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: space(2);
+  }
+
+  &__share {
+    min-width: 6.5rem;
+    text-align: right;
+  }
+}

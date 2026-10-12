@@ -1,0 +1,54 @@
+// A label + control pair: <label class="field"><span class="field__label">..</span><input class="field__control"></label>
+@use '../abstracts' as *;
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+  min-width: 0;
+
+  &__label {
+    font-size: font-size(sm);
+  }
+
+  &__control {
+    width: 100%;
+    padding: space(2) 10px;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-md;
+    background: var(--color-bg);
+
+    &--narrow {
+      width: 4.5rem;
+    }
+
+    &--mono {
+      font-family: $font-family-mono;
+    }
+  }
+
+  &__hint {
+    font-size: font-size(sm);
+    color: var(--color-muted);
+    min-height: 1.2em;
+  }
+
+  // Checkbox / radio with the label to its right.
+  &--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: space(2);
+  }
+}
+
+.fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: space(2) space(3) space(3);
+  margin: 0;
+
+  &__legend {
+    padding: 0 space(1);
+    font-size: font-size(sm);
+  }
+}

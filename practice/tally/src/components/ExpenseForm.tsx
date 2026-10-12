@@ -1,0 +1,153 @@
+import { useMemo, useState } from 'react';
+import { splitAmount } from '../../shared/money';
+import type { GroupDto } from '../../shared/types';
+import { api } from '../api';
+import { todayLocal } from '../dates';
+import { useGroupMoney } from '../hooks/useGroupMoney';
+import { useI18n } from '../i18n';
+import './ExpenseForm.scss';
+
+export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
+  const { t, errorMessage } = useI18n();
+  const { currency, money, parseMoney } = useGroupMoney(group);
+  const [payerId, setPayerId] = useState(group.me.memberId ?? group.members[0].id);
+  const [amountText, setAmountText] = useState('');
+  const [description, setDescription] = useState('');
+  const [spentOn, setSpentOn] = useState(todayLocal);
+  const [mode, setMode] = useState<'equal' | 'weight'>('equal');
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(group.members.map((m) => m.id)));
+  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const amount = parseMoney(amountText);
+  const participants = group.members
+    .filter((m) => selected.has(m.id))
+    .map((m) => ({ memberId: m.id, weight: mode === 'equal' ? 1 : Number((weights[m.id] ?? '1').replace(',', '.')) }));
+
+  const participantsKey = JSON.stringify(participants);
+  const preview = useMemo(() => {
+    if (!amount || participants.length === 0) return null;
+    try {
+      return splitAmount(amount, participants, { roundTo: group.roundTo, payerId });
+    } catch {
+      return null;
+    }
+    // participantsKey stands in for participants, which is rebuilt every render.
+  }, [amount, participantsKey, group.roundTo, payerId]);
+
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!amount) {
+      const examples = t(currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples');
+      return setError(t('expenseForm.invalidAmount', { examples }));
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.addExpense(group.code, { payerId, amount, description, spentOn, splitMode: mode, participants });
+      setAmountText('');
+      setDescription('');
+      onSaved();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card expense-form">
+      <h2 className="card__title">{t('expenseForm.title')}</h2>
+      <form onSubmit={submit} className="stack">
+        <div className="columns">
+          <label className="field">
+            <span className="field__label">{t('expenseForm.amount')}</span>
+            <input
+              className="field__control"
+              value={amountText}
+              onChange={(e) => setAmountText(e.target.value)}
+              placeholder={t('expenseForm.amountPlaceholder')}
+              inputMode="decimal"
+              required
+            />
+            <span className="field__hint">{amount ? money(amount) : ''}</span>
+          </label>
+          <label className="field">
+            <span className="field__label">{t('expenseForm.paidBy')}</span>
+            <select className="field__control" value={payerId} onChange={(e) => setPayerId(e.target.value)}>
+              {group.members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="columns">
+          <label className="field">
+            <span className="field__label">{t('expenseForm.description')}</span>
+            <input
+              className="field__control"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t('expenseForm.descriptionPlaceholder')}
+              required
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">{t('expenseForm.date')}</span>
+            <input className="field__control" type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} required />
+          </label>
+        </div>
+
+        <fieldset className="fieldset stack stack--tight">
+          <legend className="fieldset__legend">{t('expenseForm.splitBetween')}</legend>
+          <div className="cluster">
+            <label className="field field--inline">
+              <input type="radio" checked={mode === 'equal'} onChange={() => setMode('equal')} /> {t('expenseForm.equal')}
+            </label>
+            <label className="field field--inline">
+              <input type="radio" checked={mode === 'weight'} onChange={() => setMode('weight')} /> {t('expenseForm.byWeight')}
+            </label>
+          </div>
+          <ul className="list">
+            {group.members.map((m) => (
+              <li key={m.id} className="list__item expense-form__participant">
+                <label className="field field--inline">
+                  <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
+                  {m.name}
+                </label>
+                {mode === 'weight' && selected.has(m.id) && (
+                  <input
+                    className="field__control field__control--narrow"
+                    aria-label={t('expenseForm.weightOf', { name: m.name })}
+                    value={weights[m.id] ?? '1'}
+                    onChange={(e) => setWeights({ ...weights, [m.id]: e.target.value })}
+                    inputMode="decimal"
+                  />
+                )}
+                <span className="text text--muted text--small expense-form__share">
+                  {preview?.has(m.id) ? money(preview.get(m.id)!) : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+
+        {error && <p className="text text--error">{error}</p>}
+        <button className="button button--block-mobile" disabled={busy || participants.length === 0}>
+          {t('expenseForm.submit')}
+        </button>
+      </form>
+    </section>
+  );
+}

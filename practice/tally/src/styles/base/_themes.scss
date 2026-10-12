@@ -1,0 +1,56 @@
+// Theme colors as CSS custom properties.
+// - Default: light.
+// - prefers-color-scheme: dark switches to dark unless <html data-theme="light">.
+// - <html data-theme="dark"> forces dark (see src/theme.ts).
+// To add a theme: add a palette mixin and a [data-theme='name'] selector.
+
+@mixin light-palette {
+  color-scheme: light;
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-text: #1c2330;
+  --color-muted: #667085;
+  --color-border: #e3e6eb;
+  --color-accent: #0f766e;
+  --color-on-accent: #ffffff;
+  --color-positive: #15803d;
+  --color-negative: #b42318;
+  --color-warning-bg: #fff7e6;
+  --color-warning-border: #f5c26b;
+  --color-focus: #0f766e;
+  --color-backdrop: rgb(0 0 0 / 0.45);
+  // QR codes need a light background to scan, in every theme.
+  --color-qr-bg: #ffffff;
+}
+
+@mixin dark-palette {
+  color-scheme: dark;
+  --color-bg: #11151c;
+  --color-surface: #1a2029;
+  --color-text: #e7eaf0;
+  --color-muted: #98a2b3;
+  --color-border: #2c3440;
+  --color-accent: #2dd4bf;
+  --color-on-accent: #062a26;
+  --color-positive: #4ade80;
+  --color-negative: #f97066;
+  --color-warning-bg: #2b2414;
+  --color-warning-border: #8a6d2f;
+  --color-focus: #2dd4bf;
+  --color-backdrop: rgb(0 0 0 / 0.6);
+  --color-qr-bg: #ffffff;
+}
+
+:root {
+  @include light-palette;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-palette;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark-palette;
+}

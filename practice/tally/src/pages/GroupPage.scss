@@ -1,0 +1,25 @@
+@use '../styles/abstracts' as *;
+
+.group-page {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+
+  &__title {
+    font-size: font-size(xl);
+  }
+
+  // Expenses tab: form beside the list on desktop.
+  &__panels {
+    display: grid;
+    gap: space(3);
+    align-items: start;
+
+    // Two columns only when both panels are present (guests see just the list).
+    @include up(lg) {
+      &:has(> :nth-child(2)) {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      }
+    }
+  }
+}

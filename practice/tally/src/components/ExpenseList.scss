@@ -1,0 +1,21 @@
+@use '../styles/abstracts' as *;
+
+.expense-list {
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: space(2);
+  }
+
+  &__amount {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}

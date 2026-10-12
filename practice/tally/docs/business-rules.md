@@ -1,0 +1,110 @@
+# Business rules: Tally
+
+What the app **must** do, as stated by the customer (the group owner). Code and tests must match this file.
+Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they are BA exercises.
+
+## Groups
+
+- Each event (trip, meal, shared-house fund, club...) is **a separate group**.
+- A group code has the form `xxxx-xxxx-xxxx`: 12 characters from the 31-character alphabet
+  `23456789abcdefghjkmnpqrstuvwxyz` (`0 o 1 l i` are excluded because they are easily confused). Codes are random,
+  not guessable and not sequential.
+- Anyone with the link `/g/<code>` can **view** the whole group: members, expenses, balances and receiving accounts.
+- The creator of a group is its **owner** and also its first member.
+- The owner receives a secret **owner key**:
+  - The server stores only its SHA-256 hash, never the key.
+  - The key is shown **once**, as a recovery link `.../g/<code>#owner=<key>`.
+  - The key is after `#`, so browsers do not send it to the server and it does not appear in logs.
+  - Opening the recovery link on another device restores owner access.
+- The owner can rename the group and change the rounding mode.
+- **Currency** is a group setting, independent of the interface language (for example, a trip to Thailand uses THB
+  while the interface stays in Vietnamese).
+  - When a group is created, the currency field defaults from the interface language (Vietnamese: VND,
+    English: USD). The owner can change it.
+  - Supported: VND, USD, EUR, GBP, AUD, SGD, THB, CNY, JPY, KRW.
+  - The currency can be changed only while the group has **no expenses and no transfers**. Deleted expenses count too,
+    because they stay in the history with their amounts in the original currency.
+- Every change is recorded in `audit_log` and counts as group **activity** (`last_activity_at`).
+  A member viewing the group also counts as activity (current behaviour). A guest (not joined) viewing it does not.
+  OPEN QUESTION: once inactive groups are deleted, should viewing still count as activity? (`purge_inactive_groups`)
+
+## Members
+
+- A visitor can **join** by entering a name. That device receives a *device token* (HttpOnly cookie).
+- A member can **add other people by name** (people who do not use the app). Such a person can later open the link
+  and click "I am <name>" to claim the name, if nobody has claimed it yet.
+- Names are unique within a group (case-insensitive).
+- Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
+  (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
+  `owner_member_tools`). Clearing the account
+  number clears all three fields.
+- OPEN QUESTION: what happens when a member leaves while they still owe or are owed money? (`remove_member`)
+
+## Expenses
+
+- An expense has a payer, an amount, a description, a date and a list of participants.
+- **Amounts are integers in the minor unit of the group currency**: dong for VND, cents for USD, yen for JPY.
+  Floating-point numbers are not used. The maximum is 1,000,000,000 units per expense.
+- The amount field accepts the input conventions of the interface language:
+  - Vietnamese: `150000`, `150.000`, `150k`, `77.5k`, `1,2tr`, `2m`, `150.000` followed by the dong sign. For
+    currencies with decimals (USD): `12,50`, `1.250,50`.
+  - English: `150000`, `150,000`, `150k`, `1.2m`. For USD: `12.50`, `1,250.50`.
+  - For VND, ambiguous values such as `1.5` (without a suffix) are rejected.
+- The date is a calendar date chosen by the user (`YYYY-MM-DD`), without a time zone. It defaults to **today in the
+  time zone of the device entering the expense**.
+- Split modes:
+  - **Equal** among the selected participants.
+  - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
+- Rounding (a group setting, applied to **new** expenses) has two levels, depending on the currency:
+  - Exact: to the dong or to the cent.
+  - Rounded: VND and KRW to 1,000; USD, EUR and similar to 1 major unit; JPY to 100.
+- Split rules (must always hold):
+  1. The shares add up **exactly** to the amount.
+  2. Units are distributed with the **largest remainder** method. Ties go to the participant listed first.
+  3. The remainder that cannot be split at the rounding unit (for example 500 dong when rounding to 1,000) goes to
+     the **payer** if the payer is a participant, otherwise to the first participant.
+  4. Shares are computed **once, when the expense is saved**, and are not recomputed when the rounding setting
+     changes.
+- Deleting an expense: only its **author** or the **owner**. Deletion is soft (`deleted_at`) and stays in the audit log.
+- OPEN QUESTION: who may edit an expense, and is an edit history needed? (`edit_expense`)
+
+## Balances and settling up
+
+- A member's balance = total paid - total owed +/- **confirmed** transfers.
+  Positive means they are owed money, negative means they owe. Balances in a group always sum to 0.
+- "Simplest way to settle": sort debtors and creditors by amount (largest first, ties by member id), then pair
+  them in that order, each transfer settling as much as possible before moving to the next person. The number of transfers
+  is at most (number of members - 1). The result must be stable across page loads.
+- Payment flow:
+  1. The debtor clicks **Pay** on their suggested transfer. The app shows the recipient's **VietQR** code with the amount and message filled in.
+  2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
+  3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
+- Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
+- A member can record only **their own** transfers. The owner can record transfers on behalf of others (API only
+  in the MVP; the interface is `owner_member_tools`).
+
+## VietQR
+
+- Follows the EMVCo/NAPAS 247 standard: GUID `A000000727`, service `QRIBFTTA` (transfer to account number),
+  currency `704`, country `VN`, CRC-16/CCITT-FALSE at the end.
+- With an amount the QR is dynamic (`01` = `12`); without an amount it is static (`11`).
+- VietQR is **only for VND groups**. Groups in other currencies show the account number for manual transfer, without
+  a QR code. OPEN QUESTION: currency conversion when paying back a non-VND group (`currency_conversion`).
+- The transfer message is stripped of diacritics, upper-cased, limited to `A-Z 0-9` and spaces, and capped at
+  50 characters. The screen shows **exactly** the message encoded in the QR.
+- The QR code is generated in the browser. Account numbers are never sent to a third-party service.
+
+## Data and safety
+
+- Only **fake data** is used in development and tests. Fake account numbers: `0123456789`, `9876543210`.
+- Owner keys and device tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`, and are sent
+  only to the API path of their own group.
+- Request bodies are limited to 16 KB.
+- The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
+- OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
+- OPEN QUESTION: anyone with the link can claim an unclaimed name. Is this risk acceptable? (`wrong_name_claim`)
+
+## Planned (in the backlog)
+
+See `tickets/`. The technical design for each feature is in `docs/design.md`.
+When a feature is done, its rules move into the sections above.

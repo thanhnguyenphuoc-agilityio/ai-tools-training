@@ -1,0 +1,50 @@
+// Stable error codes returned by the API as { error, code, params }.
+// `error` is an English message for logs and API users; the UI translates
+// `code` (see src/i18n/locales). Adding a code here makes the locale files
+// fail to type-check until every locale has a message for it.
+
+export const ERROR_CODES = [
+  'INTERNAL',
+  'NOT_FOUND',
+  'BODY_TOO_LARGE',
+  'INVALID_JSON',
+  'FIELD_REQUIRED',
+  'FIELD_TOO_LONG',
+  'INVALID_AMOUNT',
+  'INVALID_DATE',
+  'INVALID_WEIGHT',
+  'INVALID_CURRENCY',
+  'INVALID_ROUNDING',
+  'CURRENCY_LOCKED',
+  'UNKNOWN_BANK',
+  'INVALID_ACCOUNT_NO',
+  'GROUP_NOT_FOUND',
+  'MEMBER_NOT_FOUND',
+  'EXPENSE_NOT_FOUND',
+  'TRANSFER_NOT_FOUND',
+  'JOIN_FIRST',
+  'OWNER_ONLY',
+  'EDIT_SELF_ONLY',
+  'DELETE_NOT_ALLOWED',
+  'TRANSFER_SELF_ONLY',
+  'CONFIRM_RECEIVER_ONLY',
+  'WRONG_OWNER_KEY',
+  'DUPLICATE_NAME',
+  'MEMBER_ALREADY_CLAIMED',
+  'PAYER_NOT_IN_GROUP',
+  'PARTICIPANT_NOT_IN_GROUP',
+  'NO_PARTICIPANTS',
+  'DUPLICATE_PARTICIPANT',
+  'SELF_TRANSFER',
+  'ALREADY_CONFIRMED',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export type ErrorParams = Record<string, string | number>;
+
+export interface ErrorBody {
+  error: string;
+  code: ErrorCode;
+  params?: ErrorParams;
+}

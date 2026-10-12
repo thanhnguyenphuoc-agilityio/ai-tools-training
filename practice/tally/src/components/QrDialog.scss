@@ -1,0 +1,26 @@
+@use '../styles/abstracts' as *;
+
+.qr-dialog {
+  &__code {
+    align-self: center;
+    max-width: 100%;
+    border-radius: $radius-md;
+    background: var(--color-qr-bg);
+  }
+
+  &__details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: space(1) space(3);
+    margin: 0;
+  }
+
+  &__term {
+    color: var(--color-muted);
+  }
+
+  &__value {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}

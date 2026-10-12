@@ -1,0 +1,12 @@
+@use '../styles/abstracts' as *;
+
+.home-page {
+  display: grid;
+  gap: space(4);
+
+  // Create form and the side column next to each other on desktop.
+  @include up(lg) {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+}

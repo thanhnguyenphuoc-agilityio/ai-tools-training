@@ -1,0 +1,144 @@
+import { describe, expect, it } from 'vitest';
+import { CURRENCIES } from '../../shared/currency';
+import { formatMoney, parseAmount, splitAmount } from '../../shared/money';
+import { enLocale } from '../../src/i18n/locales/en';
+import { viLocale } from '../../src/i18n/locales/vi';
+
+const { VND, USD, JPY, THB } = CURRENCIES;
+// Dong signs, written as escapes so the source stays ASCII.
+const DONG = '\u0111';
+const DONG_SIGN = '\u20ab';
+const vi = viLocale.amountInput;
+const en = enLocale.amountInput;
+
+describe('parseAmount, zero-digit currency (VND)', () => {
+  it.each([
+    ['77500', 77_500],
+    ['77.500', 77_500],
+    ['77,500', 77_500],
+    ['1.250.000', 1_250_000],
+    ['77.5k', 77_500],
+    ['50k', 50_000],
+    ['1,2tr', 1_200_000],
+    ['2m', 2_000_000],
+    ['150.000vnd', 150_000],
+    [' 30 000 ', 30_000],
+  ])('vi parses %s', (input, expected) => {
+    expect(parseAmount(input, vi, VND)).toBe(expected);
+  });
+
+  it.each(['', 'abc', '1.5', '0', '-5000', '12.34.5', '1.2345k', '2000tr'])('vi rejects %s', (input) => {
+    expect(parseAmount(input, vi, VND)).toBeNull();
+  });
+
+  it('accepts the dong signs for VND', () => {
+    expect(parseAmount(`150.000${DONG}`, vi, VND)).toBe(150_000);
+    expect(parseAmount(`50k${DONG_SIGN}`, en, VND)).toBe(50_000);
+  });
+
+  it('rejects a thousands-looking separator before a suffix as ambiguous', () => {
+    expect(parseAmount('1,500k', en, VND)).toBeNull();
+    expect(parseAmount('1.500k', vi, VND)).toBeNull();
+  });
+
+  it('only knows the suffixes of the locale', () => {
+    expect(parseAmount('1tr', en, VND)).toBeNull();
+    expect(parseAmount('1m', en, VND)).toBe(1_000_000);
+  });
+});
+
+describe('parseAmount, two-digit currency (USD), returns cents', () => {
+  it.each([
+    ['12', 1_200],
+    ['12.5', 1_250],
+    ['12.50', 1_250],
+    ['1,250.50', 125_050],
+    ['usd 7', 700],
+    ['1.5k', 150_000],
+  ])('en parses %s', (input, expected) => {
+    expect(parseAmount(input, en, USD)).toBe(expected);
+  });
+
+  it.each([
+    ['12,50', 1_250],
+    ['1.250,50', 125_050],
+  ])('vi uses comma decimals: %s', (input, expected) => {
+    expect(parseAmount(input, vi, USD)).toBe(expected);
+  });
+
+  it.each(['12.505', '1,25', '.5'])('en rejects %s', (input) => {
+    expect(parseAmount(input, en, USD)).toBeNull();
+  });
+
+  it('does not accept dong signs for other currencies', () => {
+    expect(parseAmount(`150k${DONG_SIGN}`, en, USD)).toBeNull();
+    expect(parseAmount(`100${DONG}`, vi, THB)).toBeNull();
+  });
+});
+
+describe('CURRENCIES', () => {
+  it.each(Object.values(CURRENCIES))('$code minor digits match Intl', (currency) => {
+    const intl = new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.code }).resolvedOptions();
+    expect(intl.maximumFractionDigits).toBe(currency.minorDigits);
+    expect(currency.roundOptions[0]).toBe(1);
+  });
+});
+
+describe('formatMoney', () => {
+  it('formats minor units with the locale and currency', () => {
+    const intlVnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(1_250_000);
+    expect(formatMoney(1_250_000, VND, 'vi-VN')).toBe(intlVnd);
+    expect(formatMoney(125_050, USD, 'en-US')).toBe('$1,250.50');
+    expect(formatMoney(1_500, JPY, 'en-US')).toBe('\u00a51,500');
+  });
+});
+
+describe('splitAmount', () => {
+  const equal = (ids: string[]) => ids.map((memberId) => ({ memberId, weight: 1 }));
+  const sum = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
+
+  it('splits evenly when it divides', () => {
+    const shares = splitAmount(300_000, equal(['a', 'b', 'c']), { roundTo: 1, payerId: 'a' });
+    expect([...shares.values()]).toEqual([100_000, 100_000, 100_000]);
+  });
+
+  it('hands remainder units to the earliest parts and keeps the total', () => {
+    const shares = splitAmount(100, equal(['a', 'b', 'c']), { roundTo: 1, payerId: 'z' });
+    expect(Object.fromEntries(shares)).toEqual({ a: 34, b: 33, c: 33 });
+  });
+
+  it('rounds to thousands and gives the sub-thousand leftover to the payer', () => {
+    const shares = splitAmount(465_500, equal(['a', 'b', 'c', 'd', 'e', 'f']), { roundTo: 1000, payerId: 'c' });
+    expect(sum(shares)).toBe(465_500);
+    for (const [id, v] of shares) if (id !== 'c') expect(v % 1000).toBe(0);
+    expect(shares.get('c')! % 1000).toBe(500);
+  });
+
+  it('rounds cents to whole dollars the same way', () => {
+    const shares = splitAmount(10_050, equal(['a', 'b', 'c']), { roundTo: 100, payerId: 'b' });
+    expect(Object.fromEntries(shares)).toEqual({ a: 3_400, b: 3_350, c: 3_300 });
+  });
+
+  it('splits by weight', () => {
+    const shares = splitAmount(
+      180_000,
+      [
+        { memberId: 'p1', weight: 1 },
+        { memberId: 'p2', weight: 1 },
+        { memberId: 'p3', weight: 0.8 },
+      ],
+      { roundTo: 1000, payerId: 'p1' },
+    );
+    expect(Object.fromEntries(shares)).toEqual({ p1: 64_000, p2: 64_000, p3: 52_000 });
+    expect(sum(shares)).toBe(180_000);
+  });
+
+  it('rejects empty participants, bad weights and bad rounding', () => {
+    expect(() => splitAmount(1000, [], { roundTo: 1, payerId: 'a' })).toThrow();
+    expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0 }], { roundTo: 1, payerId: 'a' })).toThrow();
+    // At most two decimals: 0.001 would round to a zero weight, 0.333 would be split as 0.33.
+    expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.001 }], { roundTo: 1, payerId: 'a' })).toThrow();
+    expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.333 }], { roundTo: 1, payerId: 'a' })).toThrow();
+    expect(() => splitAmount(1000, equal(['a']), { roundTo: 0, payerId: 'a' })).toThrow();
+  });
+});

@@ -1,0 +1,22 @@
+@use 'sass:map';
+@use './styles/abstracts' as *;
+
+.app {
+  max-width: map.get($content-width, narrow);
+  margin: 0 auto;
+  padding: 0 space(4) space(7);
+
+  // Wider canvas on desktop for two-column pages.
+  @include up(lg) {
+    max-width: map.get($content-width, wide);
+  }
+
+  &__header {
+    padding: space(4) 0;
+  }
+
+  &__brand {
+    font-weight: 700;
+    font-size: font-size(lg);
+  }
+}

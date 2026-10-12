@@ -1,0 +1,199 @@
+import { useState } from 'react';
+import { CURRENCIES, getCurrency } from '../../shared/currency';
+import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
+import { api } from '../api';
+import { useI18n } from '../i18n';
+
+export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
+  const { t, errorMessage } = useI18n();
+  const [newName, setNewName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const me = group.members.find((m) => m.id === group.me.memberId);
+
+  const run = (action: Promise<unknown>) =>
+    action
+      .then(() => {
+        setError(null);
+        onChanged();
+      })
+      .catch((err) => setError(errorMessage(err)));
+
+  return (
+    <div className="stack">
+      {me && <BankForm key={me.id} code={group.code} member={me} onSaved={onChanged} />}
+
+      <section className="card stack">
+        <h2 className="card__title">{t('members.listTitle', { count: group.members.length })}</h2>
+        <ul className="list list--divided">
+          {group.members.map((m) => {
+            const bank = findBank(m.bankBin);
+            return (
+              <li key={m.id} className="list__item cluster cluster--between">
+                <span className="cluster">
+                  <span className="text text--strong">{m.name}</span>
+                  {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
+                  {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
+                </span>
+                <span className="text text--muted text--small">
+                  {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        {group.me.memberId && (
+          <form
+            className="cluster cluster--nowrap"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(api.addMember(group.code, newName).then(() => setNewName('')));
+            }}
+          >
+            <input
+              className="field__control"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('members.addPlaceholder')}
+              aria-label={t('members.addLabel')}
+              required
+              maxLength={40}
+            />
+            <button className="button">{t('members.add')}</button>
+          </form>
+        )}
+        {error && <p className="text text--error">{error}</p>}
+      </section>
+
+      {group.me.isOwner && <OwnerSettings group={group} onSaved={onChanged} />}
+    </div>
+  );
+}
+
+function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; onSaved: () => void }) {
+  const { t, errorMessage } = useI18n();
+  const [bankBin, setBankBin] = useState(member.bankBin ?? '');
+  const [accountNo, setAccountNo] = useState(member.accountNo ?? '');
+  const [accountName, setAccountName] = useState(member.accountName ?? '');
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await api.updateMember(code, member.id, { bankBin, accountNo, accountName });
+      setStatus(t('common.saved'));
+      onSaved();
+    } catch (err) {
+      setStatus(errorMessage(err));
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2 className="card__title">{t('members.bankTitle')}</h2>
+      <form onSubmit={save} className="stack">
+        <p className="text text--muted text--small">{t('members.bankHint')}</p>
+        <label className="field">
+          <span className="field__label">{t('members.bank')}</span>
+          <select className="field__control" value={bankBin} onChange={(e) => setBankBin(e.target.value)}>
+            <option value="">{t('members.chooseBank')}</option>
+            {BANKS.map((b) => (
+              <option key={b.bin} value={b.bin}>
+                {b.shortName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="columns">
+          <label className="field">
+            <span className="field__label">{t('members.accountNo')}</span>
+            <input
+              className="field__control"
+              value={accountNo}
+              onChange={(e) => setAccountNo(e.target.value.trim())}
+              inputMode="numeric"
+              maxLength={19}
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">{t('members.accountName')}</span>
+            <input
+              className="field__control"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder={t('members.accountNamePlaceholder')}
+              maxLength={60}
+            />
+          </label>
+        </div>
+        <div className="cluster">
+          <button className="button">{t('common.save')}</button>
+          {status && <span className="text text--muted text--small">{status}</span>}
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
+  const { t, money, currencyName, errorMessage } = useI18n();
+  const [name, setName] = useState(group.name);
+  const [currencyCode, setCurrencyCode] = useState(group.currency);
+  const currency = getCurrency(currencyCode) ?? CURRENCIES[group.currency];
+  const coarseUnit = currency.roundOptions[currency.roundOptions.length - 1];
+  const [roundCoarse, setRoundCoarse] = useState(group.roundTo > 1);
+  const [status, setStatus] = useState<string | null>(null);
+  const currencyLocked = group.currencyLocked;
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await api.updateGroup(group.code, {
+        name,
+        currency: currency.code,
+        roundTo: roundCoarse ? coarseUnit : currency.roundOptions[0],
+      });
+      setStatus(t('common.saved'));
+      onSaved();
+    } catch (err) {
+      setStatus(errorMessage(err));
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2 className="card__title">{t('members.settingsTitle')}</h2>
+      <form onSubmit={save} className="stack">
+        <label className="field">
+          <span className="field__label">{t('members.groupName')}</span>
+          <input className="field__control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+        </label>
+        <label className="field">
+          <span className="field__label">{t('members.currency')}</span>
+          <select
+            className="field__control"
+            value={currencyCode}
+            onChange={(e) => setCurrencyCode(e.target.value)}
+            disabled={currencyLocked}
+          >
+            {Object.keys(CURRENCIES).map((c) => (
+              <option key={c} value={c}>
+                {currencyName(c)}
+              </option>
+            ))}
+          </select>
+          {currencyLocked && <span className="field__hint">{t('members.currencyLocked')}</span>}
+        </label>
+        {coarseUnit > 1 && (
+          <label className="field field--inline">
+            <input type="checkbox" checked={roundCoarse} onChange={(e) => setRoundCoarse(e.target.checked)} />
+            {t('members.roundCoarse', { unit: money(coarseUnit, currency) })}
+          </label>
+        )}
+        <div className="cluster">
+          <button className="button">{t('common.save')}</button>
+          {status && <span className="text text--muted text--small">{status}</span>}
+        </div>
+      </form>
+    </section>
+  );
+}

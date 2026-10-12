@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tally",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "practice/tally", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}
