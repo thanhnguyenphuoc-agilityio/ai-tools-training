@@ -10,13 +10,15 @@ import { transferRoutes } from './routes/transfers';
 
 export type { Env } from './http';
 
+const MAX_BODY_BYTES = 2 * 1024;
+
 export function createApp() {
   const app = new Hono<AppEnv>().basePath('/api');
 
   app.use(
     '*',
     bodyLimit({
-      maxSize: 16 * 1024,
+      maxSize: MAX_BODY_BYTES,
       onError: (c) => c.json({ error: 'request body too large', code: 'BODY_TOO_LARGE' } satisfies ErrorBody, 413),
     }),
   );
