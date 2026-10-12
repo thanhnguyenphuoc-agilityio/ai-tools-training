@@ -32,9 +32,10 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
       {group.expenses.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
       <ul className="list list--divided">
         {group.expenses.map((e) => {
-          const canDelete = group.me.isOwner || (!!group.me.memberId && e.createdBy === group.me.memberId);
+          const isAuthor = !!group.me.memberId && e.createdBy === group.me.memberId;
+          const canDelete = group.me.isOwner || isAuthor;
           const meta = [
-            t('expenseList.meta', { payer: nameOf(e.payerId), date: day(e.spentOn) }),
+            t('expenseList.meta', { payer: nameOf(e.createdBy), date: day(e.spentOn) }),
             tp('expenseList.people', e.shares.length),
             ...(e.splitMode === 'weight' ? [t('expenseList.byWeight')] : []),
           ].join(t('common.separator'));
