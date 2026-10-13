@@ -153,6 +153,23 @@ describe('splitAmount', () => {
     });
   });
 
+  it('uses the intended hundredths for every valid weight', () => {
+    // With a total of k + 100 hundredths and an amount of k + 100, each hundredth is worth exactly 1.
+    const wrong: number[] = [];
+    for (let k = 1; k <= 10_000; k++) {
+      const shares = splitAmount(
+        k + 100,
+        [
+          { memberId: 'a', weight: k / 100 },
+          { memberId: 'b', weight: 1 },
+        ],
+        { roundTo: 1, payerId: 'a' },
+      );
+      if (shares.get('a') !== k || shares.get('b') !== 100) wrong.push(k / 100);
+    }
+    expect(wrong).toEqual([]);
+  });
+
   it('rejects empty participants, bad weights and bad rounding', () => {
     expect(() => splitAmount(1000, [], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0 }], { roundTo: 1, payerId: 'a' })).toThrow();
