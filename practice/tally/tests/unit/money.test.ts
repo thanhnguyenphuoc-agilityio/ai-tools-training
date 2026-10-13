@@ -133,6 +133,26 @@ describe('splitAmount', () => {
     expect(sum(shares)).toBe(180_000);
   });
 
+  // Weights such as 2.3 and 1.15 have no exact binary form: 2.3 * 100 is 229.99999999999997.
+  it('uses the exact hundredths of weights that floats cannot represent', () => {
+    const pair = (weight: number) => [
+      { memberId: 'alex', weight: 1 },
+      { memberId: 'sam', weight },
+    ];
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(2.3), { roundTo: 1, payerId: 'alex' }))).toEqual({
+      alex: 303_030,
+      sam: 696_970,
+    });
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(1.15), { roundTo: 1, payerId: 'alex' }))).toEqual({
+      alex: 465_116,
+      sam: 534_884,
+    });
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(2.3), { roundTo: 1000, payerId: 'alex' }))).toEqual({
+      alex: 303_000,
+      sam: 697_000,
+    });
+  });
+
   it('rejects empty participants, bad weights and bad rounding', () => {
     expect(() => splitAmount(1000, [], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0 }], { roundTo: 1, payerId: 'a' })).toThrow();
