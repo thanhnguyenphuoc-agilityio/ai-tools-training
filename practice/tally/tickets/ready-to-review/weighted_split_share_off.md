@@ -52,3 +52,9 @@ truncating the scaled weight loses one hundredth (229 instead of 230). Weights s
 
 `fix/weighted_split_share_off` -> `develop`: round the scaled weights in `splitAmount` instead of truncating them;
 unit test for weights 2.3 and 1.15.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 105 unit and API tests and 6 e2e tests pass. Review
+comments addressed: a check over every valid weight, and the commit list in the merge request description. A
+follow-up (stored weight versus the weight used for the split) is recorded as a separate ticket.
