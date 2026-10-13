@@ -47,3 +47,8 @@ case as a unit test of `splitAmount` in `shared/money.ts`.
 
 Hypothesis, checked in Node: `2.3 * 100` is `229.99999999999997` and `1.15 * 100` is `114.99999999999999`, so
 truncating the scaled weight loses one hundredth (229 instead of 230). Weights such as 0.8 and 1.5 scale exactly.
+
+## Merge request
+
+`fix/weighted_split_share_off` -> `develop`: round the scaled weights in `splitAmount` instead of truncating them;
+unit test for weights 2.3 and 1.15.
