@@ -44,7 +44,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 - An expense has a payer, an amount, a description, a date and a list of participants.
 - **Amounts are integers in the minor unit of the group currency**: dong for VND, cents for USD, yen for JPY.
-  Floating-point numbers are not used. The maximum is 1,000,000,000 units per expense.
+  Floating-point numbers are not used. The maximum is 1,000,000,000 minor units per expense (10,000,000 USD, 1,000,000,000 VND).
 - The amount field accepts the input conventions of the interface language:
   - Vietnamese: `150000`, `150.000`, `150k`, `77.5k`, `1,2tr`, `2m`, `150.000` followed by the dong sign. For
     currencies with decimals (USD): `12,50`, `1.250,50`.
