@@ -133,6 +133,43 @@ describe('splitAmount', () => {
     expect(sum(shares)).toBe(180_000);
   });
 
+  // Weights such as 2.3 and 1.15 have no exact binary form: 2.3 * 100 is 229.99999999999997.
+  it('uses the exact hundredths of weights that floats cannot represent', () => {
+    const pair = (weight: number) => [
+      { memberId: 'alex', weight: 1 },
+      { memberId: 'sam', weight },
+    ];
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(2.3), { roundTo: 1, payerId: 'alex' }))).toEqual({
+      alex: 303_030,
+      sam: 696_970,
+    });
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(1.15), { roundTo: 1, payerId: 'alex' }))).toEqual({
+      alex: 465_116,
+      sam: 534_884,
+    });
+    expect(Object.fromEntries(splitAmount(1_000_000, pair(2.3), { roundTo: 1000, payerId: 'alex' }))).toEqual({
+      alex: 303_000,
+      sam: 697_000,
+    });
+  });
+
+  it('uses the intended hundredths for every valid weight', () => {
+    // With a total of k + 100 hundredths and an amount of k + 100, each hundredth is worth exactly 1.
+    const wrong: number[] = [];
+    for (let k = 1; k <= 10_000; k++) {
+      const shares = splitAmount(
+        k + 100,
+        [
+          { memberId: 'a', weight: k / 100 },
+          { memberId: 'b', weight: 1 },
+        ],
+        { roundTo: 1, payerId: 'a' },
+      );
+      if (shares.get('a') !== k || shares.get('b') !== 100) wrong.push(k / 100);
+    }
+    expect(wrong).toEqual([]);
+  });
+
   it('rejects empty participants, bad weights and bad rounding', () => {
     expect(() => splitAmount(1000, [], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0 }], { roundTo: 1, payerId: 'a' })).toThrow();
