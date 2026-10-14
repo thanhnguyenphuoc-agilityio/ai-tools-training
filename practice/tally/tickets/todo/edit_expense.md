@@ -50,3 +50,9 @@ From Opus (product owner):
    amount, payer, participants or split change; editing only the date or description keeps the stored shares.
 5. Nothing is blocked. Sent and confirmed transfers stay unchanged and balances are recalculated from the edited
    shares; any new difference is settled with a new transfer.
+
+From Opus (product owner), follow-up after review:
+
+1. The author of the expense and the group owner may edit it. An expense without a recorded author can be edited
+   only by the owner. The risk that a member reduces their own share is accepted for the first version: the
+   "edited" marker, the editor's name and the audit log make every change visible to the group.

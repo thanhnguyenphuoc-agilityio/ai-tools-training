@@ -40,4 +40,7 @@ From Gemini (reporter):
 
 From Opus (product owner):
 
-5. Any member who has joined the group can download the export. Guests who have not joined cannot.
+5. The download button is shown only to members who have joined. This is an interface rule, not a security
+   boundary: anyone with the link can already view the same data, so no server endpoint is needed.
+
+Scope of the first version (product owner): one file for the whole group, without a date range.

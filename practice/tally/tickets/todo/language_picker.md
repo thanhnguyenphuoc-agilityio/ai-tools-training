@@ -39,4 +39,6 @@ From Gemini (reporter):
 
 From Opus (product owner):
 
-3. No. Language and currency are independent settings; changing the language never changes the suggested currency.
+3. A "new group" form that is already open keeps its currency when the language changes. A newly opened form
+   still takes its default currency from the current interface language (Vietnamese: VND, English: USD), as in
+   `docs/business-rules.md`. The person can change the currency by hand before creating the group.
