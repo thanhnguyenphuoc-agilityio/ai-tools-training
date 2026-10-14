@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Training sandbox for a 15-day "AI Tools" course. The user writes in Vietnamese; reply in Vietnamese unless asked otherwise.
+Training sandbox for a 15-day "AI Tools" course. All project documentation, tickets, code, and communication must use English.
 
 ## Layout
 
@@ -24,13 +24,13 @@ Training sandbox for a 15-day "AI Tools" course. The user writes in Vietnamese; 
 
 - Every file in the repo is English: code, tests, SQL, SCSS, package and resource names, and all Markdown
   (READMEs, `TRAINING-LOG.md`, `PRACTICE.md`, `docs/`, `tickets/`). The app is `tally`.
-- The only place for Vietnamese (or any user-facing text) is `src/i18n/locales/*.ts`. Components call `t()`/`tp()`
+- All files and code must use English. The only place for localized non-English text (or any user-facing string) is `src/i18n/locales/*.ts`. Components call `t()`/`tp()`
   from `useI18n()`; never hard-code UI text, symbols like arrows or separators included.
 - Markdown uses a neutral, factual tone: third person, no slang, no chatty asides. Tickets state the request and the
   reporter's notes; they stay vague where the exercise needs it, but not informal.
-- Test, demo and ticket people use English names (Alex, Sam, Jamie...), never real or Vietnamese names.
+- Ticket reporters use model names with roles (Opus product owner, Sonnet QA tester, Haiku and Gemini end users); test and demo people use standard synthetic names (Alex, Sam, Jamie...), never real personal names.
 - The API returns stable error `code`s (`shared/errors.ts`); every locale must translate every code (type-checked).
-- When test input must be Vietnamese (e.g. stripping diacritics), write it with `\uXXXX` escapes.
+- When test input requires non-ASCII characters or diacritics, write them with `\uXXXX` escapes.
 - Docs link only to the training plan (https://dojo.agilityio.dev/); do not reference other training sites.
 
 ## Money

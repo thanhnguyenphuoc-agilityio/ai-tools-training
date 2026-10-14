@@ -16,7 +16,7 @@ Go through the checklist **in this order**. Importance falls from top to bottom:
 2. **Tests**: is there a test that would fail without the change? Are the assertions about behaviour, not
    implementation? Run `npm run typecheck` and `npm test` in `practice/tally` and report the result.
 3. **Readability**: names, size of functions, matches surrounding code, comments explain *why*.
-   Repo conventions: no user-facing text outside `src/i18n/locales` (and no Vietnamese anywhere else in source),
+   Repo conventions: no user-facing text outside `src/i18n/locales` (English-only anywhere else in source),
    new keys exist in every locale, SCSS follows BEM with tokens/mixins, colors only via theme custom properties,
    amounts stay integer minor units.
 4. **Security basics**:
