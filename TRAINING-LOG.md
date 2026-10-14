@@ -83,6 +83,39 @@ Open before the next day:
 - [ ] Role-play reporter and developer with a person, and compare the analysis with a partner's
 - [ ] Finish Claude 101
 
+## Day 03: 2026-10-14
+
+Goal: fix the Day 02 bug on a branch with small commits, write the merge request description, review, merge, and
+resolve the conflict (Checkpoint 1).
+Left over from the previous day: role play with a person and Claude 101.
+Shipped (merge requests, artifacts, screenshots):
+- `fix/weighted_split_share_off` merged into `develop`: the fix (round the scaled weight instead of truncating it),
+  a check over every valid weight added after review, and a self-contained merge request description.
+- Review by the AI team lead with the `review-checklist` skill: three actionable comments (test over all weights,
+  incomplete commit list in the description, stored weight versus used weight). The third became the ticket
+  `stored_weight_rounding`.
+- Conflict exercise: `docs/max-amount-minor-units` merged, then `docs/max-amount-constant` merged with the conflict
+  in `docs/business-rules.md` resolved by keeping both changes on one line.
+- `docs/ticket-analysis` merged after two review rounds; `docs/day-01-setup` merged.
+Checkpoint 1:
+- [x] Reproduce an assigned bug and write the repro in the ticket
+- [x] Fix on a branch with a test that failed first
+- [x] Merge request with a self-contained description
+- [x] One review with at least 3 actionable comments; one merge with a conflict resolved
+Observations (positive / negative):
+- The review showed that 573 of the 10,000 valid weights were affected, not only the two in the ticket; a test over
+  the whole input range is cheap here and proves the claim in the description.
+- Two reviewers reported that `CLAUDE.md` still used the old status name `waiting-to-review`. A search of the
+  repository showed no such text: the reviewers had read an older copy of the instructions from their own context.
+  A claim from an AI reviewer is checked against the files before it is acted on.
+For the retro:
+- Writing the merge request description before review made the reviewer's job faster, and the reviewer still found
+  a factual slip in it (the commit count).
+Open before the next day:
+- [ ] Peer swap with a person: could they review or implement from the merge request description alone?
+- [ ] Push the branches and open the merge requests on GitLab, so CI runs on them
+- [ ] Course (BA/QA path, optional): Real-World AI for Everyone
+
 ## For the retro
 
 -
