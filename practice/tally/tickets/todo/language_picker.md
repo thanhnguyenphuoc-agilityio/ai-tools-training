@@ -17,9 +17,10 @@ remembered.
 ## Analysis
 
 The ticket asks for an in-app control to choose the interface language, with the choice remembered on the device.
-It does not say where the control lives, whether the choice is per device or per group, or whether changing the
-language should affect amounts already typed or the currency of new groups. First step: add a picker to the app
-header that calls the existing `setLocale()`, which already stores the choice under `tally.locale`.
+It does not say where the control lives, whether the choice stays on one device or follows the person to other
+devices, or whether changing the language should change the suggested currency of new groups. First step: add a
+picker to the app header that calls the existing `setLocale()`, which already stores the choice under
+`tally.locale`.
 
 ## Clarifying questions
 

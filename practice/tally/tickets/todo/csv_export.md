@@ -18,7 +18,8 @@ downloadable as a file that opens in Excel.
 The ticket asks for a download of a group's expenses and transfers as a file that opens in Excel. It does not say
 which columns are needed, whether deleted expenses and unconfirmed transfers are included, whether the period can
 be filtered, or who may download. First step: build a CSV file in the browser from the loaded `GroupDto`, with a
-UTF-8 BOM so that Excel shows Vietnamese text correctly.
+UTF-8 BOM so that Excel shows Vietnamese text correctly. Text cells that start with `=`, `+`, `-` or `@` must be
+escaped so that Excel does not run a description as a formula.
 
 ## Clarifying questions
 
