@@ -59,11 +59,12 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Not in the MVP
 
-Each of these is a ticket in [`tickets/backlog/`](tickets/backlog/): Google sign-in and a per-account group list,
-saved bank details, automatic deletion and locked groups, receipt photos, attendance-based splits, exact-amount
-splits, spreadsheet export, language and theme pickers, owner tools for other members, editing expenses, removing
-members, currency conversion and a visual redesign. `docs/design.md` holds a design for each of them; for
-`edit_expense` and `remove_member` the design waits on the open business question.
+Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): Google sign-in and a
+per-account group list, saved bank details, automatic deletion and locked groups, receipt photos, attendance-based
+splits, exact-amount splits, spreadsheet export, language and theme pickers, owner tools for other members, editing
+expenses, removing members, currency conversion and a visual redesign. `docs/design.md` holds a design for each of
+them; for `remove_member` the design waits on the open business question, and the rules agreed for `edit_expense`
+are in its ticket until the feature lands.
 
 ### Who reports tickets
 

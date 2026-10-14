@@ -41,7 +41,8 @@ moving to another folder (`git mv`).
   repository README).
 - **Assignee** is set when the ticket moves to `in-progress/`.
 - A question or a vague request is clarified before the ticket moves to `todo/`. The analysis goes into the ticket
-  itself: `## Analysis`, `## Clarifying questions`, and `## Reproduce` for bugs.
+  itself: `## Analysis`, `## Clarifying questions` with their `## Answers` (who answered), and `## Reproduce` for
+  bugs.
 
 ## Workflow
 
