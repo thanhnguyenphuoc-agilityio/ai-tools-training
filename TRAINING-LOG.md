@@ -57,6 +57,32 @@ Open before the next day:
 - [ ] Git block on GitLab: clone, branch, commit, push
 - [ ] Push `develop` with the seeded commits so that feature branches start from them
 
+## Day 02: 2026-10-14
+
+Goal: analyse five backlog tickets; reproduce one seeded bug and express it as a failing test; create the conflict.
+Left over from the previous day: the Day 01 chat exercise and the GitLab git block.
+Shipped (merge requests, artifacts, screenshots):
+- `docs/ticket-analysis`: `language_picker`, `theme_picker`, `exact_amount_split`, `csv_export` and `edit_expense`
+  analysed (what it asks, what is ambiguous, first step), with clarifying questions answered by the simulated
+  reporters (Haiku, Gemini) and the product owner (Opus); the five tickets moved to `todo/`.
+- `fix/weighted_split_share_off`: reproduced in the interface and through the API (Sam 696,049 instead of
+  696,970), reproduction written into the ticket, and a unit test that fails on `develop`.
+- Conflict exercise prepared: `docs/max-amount-minor-units` and `docs/max-amount-constant` change the same line of
+  `docs/business-rules.md`.
+Observations (positive / negative):
+- The hypothesis came from reading `splitAmount` and was confirmed in Node before writing the test
+  (`2.3 * 100` is `229.99999999999997`), as the Day 02 habit asks: verify by running, not by trusting.
+- Reproducing in the interface after midnight also showed `expense_date_previous_day` live: at 00:40 the form
+  suggested the previous day.
+- Review of the analysis branch found three product owner answers that contradicted `docs/business-rules.md` or
+  `docs/design.md`. Answers have to be checked against the documented rules before a ticket counts as clarified.
+For the retro:
+- Simulated reporters answer quickly and consistently; real reporters would be vaguer and slower. The questions
+  were the useful part of the exercise.
+Open before the next day:
+- [ ] Role-play reporter and developer with a person, and compare the analysis with a partner's
+- [ ] Finish Claude 101
+
 ## For the retro
 
 -
