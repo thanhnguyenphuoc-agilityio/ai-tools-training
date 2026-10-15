@@ -43,17 +43,21 @@ measure a realistic 35-person request and compare it with the limit configured i
 Findings: a 35-person request is 2,360 bytes, but `MAX_BODY_BYTES` in `worker/app.ts` is 2 KB (2,048 bytes)
 instead of the 16 KB the business rules require. Requests above 2 KB start at about 31 participants.
 
-Question for the product owner: with the 16 KB limit, an equal split fits about 250 participants. Is there a
-maximum group size, or should groups larger than that be supported? This does not change the current rule and is
-not part of this fix.
+## Clarifying questions
+
+- For the product owner: with the 16 KB limit, an equal split fits about 257 participants (measured with the
+  description "Monthly fee"). What is the maximum number of members in a group, and should groups larger than
+  that be supported? This does not change the current rule and is not part of this fix. It is recorded as an
+  OPEN QUESTION in the "Members" section of `docs/business-rules.md`.
 
 ## Plan
 
 - `worker/app.ts`: set `MAX_BODY_BYTES` to 16 KB, as stated in `docs/business-rules.md` ("Data and safety").
 - `tests/api/money-flow.test.ts`: add an API test that creates a group with 35 members and saves one expense split
-  equally among all of them (expects `201` and 35 shares), and a test that a body just over 16 KB is still
-  rejected with `413` and `BODY_TOO_LARGE`.
-- No change to `docs/business-rules.md` or `docs/design.md`: the rule (16 KB) stays the same.
+  equally among all of them (expects `201` and 35 shares), and a test that a body of exactly 16 KB passes the
+  limit while one byte more is rejected with `413` and `BODY_TOO_LARGE`.
+- `docs/business-rules.md`: the 16 KB rule stays the same; only an OPEN QUESTION about the maximum group size is
+  added. No change to `docs/design.md`.
 
 ## Merge request
 
