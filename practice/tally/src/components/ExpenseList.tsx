@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
+import { memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
 import './ExpenseList.scss';
@@ -9,7 +10,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
   const { t, tp, day, errorMessage } = useI18n();
   const { money } = useGroupMoney(group);
   const [error, setError] = useState<string | null>(null);
-  const nameOf = (id: string | null) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
+  const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
 
   async function remove(id: string, description: string) {
@@ -35,7 +36,10 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
           const isAuthor = !!group.me.memberId && e.createdBy === group.me.memberId;
           const canDelete = group.me.isOwner || isAuthor;
           const meta = [
-            t('expenseList.meta', { payer: nameOf(e.createdBy), date: day(e.spentOn) }),
+            t('expenseList.meta', {
+              payer: payerName(e, group.members, t('common.unknownMember')),
+              date: day(e.spentOn),
+            }),
             tp('expenseList.people', e.shares.length),
             ...(e.splitMode === 'weight' ? [t('expenseList.byWeight')] : []),
           ].join(t('common.separator'));

@@ -37,6 +37,11 @@ test('create a group, split an expense and settle with VietQR', async ({ page })
   await page.getByLabel(t('expenseForm.description')).fill('Thai hotpot');
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
   await expect(page.getByText(t('expenseList.total', { amount: vnd(300_000) }))).toBeVisible();
+  // Alex entered the expense, but the row names the payer chosen in "Paid by" (expense_list_wrong_payer).
+  const paidBy = (payer: string) => t('expenseList.meta', { payer }).split('{date}')[0];
+  const row = page.locator('.expense-list__item');
+  await expect(row).toContainText(paidBy('Sam'));
+  await expect(row).not.toContainText(paidBy('Alex'));
 
   await page.getByRole('tab', { name: t('group.tabs.settle') }).click();
   const owes = t('settle.owes', { amount: vnd(150_000) });
