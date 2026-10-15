@@ -88,9 +88,18 @@ describe('expenses', () => {
   });
 
   it('accepts an expense shared by a 35-member group', async () => {
-    for (let i = 4; i <= 35; i++) {
-      await owner.call('POST', `/groups/${code}/members`, { name: `Member ${String(i).padStart(2, '0')}` });
-    }
+    // Inserted directly: the request under test is the expense, not 32 member requests.
+    const createdAt = new Date().toISOString();
+    await env.env.DB.batch(
+      Array.from({ length: 32 }, (_, i) =>
+        env.env.DB.prepare('INSERT INTO members (id, group_code, name, token_hash, created_at) VALUES (?, ?, ?, NULL, ?)').bind(
+          crypto.randomUUID(),
+          code,
+          `Member ${String(i + 4).padStart(2, '0')}`,
+          createdAt,
+        ),
+      ),
+    );
     const members = (await getGroup(owner)).members;
     expect(members).toHaveLength(35);
 
@@ -106,13 +115,24 @@ describe('expenses', () => {
     const shares = (await getGroup(owner)).expenses[0].shares;
     expect(shares).toHaveLength(35);
     expect(shares.every((s) => s.amount === 100_000)).toBe(true);
-    // Adding 32 members one request at a time takes several seconds in Miniflare.
-  }, 60_000);
+  });
 
-  it('rejects a request body larger than 16 KB', async () => {
-    const res = await owner.call('POST', `/groups/${code}/expenses`, { filler: 'x'.repeat(16 * 1024) });
-    expect(res.status).toBe(413);
-    expect(res.json.code).toBe('BODY_TOO_LARGE');
+  it('accepts a request body of exactly 16 KB and rejects one byte more', async () => {
+    const limit = 16 * 1024;
+    // A body without payerId whose JSON encoding is exactly `bytes` long.
+    const bodyOf = (bytes: number) => {
+      const body = { filler: 'x'.repeat(bytes - JSON.stringify({ filler: '' }).length) };
+      expect(new TextEncoder().encode(JSON.stringify(body)).length).toBe(bytes);
+      return body;
+    };
+
+    const atLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit));
+    expect(atLimit.status).toBe(400);
+    expect(atLimit.json.code).not.toBe('BODY_TOO_LARGE');
+
+    const overLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit + 1));
+    expect(overLimit.status).toBe(413);
+    expect(overLimit.json.code).toBe('BODY_TOO_LARGE');
   });
 });
 
