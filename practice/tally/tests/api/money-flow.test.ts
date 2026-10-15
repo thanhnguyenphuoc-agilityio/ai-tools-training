@@ -126,9 +126,11 @@ describe('expenses', () => {
       return body;
     };
 
+    // The whole body is parsed: validation reaches the first field.
     const atLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit));
     expect(atLimit.status).toBe(400);
-    expect(atLimit.json.code).not.toBe('BODY_TOO_LARGE');
+    expect(atLimit.json.code).toBe('FIELD_REQUIRED');
+    expect(atLimit.json.params.field).toBe('payerId');
 
     const overLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit + 1));
     expect(overLimit.status).toBe(413);
