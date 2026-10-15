@@ -65,3 +65,10 @@ instead of the 16 KB the business rules require. Requests above 2 KB start at ab
 required by the business rules. Two API tests cover it: one saves an expense shared by 35 members, the other checks
 that a body of exactly 16 KB passes the limit and one byte more gets `413 BODY_TOO_LARGE`. The merge request is
 opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Approved by the AI team lead after two rounds: typecheck, 134 unit and API tests and 18 e2e tests pass. Review
+comments addressed: a test pinned at exactly 16 KB, members seeded with one statement instead of 32 requests, the
+tests kept in the `expenses` block, the request size asserted above the old 2 KB limit, and the maximum group size
+recorded as an open question.
