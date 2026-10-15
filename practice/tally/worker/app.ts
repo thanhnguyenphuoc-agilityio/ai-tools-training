@@ -10,7 +10,7 @@ import { transferRoutes } from './routes/transfers';
 
 export type { Env } from './http';
 
-const MAX_BODY_BYTES = 2 * 1024;
+const MAX_BODY_BYTES = 16 * 1024;
 
 export function createApp() {
   const app = new Hono<AppEnv>().basePath('/api');

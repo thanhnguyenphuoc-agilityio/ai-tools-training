@@ -86,6 +86,63 @@ describe('expenses', () => {
     expect((await owner.call('DELETE', `/groups/${code}/expenses/${second}`)).status).toBe(200);
     expect((await getGroup(owner)).expenses).toHaveLength(0);
   });
+
+  it('accepts an expense shared by a 35-member group', async () => {
+    // One INSERT adds Member 04 to Member 35: the request under test is the expense, not 32 member requests.
+    // The ids have the length of real ids (UUIDs), so the request has its real size (2,360 bytes).
+    await env.env.DB.prepare(
+      `WITH RECURSIVE n(i) AS (SELECT 4 UNION ALL SELECT i + 1 FROM n WHERE i < 35)
+       INSERT INTO members (id, group_code, name, token_hash, created_at)
+       SELECT printf('00000000-0000-4000-8000-%012d', i), ?, printf('Member %02d', i), NULL, ? FROM n`,
+    )
+      .bind(code, new Date().toISOString())
+      .run();
+    const memberIds = [
+      ids.alex,
+      ids.sam,
+      ids.jamie,
+      ...Array.from({ length: 32 }, (_, i) => `00000000-0000-4000-8000-${String(i + 4).padStart(12, '0')}`),
+    ];
+
+    const body = {
+      payerId: ids.alex,
+      amount: 3_500_000,
+      description: 'Monthly fee',
+      spentOn: today,
+      splitMode: 'equal',
+      participants: memberIds.map((memberId) => ({ memberId, weight: 1 })),
+    };
+    expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeGreaterThan(2 * 1024);
+
+    const res = await owner.call('POST', `/groups/${code}/expenses`, body);
+    expect(res.status).toBe(201);
+    // One query instead of GET /groups/:code, which loads the whole group.
+    const shares = await env.env.DB.prepare('SELECT member_id, amount FROM expense_shares WHERE expense_id = ?')
+      .bind(res.json.id)
+      .all<{ member_id: string; amount: number }>();
+    expect(shares.results.map((s) => s.member_id).sort()).toEqual([...memberIds].sort());
+    expect(shares.results.every((s) => s.amount === 100_000)).toBe(true);
+  });
+
+  it('accepts a request body of exactly 16 KB and rejects one byte more', async () => {
+    const limit = 16 * 1024;
+    // A body without payerId whose JSON encoding is exactly `bytes` long.
+    const bodyOf = (bytes: number) => {
+      const body = { filler: 'x'.repeat(bytes - JSON.stringify({ filler: '' }).length) };
+      expect(new TextEncoder().encode(JSON.stringify(body)).length).toBe(bytes);
+      return body;
+    };
+
+    // The whole body is parsed: validation reaches the first field.
+    const atLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit));
+    expect(atLimit.status).toBe(400);
+    expect(atLimit.json.code).toBe('FIELD_REQUIRED');
+    expect(atLimit.json.params.field).toBe('payerId');
+
+    const overLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit + 1));
+    expect(overLimit.status).toBe(413);
+    expect(overLimit.json.code).toBe('BODY_TOO_LARGE');
+  });
 });
 
 describe('transfers', () => {

@@ -39,6 +39,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   `owner_member_tools`). Clearing the account
   number clears all three fields.
 - OPEN QUESTION: what happens when a member leaves while they still owe or are owed money? (`remove_member`)
+- OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
 ## Expenses
 
