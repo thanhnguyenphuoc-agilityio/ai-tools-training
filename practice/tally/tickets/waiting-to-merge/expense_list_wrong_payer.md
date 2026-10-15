@@ -49,3 +49,8 @@ reproduce the bug without a component test setup.
   before the fix (it returns Alex).
 - Fix: the helper reads `payerId` instead of `createdBy`. `createdBy` stays in use for the delete button, which
   depends on the author. No rule or design changes, so `docs/` stays as it is.
+
+## Merge request
+
+`fix/expense_list_wrong_payer` into `develop`: the expense list row now names the member in `payerId` instead of the
+author in `createdBy`, through the new pure helper `src/expenseRow.ts`, covered by `tests/unit/expenseRow.test.ts`.
