@@ -8,7 +8,7 @@ export function memberName(members: MemberDto[], id: string | null, fallback: st
 
 /** Name shown as the payer: the member selected in "Paid by", not the member who entered the expense. */
 export function payerName(
-  expense: Pick<ExpenseDto, 'payerId' | 'createdBy'>,
+  expense: Pick<ExpenseDto, 'payerId'>,
   members: MemberDto[],
   fallback: string,
 ): string {

@@ -15,11 +15,13 @@ const members = [member('alex', 'Alex'), member('jamie', 'Jamie')];
 
 describe('expense list row', () => {
   it('names the selected payer when someone else entered the expense', () => {
-    expect(payerName({ payerId: 'jamie', createdBy: 'alex' }, members, '(unknown)')).toBe('Jamie');
+    const enteredByAlex = { payerId: 'jamie', createdBy: 'alex' };
+    expect(payerName(enteredByAlex, members, '(unknown)')).toBe('Jamie');
   });
 
   it('names the payer when the payer entered the expense', () => {
-    expect(payerName({ payerId: 'alex', createdBy: 'alex' }, members, '(unknown)')).toBe('Alex');
+    const enteredByPayer = { payerId: 'alex', createdBy: 'alex' };
+    expect(payerName(enteredByPayer, members, '(unknown)')).toBe('Alex');
   });
 
   it('falls back when the member is not in the group', () => {
