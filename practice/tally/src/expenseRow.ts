@@ -6,11 +6,11 @@ export function memberName(members: MemberDto[], id: string | null, fallback: st
   return members.find((m) => m.id === id)?.name ?? fallback;
 }
 
-/** Name shown as the payer of an expense. */
+/** Name shown as the payer: the member selected in "Paid by", not the member who entered the expense. */
 export function payerName(
   expense: Pick<ExpenseDto, 'payerId' | 'createdBy'>,
   members: MemberDto[],
   fallback: string,
 ): string {
-  return memberName(members, expense.createdBy, fallback);
+  return memberName(members, expense.payerId, fallback);
 }
