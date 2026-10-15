@@ -54,3 +54,9 @@ not part of this fix.
   equally among all of them (expects `201` and 35 shares), and a test that a body just over 16 KB is still
   rejected with `413` and `BODY_TOO_LARGE`.
 - No change to `docs/business-rules.md` or `docs/design.md`: the rule (16 KB) stays the same.
+
+## Merge request
+
+`fix/large_group_expense_rejected` into `develop`: sets `MAX_BODY_BYTES` in `worker/app.ts` from 2 KB to the 16 KB
+required by the business rules, with an API test that saves an expense shared by 35 members. The question about a
+maximum group size remains open for the product owner.
