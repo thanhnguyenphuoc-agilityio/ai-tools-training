@@ -54,3 +54,9 @@ reproduce the bug without a component test setup.
 
 `fix/expense_list_wrong_payer` into `develop`: the expense list row now names the member in `payerId` instead of the
 author in `createdBy`, through the new pure helper `src/expenseRow.ts`, covered by `tests/unit/expenseRow.test.ts`.
+The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 106 unit and API tests and 6 e2e tests pass. Review
+comments addressed: an e2e assertion on the row text (it fails with the old behaviour) and a narrower helper type.
