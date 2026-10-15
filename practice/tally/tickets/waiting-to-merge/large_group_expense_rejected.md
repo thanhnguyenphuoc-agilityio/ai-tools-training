@@ -62,5 +62,6 @@ instead of the 16 KB the business rules require. Requests above 2 KB start at ab
 ## Merge request
 
 `fix/large_group_expense_rejected` into `develop`: sets `MAX_BODY_BYTES` in `worker/app.ts` from 2 KB to the 16 KB
-required by the business rules, with an API test that saves an expense shared by 35 members. The question about a
-maximum group size remains open for the product owner.
+required by the business rules. Two API tests cover it: one saves an expense shared by 35 members, the other checks
+that a body of exactly 16 KB passes the limit and one byte more gets `413 BODY_TOO_LARGE`. The merge request is
+opened on GitLab from this branch; its link is added when it exists.
