@@ -86,6 +86,34 @@ describe('expenses', () => {
     expect((await owner.call('DELETE', `/groups/${code}/expenses/${second}`)).status).toBe(200);
     expect((await getGroup(owner)).expenses).toHaveLength(0);
   });
+
+  it('accepts an expense shared by a 35-member group', async () => {
+    for (let i = 4; i <= 35; i++) {
+      await owner.call('POST', `/groups/${code}/members`, { name: `Member ${String(i).padStart(2, '0')}` });
+    }
+    const members = (await getGroup(owner)).members;
+    expect(members).toHaveLength(35);
+
+    const res = await owner.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.alex,
+      amount: 3_500_000,
+      description: 'Monthly fee',
+      spentOn: today,
+      splitMode: 'equal',
+      participants: members.map((m) => ({ memberId: m.id, weight: 1 })),
+    });
+    expect(res.status).toBe(201);
+    const shares = (await getGroup(owner)).expenses[0].shares;
+    expect(shares).toHaveLength(35);
+    expect(shares.every((s) => s.amount === 100_000)).toBe(true);
+    // Adding 32 members one request at a time takes several seconds in Miniflare.
+  }, 60_000);
+
+  it('rejects a request body larger than 16 KB', async () => {
+    const res = await owner.call('POST', `/groups/${code}/expenses`, { filler: 'x'.repeat(16 * 1024) });
+    expect(res.status).toBe(413);
+    expect(res.json.code).toBe('BODY_TOO_LARGE');
+  });
 });
 
 describe('transfers', () => {
