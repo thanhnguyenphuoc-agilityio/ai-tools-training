@@ -116,6 +116,33 @@ Open before the next day:
 - [ ] Push the branches and open the merge requests on GitLab, so CI runs on them
 - [ ] Course (BA/QA path, optional): Real-World AI for Everyone
 
+## Day 04: 2026-10-14
+
+Goal: the daily loop in the Code tab; take two seeded bug tickets through the full loop (ticket, plan, fix, test,
+merge request, review, merge).
+Left over from the previous day: the peer swap and pushing the branches to GitLab.
+Shipped (merge requests, artifacts, screenshots):
+- `fix/expense_list_wrong_payer` merged: the expense row named the author (`createdBy`) instead of the payer
+  (`payerId`). A unit test for the new `payerName` helper and an e2e assertion on the row text, which fails with the
+  old behaviour.
+- `fix/large_group_expense_rejected` merged after two review rounds: the request body limit was 2 KB, not the
+  documented 16 KB. Tests for a 35-member expense and for a body of exactly 16 KB and one byte more; the maximum
+  group size is recorded as an open question in `docs/business-rules.md`.
+Observations (positive / negative):
+- The first version of the 35-member test passed even with the old 2 KB limit: short test ids made the request
+  only about 1.5 KB. The test was run against the unfixed code on purpose, which showed the gap; it now uses ids of
+  real length and asserts that the body is larger than 2 KB. A test that has never been seen to fail proves little.
+- The same test took about 15 s at first because it added 32 members through the API. Seeding them with one SQL
+  statement brought the test body down to about 2 s.
+For the retro:
+- Running a new test against the unfixed code is a cheap step that catches tests that do not test anything.
+Open before the next day:
+- [ ] Permission modes tour (default, acceptEdits, plan, auto) on a throwaway change
+- [ ] "Explain how feature X works" in a fresh session, then verify two of its claims by reading the code
+- [ ] Repeat the full loop on a ticket in the Code tab without help, steering once with a hunk comment in the diff
+  pane
+- [ ] Course: Claude Code in action
+
 ## For the retro
 
 -
