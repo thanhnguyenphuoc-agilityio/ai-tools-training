@@ -88,33 +88,40 @@ describe('expenses', () => {
   });
 
   it('accepts an expense shared by a 35-member group', async () => {
-    // Inserted directly: the request under test is the expense, not 32 member requests.
-    const createdAt = new Date().toISOString();
-    await env.env.DB.batch(
-      Array.from({ length: 32 }, (_, i) =>
-        env.env.DB.prepare('INSERT INTO members (id, group_code, name, token_hash, created_at) VALUES (?, ?, ?, NULL, ?)').bind(
-          crypto.randomUUID(),
-          code,
-          `Member ${String(i + 4).padStart(2, '0')}`,
-          createdAt,
-        ),
-      ),
-    );
-    const members = (await getGroup(owner)).members;
-    expect(members).toHaveLength(35);
+    // One INSERT adds Member 04 to Member 35: the request under test is the expense, not 32 member requests.
+    // The ids have the length of real ids (UUIDs), so the request has its real size (2,360 bytes).
+    await env.env.DB.prepare(
+      `WITH RECURSIVE n(i) AS (SELECT 4 UNION ALL SELECT i + 1 FROM n WHERE i < 35)
+       INSERT INTO members (id, group_code, name, token_hash, created_at)
+       SELECT printf('00000000-0000-4000-8000-%012d', i), ?, printf('Member %02d', i), NULL, ? FROM n`,
+    )
+      .bind(code, new Date().toISOString())
+      .run();
+    const memberIds = [
+      ids.alex,
+      ids.sam,
+      ids.jamie,
+      ...Array.from({ length: 32 }, (_, i) => `00000000-0000-4000-8000-${String(i + 4).padStart(12, '0')}`),
+    ];
 
-    const res = await owner.call('POST', `/groups/${code}/expenses`, {
+    const body = {
       payerId: ids.alex,
       amount: 3_500_000,
       description: 'Monthly fee',
       spentOn: today,
       splitMode: 'equal',
-      participants: members.map((m) => ({ memberId: m.id, weight: 1 })),
-    });
+      participants: memberIds.map((memberId) => ({ memberId, weight: 1 })),
+    };
+    expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeGreaterThan(2 * 1024);
+
+    const res = await owner.call('POST', `/groups/${code}/expenses`, body);
     expect(res.status).toBe(201);
-    const shares = (await getGroup(owner)).expenses[0].shares;
-    expect(shares).toHaveLength(35);
-    expect(shares.every((s) => s.amount === 100_000)).toBe(true);
+    // One query instead of GET /groups/:code, which loads the whole group.
+    const shares = await env.env.DB.prepare('SELECT member_id, amount FROM expense_shares WHERE expense_id = ?')
+      .bind(res.json.id)
+      .all<{ member_id: string; amount: number }>();
+    expect(shares.results.map((s) => s.member_id).sort()).toEqual([...memberIds].sort());
+    expect(shares.results.every((s) => s.amount === 100_000)).toBe(true);
   });
 
   it('accepts a request body of exactly 16 KB and rejects one byte more', async () => {
