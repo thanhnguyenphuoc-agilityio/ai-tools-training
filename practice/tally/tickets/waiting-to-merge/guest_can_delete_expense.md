@@ -56,3 +56,9 @@ check entirely.
 - `worker/policy.ts`: `requireCanDeleteExpense` lets the owner through, otherwise requires a member
   (`requireMember`) and then requires that member to be the author. No route, schema or locale change is needed;
   `JOIN_FIRST` is already translated.
+
+## Merge request
+
+Branch `fix/guest_can_delete_expense` into `develop`: `requireCanDeleteExpense` now lets the owner through and
+otherwise requires a member who is the author, so a guest gets `401 JOIN_FIRST`. API tests cover the guest, a
+member who is neither author nor owner, the author and the owner; the guest test failed before the fix.
