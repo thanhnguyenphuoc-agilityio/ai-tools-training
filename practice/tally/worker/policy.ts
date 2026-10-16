@@ -18,9 +18,10 @@ export function requireCanEditMember(me: Identity, memberId: string): void {
   if (me.memberId !== memberId && !me.isOwner) throw new ApiError(403, 'EDIT_SELF_ONLY', 'you can only edit yourself');
 }
 
-/** Expenses: the author or the owner. */
+/** Expenses: the author or the owner. A guest (no member identity) is never the author. */
 export function requireCanDeleteExpense(me: Identity, expense: { created_by: string | null }): void {
-  if (me.memberId && me.memberId !== expense.created_by && !me.isOwner) {
+  if (me.isOwner) return;
+  if (requireMember(me) !== expense.created_by) {
     throw new ApiError(403, 'DELETE_NOT_ALLOWED', 'only the author or the group owner can delete this');
   }
 }

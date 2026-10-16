@@ -7,6 +7,7 @@ let env: Awaited<ReturnType<typeof createTestEnv>>;
 let owner: Browser;
 let sam: Browser;
 let code: string;
+let ownerKey: string;
 let ids: { alex: string; sam: string; jamie: string };
 
 const getGroup = (b: Browser) => b.call<GroupDto>('GET', `/groups/${code}`).then((r) => r.json);
@@ -16,7 +17,7 @@ beforeEach(async () => {
   env = await createTestEnv();
   owner = new Browser(env.env);
   sam = new Browser(env.env);
-  ({ code } = (await owner.call('POST', '/groups', { name: 'Beach trip', ownerName: 'Alex' })).json);
+  ({ code, ownerKey } = (await owner.call('POST', '/groups', { name: 'Beach trip', ownerName: 'Alex' })).json);
   const samId = (await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true })).json.id;
   const jamieId = (await owner.call('POST', `/groups/${code}/members`, { name: 'Jamie' })).json.id;
   ids = { alex: (await getGroup(owner)).members[0].id, sam: samId, jamie: jamieId };
@@ -63,28 +64,6 @@ describe('expenses', () => {
     const ok = await owner.call('POST', `/groups/${code}/expenses`, weighted(0.25));
     expect(ok.status).toBe(201);
     await owner.call('DELETE', `/groups/${code}/expenses/${ok.json.id}`);
-  });
-
-  it('lets the author or the owner delete, nobody else', async () => {
-    const jamie = new Browser(env.env);
-    await jamie.call('POST', `/groups/${code}/members/${ids.jamie}/claim`);
-    const add = (b: Browser) =>
-      b.call('POST', `/groups/${code}/expenses`, {
-        payerId: ids.sam,
-        amount: 50_000,
-        description: 'Coffee',
-        spentOn: today,
-        participants: [{ memberId: ids.sam }, { memberId: ids.jamie }],
-      });
-
-    const first = (await add(sam)).json.id;
-    expect((await jamie.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(403);
-    expect((await sam.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(200);
-    expect((await sam.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(404);
-
-    const second = (await add(sam)).json.id;
-    expect((await owner.call('DELETE', `/groups/${code}/expenses/${second}`)).status).toBe(200);
-    expect((await getGroup(owner)).expenses).toHaveLength(0);
   });
 
   it('accepts an expense shared by a 35-member group', async () => {
@@ -142,6 +121,59 @@ describe('expenses', () => {
     const overLimit = await owner.call('POST', `/groups/${code}/expenses`, bodyOf(limit + 1));
     expect(overLimit.status).toBe(413);
     expect(overLimit.json.code).toBe('BODY_TOO_LARGE');
+  });
+});
+
+describe('deleting an expense', () => {
+  let expenseId: string;
+  const remove = (b: Browser) => b.call('DELETE', `/groups/${code}/expenses/${expenseId}`);
+  const expenseIds = async () => (await getGroup(owner)).expenses.map((e) => e.id);
+
+  beforeEach(async () => {
+    const res = await sam.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.sam,
+      amount: 80_000,
+      description: 'Groceries',
+      spentOn: today,
+      participants: [{ memberId: ids.alex }, { memberId: ids.sam }],
+    });
+    expect(res.status).toBe(201);
+    expenseId = res.json.id;
+  });
+
+  it('rejects a guest who has not joined, and keeps the expense', async () => {
+    const guest = new Browser(env.env);
+    const res = await remove(guest);
+    expect(res.status).toBe(401);
+    expect(res.json.code).toBe('JOIN_FIRST');
+    expect(await expenseIds()).toEqual([expenseId]);
+  });
+
+  it('rejects a member who is neither the author nor the owner', async () => {
+    const jamie = new Browser(env.env);
+    await jamie.call('POST', `/groups/${code}/members/${ids.jamie}/claim`);
+    const res = await remove(jamie);
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('DELETE_NOT_ALLOWED');
+    expect(await expenseIds()).toEqual([expenseId]);
+  });
+
+  it('lets the author delete, once', async () => {
+    expect((await remove(sam)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
+    expect((await remove(sam)).status).toBe(404);
+  });
+
+  it('lets the owner delete an expense someone else added', async () => {
+    expect((await remove(owner)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
+  });
+
+  it('lets the owner delete from a device that holds only the owner key', async () => {
+    const laptop = new Browser(env.env);
+    expect((await laptop.call('POST', `/groups/${code}/owner/claim`, { ownerKey })).status).toBe(200);
+    expect((await remove(laptop)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
   });
 });
 
