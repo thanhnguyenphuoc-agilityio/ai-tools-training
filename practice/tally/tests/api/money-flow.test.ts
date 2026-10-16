@@ -7,6 +7,7 @@ let env: Awaited<ReturnType<typeof createTestEnv>>;
 let owner: Browser;
 let sam: Browser;
 let code: string;
+let ownerKey: string;
 let ids: { alex: string; sam: string; jamie: string };
 
 const getGroup = (b: Browser) => b.call<GroupDto>('GET', `/groups/${code}`).then((r) => r.json);
@@ -16,7 +17,7 @@ beforeEach(async () => {
   env = await createTestEnv();
   owner = new Browser(env.env);
   sam = new Browser(env.env);
-  ({ code } = (await owner.call('POST', '/groups', { name: 'Beach trip', ownerName: 'Alex' })).json);
+  ({ code, ownerKey } = (await owner.call('POST', '/groups', { name: 'Beach trip', ownerName: 'Alex' })).json);
   const samId = (await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true })).json.id;
   const jamieId = (await owner.call('POST', `/groups/${code}/members`, { name: 'Jamie' })).json.id;
   ids = { alex: (await getGroup(owner)).members[0].id, sam: samId, jamie: jamieId };
@@ -165,6 +166,13 @@ describe('deleting an expense', () => {
 
   it('lets the owner delete an expense someone else added', async () => {
     expect((await remove(owner)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
+  });
+
+  it('lets the owner delete from a device that holds only the owner key', async () => {
+    const laptop = new Browser(env.env);
+    expect((await laptop.call('POST', `/groups/${code}/owner/claim`, { ownerKey })).status).toBe(200);
+    expect((await remove(laptop)).status).toBe(200);
     expect(await expenseIds()).toEqual([]);
   });
 });
