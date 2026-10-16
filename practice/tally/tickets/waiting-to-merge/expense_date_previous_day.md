@@ -47,7 +47,7 @@ evening, which breaks the rule that the date defaults to today in the time zone 
 
 - `src/dates.ts`: build the `YYYY-MM-DD` string in `todayLocal()` from the local calendar fields
   (`getFullYear`, `getMonth`, `getDate`), zero-padded. Accept an optional `now: Date` argument (default
-  `new Date()`) so the function stays pure and testable; the call site in `src/components/ExpenseForm.tsx` does not
+  `new Date()`) so a test can pass a fixed date; the call site in `src/components/ExpenseForm.tsx` does not
   change.
 - `tests/unit/dates.test.ts` (new): fix the clock with Vitest fake timers (`vi.setSystemTime`) and set
   `process.env.TZ` per test, restoring both afterwards. Cases: 00:40 on 2026-10-14 in `Asia/Ho_Chi_Minh` gives
@@ -60,4 +60,7 @@ evening, which breaks the rule that the date defaults to today in the time zone 
 
 `fix/expense_date_previous_day` into `develop`: `todayLocal()` now builds the default expense date from the device's
 local calendar fields instead of the UTC date, with unit tests that fix the clock and the time zone (UTC+7 just
-after midnight, UTC-7 in the evening, and midday).
+after midnight, UTC-7 in the evening, and midday). The zone-switching tests rely on the `forks` pool, which is
+pinned in `vitest.config.ts`.
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
