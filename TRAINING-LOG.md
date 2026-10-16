@@ -143,6 +143,37 @@ Open before the next day:
   pane
 - [ ] Course: Claude Code in action
 
+## Day 05: 2026-10-14
+
+Goal: memory, context and sessions; two more seeded bugs through the loop.
+Left over from the previous day: the permission modes tour, the explain-and-verify exercise and the unaided loop.
+Shipped (merge requests, artifacts, screenshots):
+- `fix/expense_date_previous_day` merged: the default date came from `toISOString()`, which is the UTC date, so
+  before 07:00 in UTC+7 the form suggested the previous day. `todayLocal()` now builds the date from the device's
+  local fields. The tests switch time zones; Vitest is pinned to the forks pool and each test asserts that the
+  switch took effect.
+- `fix/guest_can_delete_expense` merged: the delete check was skipped for a caller without a member id, so a guest
+  could delete any expense. `requireCanDeleteExpense` in `worker/policy.ts` now lets the owner through first and
+  requires everyone else to be a member and the author. API tests cover a guest, another member, the author and an
+  owner who holds only the owner key.
+- Memory: `CLAUDE.md` kept as the shared rule file; auto memory holds facts that are not in the repository (for
+  example, that a subagent model override fails here, and where drafts and patches live).
+Observations (positive / negative):
+- A long session was compacted, then stopped by a usage limit while three background agents were working. The
+  summary kept the rules, the decisions and the list of open steps. The agents were resumed from their own
+  transcripts and finished their work without repeating it.
+- What does not survive compaction is anything that was only said and never written down. Progress notes kept in
+  a local file were the reliable source after the break, but the file had to be kept current to be useful.
+- The time zone bug was first seen live, not in a test: at 00:40 the form showed the previous day. On a build
+  server that runs in UTC the bug cannot appear, so the test has to set the time zone itself to catch it.
+For the retro:
+- Write progress down as it happens; a summary written at the end of a long session misses steps.
+Open before the next day:
+- [ ] Prove that context matters: the same task in a fresh session and in one that has read the codebase; compare
+  quality and token use
+- [ ] Make a bad edit on purpose and undo it with `/rewind`
+- [ ] Review `CLAUDE.md` as a team: does it still fit on one screen?
+
 ## For the retro
 
 -
