@@ -55,3 +55,9 @@ evening, which breaks the rule that the date defaults to today in the time zone 
   local date; single-digit months and days are zero-padded.
 - No change to the API, the database or the expense list display: `spentOn` is stored and shown as a calendar date
   without a time zone (the list formats it in UTC from `Date.UTC`, which is consistent).
+
+## Merge request
+
+`fix/expense_date_previous_day` into `develop`: `todayLocal()` now builds the default expense date from the device's
+local calendar fields instead of the UTC date, with unit tests that fix the clock and the time zone (UTC+7 just
+after midnight, UTC-7 in the evening, and midday).
