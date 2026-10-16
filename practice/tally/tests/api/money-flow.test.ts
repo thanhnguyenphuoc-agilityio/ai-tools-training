@@ -65,28 +65,6 @@ describe('expenses', () => {
     await owner.call('DELETE', `/groups/${code}/expenses/${ok.json.id}`);
   });
 
-  it('lets the author or the owner delete, nobody else', async () => {
-    const jamie = new Browser(env.env);
-    await jamie.call('POST', `/groups/${code}/members/${ids.jamie}/claim`);
-    const add = (b: Browser) =>
-      b.call('POST', `/groups/${code}/expenses`, {
-        payerId: ids.sam,
-        amount: 50_000,
-        description: 'Coffee',
-        spentOn: today,
-        participants: [{ memberId: ids.sam }, { memberId: ids.jamie }],
-      });
-
-    const first = (await add(sam)).json.id;
-    expect((await jamie.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(403);
-    expect((await sam.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(200);
-    expect((await sam.call('DELETE', `/groups/${code}/expenses/${first}`)).status).toBe(404);
-
-    const second = (await add(sam)).json.id;
-    expect((await owner.call('DELETE', `/groups/${code}/expenses/${second}`)).status).toBe(200);
-    expect((await getGroup(owner)).expenses).toHaveLength(0);
-  });
-
   it('accepts an expense shared by a 35-member group', async () => {
     // One INSERT adds Member 04 to Member 35: the request under test is the expense, not 32 member requests.
     // The ids have the length of real ids (UUIDs), so the request has its real size (2,360 bytes).
@@ -179,9 +157,10 @@ describe('deleting an expense', () => {
     expect(await expenseIds()).toEqual([expenseId]);
   });
 
-  it('lets the author delete', async () => {
+  it('lets the author delete, once', async () => {
     expect((await remove(sam)).status).toBe(200);
     expect(await expenseIds()).toEqual([]);
+    expect((await remove(sam)).status).toBe(404);
   });
 
   it('lets the owner delete an expense someone else added', async () => {
