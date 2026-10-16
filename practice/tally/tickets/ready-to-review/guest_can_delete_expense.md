@@ -64,3 +64,9 @@ otherwise requires a member who is the author, so a guest gets `401 JOIN_FIRST`.
 member who is neither author nor owner, the author and the owner; the guest test failed before the fix.
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 107 unit and API tests and 6 e2e tests pass. Review
+comments addressed: the duplicate delete test merged into one block, and a case for an owner who holds only the
+owner key.
