@@ -145,6 +145,51 @@ describe('expenses', () => {
   });
 });
 
+describe('deleting an expense', () => {
+  let expenseId: string;
+  const remove = (b: Browser) => b.call('DELETE', `/groups/${code}/expenses/${expenseId}`);
+  const expenseIds = async () => (await getGroup(owner)).expenses.map((e) => e.id);
+
+  beforeEach(async () => {
+    const res = await sam.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.sam,
+      amount: 80_000,
+      description: 'Groceries',
+      spentOn: today,
+      participants: [{ memberId: ids.alex }, { memberId: ids.sam }],
+    });
+    expect(res.status).toBe(201);
+    expenseId = res.json.id;
+  });
+
+  it('rejects a guest who has not joined, and keeps the expense', async () => {
+    const guest = new Browser(env.env);
+    const res = await remove(guest);
+    expect(res.status).toBe(401);
+    expect(res.json.code).toBe('JOIN_FIRST');
+    expect(await expenseIds()).toEqual([expenseId]);
+  });
+
+  it('rejects a member who is neither the author nor the owner', async () => {
+    const jamie = new Browser(env.env);
+    await jamie.call('POST', `/groups/${code}/members/${ids.jamie}/claim`);
+    const res = await remove(jamie);
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('DELETE_NOT_ALLOWED');
+    expect(await expenseIds()).toEqual([expenseId]);
+  });
+
+  it('lets the author delete', async () => {
+    expect((await remove(sam)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
+  });
+
+  it('lets the owner delete an expense someone else added', async () => {
+    expect((await remove(owner)).status).toBe(200);
+    expect(await expenseIds()).toEqual([]);
+  });
+});
+
 describe('transfers', () => {
   beforeEach(async () => {
     await owner.call('POST', `/groups/${code}/expenses`, {
