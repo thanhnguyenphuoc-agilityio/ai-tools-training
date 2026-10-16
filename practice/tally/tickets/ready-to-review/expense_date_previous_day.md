@@ -64,3 +64,8 @@ after midnight, UTC-7 in the evening, and midday). The zone-switching tests rely
 pinned in `vitest.config.ts`.
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 107 unit and API tests and 6 e2e tests pass. Review
+comments addressed: the forks pool is pinned and the tests assert that the time zone switch took effect.
