@@ -18,8 +18,19 @@ describe('todayLocal', () => {
     else process.env.TZ = originalTz;
   });
 
-  function at(timeZone: string, instant: string): string {
+  // Changing process.env.TZ at run time only works in a forked process (see `pool` in vitest.config.ts).
+  // ICU may report an alias (Asia/Saigon for Asia/Ho_Chi_Minh), so both names are compared in canonical form.
+  function useTimeZone(timeZone: string): void {
     process.env.TZ = timeZone;
+    const active = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const requested = new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone;
+    if (active !== requested) {
+      throw new Error(`Switching the time zone to ${timeZone} had no effect (active: ${active}); run with pool 'forks'.`);
+    }
+  }
+
+  function at(timeZone: string, instant: string): string {
+    useTimeZone(timeZone);
     vi.setSystemTime(new Date(instant));
     return todayLocal();
   }
@@ -39,7 +50,8 @@ describe('todayLocal', () => {
     expect(at('America/Los_Angeles', '2026-10-13T12:00:00-07:00')).toBe('2026-10-13');
   });
 
-  it('pads single-digit months and days', () => {
-    expect(at('Asia/Ho_Chi_Minh', '2026-03-05T09:00:00+07:00')).toBe('2026-03-05');
+  it('pads single-digit months and days of the given local date', () => {
+    useTimeZone('Asia/Ho_Chi_Minh');
+    expect(todayLocal(new Date(2026, 2, 5, 9))).toBe('2026-03-05');
   });
 });
