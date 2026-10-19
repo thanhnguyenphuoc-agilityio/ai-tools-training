@@ -1,0 +1,26 @@
+@use '../styles/abstracts' as *;
+
+// Compact select in the app header. The label is for screen readers only;
+// the options name each language in itself.
+.language-picker {
+  display: inline-flex;
+  align-items: center;
+
+  &__label {
+    @include visually-hidden;
+  }
+
+  &__control {
+    padding: space(1) space(2);
+    border: 1px solid var(--color-border);
+    border-radius: $radius-md;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: font-size(sm);
+
+    @include up(md) {
+      padding: space(1) space(3);
+      font-size: font-size(md);
+    }
+  }
+}

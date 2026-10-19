@@ -5,6 +5,9 @@ export const vi: Messages = {
   app: {
     title: 'Sổ Nhóm',
   },
+  languagePicker: {
+    label: 'Ngôn ngữ',
+  },
   common: {
     loading: 'Đang tải…',
     save: 'Lưu',
