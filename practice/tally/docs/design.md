@@ -80,7 +80,14 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `amountInput`: how users type amounts (decimal separator, `k`/`tr`/`m` suffixes, currency marks).
   - `defaultCurrency`: the suggested currency for new groups.
 - Locale detection order: the stored choice (`localStorage` `tally.locale`), then `navigator.languages`, then `vi`.
-  `setLocale()` exists; only the language picker UI is missing (`language_picker`).
+- Language picker (`language_picker`): `src/components/LanguagePicker.tsx` (+ `.scss`, block `language-picker`) is
+  rendered in `.app__header` in `src/App.tsx`, so it is on every page. It is a `<select>` built from
+  `localeOptions()` (each `LOCALES[x].label`, the language named in itself) and calls `setLocale()`, which writes
+  the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API. A new locale appears in the
+  picker without changes to the component.
+- Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
+  selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
+  and only a newly opened form takes the default of the current language.
 - The API never returns user-facing sentences. Error bodies have the form `{ error, code, params }`, and the UI
   translates `code` through `errors.<CODE>`. A new code in `shared/errors.ts` causes a type error in every locale
   until it is translated.
@@ -218,8 +225,10 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### language_picker, theme_picker
 
-- The core already exists: `useI18n().setLocale` and `LOCALES[x].label`; `setThemePreference('system'|'light'|'dark')`.
-- Only a component is needed (for example `src/components/PreferencesMenu.tsx` with its `.scss`) in `.app__header`.
+- `language_picker` is built: `src/components/LanguagePicker.tsx` in `.app__header` (see section 5, Language).
+  `.app__header` is a flex row with the brand on the left, so further header controls are added after it.
+- `theme_picker`: the core already exists (`setThemePreference('system'|'light'|'dark')`); only a component is
+  needed, with its `.scss`, in `.app__header`.
 
 ### owner_member_tools
 

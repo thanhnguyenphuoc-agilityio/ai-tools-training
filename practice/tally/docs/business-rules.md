@@ -20,7 +20,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - **Currency** is a group setting, independent of the interface language (for example, a trip to Thailand uses THB
   while the interface stays in Vietnamese).
   - When a group is created, the currency field defaults from the interface language (Vietnamese: VND,
-    English: USD). The owner can change it.
+    English: USD). The owner can change it. A "new group" form that is already open keeps its currency when the
+    interface language changes; a newly opened form takes the default of the current language.
   - Supported: VND, USD, EUR, GBP, AUD, SGD, THB, CNY, JPY, KRW.
   - The currency can be changed only while the group has **no expenses and no transfers**. Deleted expenses count too,
     because they stay in the history with their amounts in the original currency.
@@ -95,6 +96,16 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - The transfer message is stripped of diacritics, upper-cased, limited to `A-Z 0-9` and spaces, and capped at
   50 characters. The screen shows **exactly** the message encoded in the QR.
 - The QR code is generated in the browser. Account numbers are never sent to a third-party service.
+
+## Interface language
+
+- The interface is available in Vietnamese and English.
+- Until a language is chosen, the interface follows the browser languages, then defaults to Vietnamese.
+- The language can be chosen in the app from a control in the header, available on every page. The change applies
+  at once, without leaving the current page.
+- The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
+  keeps its own choice.
+- Changing the language does not change any group data, including the currency of an existing group.
 
 ## Data and safety
 
