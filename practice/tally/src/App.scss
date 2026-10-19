@@ -11,7 +11,13 @@
     max-width: map.get($content-width, wide);
   }
 
+  // App name on the left, preferences on the right; wraps on narrow phones.
   &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(2);
     padding: space(4) 0;
   }
 

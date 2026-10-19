@@ -140,6 +140,15 @@ export const vi: Messages = {
     currencyLocked: 'Không đổi được tiền tệ khi nhóm đã có khoản chi.',
     roundCoarse: 'Làm tròn phần chia đến {unit} (áp dụng cho khoản chi mới)',
   },
+  theme: {
+    label: 'Giao diện',
+    options: {
+      system: 'Tự động',
+      light: 'Sáng',
+      dark: 'Tối',
+    },
+    systemHint: 'Giống thiết bị này',
+  },
   errors: {
     INTERNAL: 'Có lỗi xảy ra. Vui lòng thử lại.',
     NOT_FOUND: 'Không tìm thấy.',
