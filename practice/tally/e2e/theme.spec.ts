@@ -28,6 +28,24 @@ test('the theme choice is applied, remembered and can follow the device again', 
   expect(await page.evaluate(() => localStorage.getItem('tally.theme'))).toBeNull();
 });
 
+test('with "same as device" selected, the page follows a live device theme change', async ({ page }) => {
+  const background = () =>
+    page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim());
+
+  await page.goto('/');
+  const picker = page.getByRole('group', { name: t('theme.label') });
+  await expect(picker.getByRole('radio', { name: t('theme.options.system') })).toBeChecked();
+  const light = await background();
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect.poll(background).not.toBe(light);
+  const dark = await background();
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect.poll(background).toBe(light);
+  expect(dark).not.toBe('');
+});
+
 test('a stored dark choice is applied before the app script runs', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('tally.theme', 'dark'));
