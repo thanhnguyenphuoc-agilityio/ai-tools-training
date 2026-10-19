@@ -1,12 +1,17 @@
-Maintenance pass for the Tally training repository. Work through these in order and stop at the first step that
-has something to do. Follow `CLAUDE.md` throughout.
+Maintenance pass for the Tally training repository. This pass only reports: it does not edit files, commit, move
+tickets, push, merge, or delete branches or worktrees. Follow `CLAUDE.md` throughout. Do one step per pass and stop
+at the first step that has something to report.
 
-1. Continue any unfinished work from this conversation.
-2. In `practice/tally/tickets/waiting-to-merge/`, take the oldest ticket and check out its branch in its own
-   worktree. Run `npm run typecheck` and `npm test` in `practice/tally`. If anything fails, report the failure in
-   one short paragraph with the first error, and fix it only if the fix is small and inside the ticket's scope.
-3. In `practice/tally/tickets/in-progress/`, report tickets whose `## Plan` is missing or whose branch has no
-   commit in the last day.
+1. Continue unfinished work from this conversation, except anything that waits for the human's answer or needs
+   confirmation under `CLAUDE.md` (a commit, a merge, a push).
+2. Take the oldest ticket in `practice/tally/tickets/waiting-to-merge/` whose branch head has changed since the last
+   report in this conversation. The branch is named in the ticket's `## Merge request` section (`feat/<ticket>` or
+   `fix/<ticket>`). Use its worktree in `.scratch/wt/<branch with "/" replaced by "-">` if one exists; otherwise
+   report that the branch has no worktree and stop. In that worktree, run `npm run typecheck` and `npm test` in
+   `practice/tally`. Report pass or fail in one short paragraph with the first error; rerun once if an API test
+   times out before calling it a failure.
+3. Report tickets in `practice/tally/tickets/in-progress/` that have no `## Plan` section, or whose branch has had
+   no commit for a day.
 4. If nothing is pending, say so in one line.
 
-Never push, never merge into `develop` or `main`, never commit on `develop`, and never read `tally-*-answers.md`.
+Never read `tally-*-answers.md` or anything outside this repository.
