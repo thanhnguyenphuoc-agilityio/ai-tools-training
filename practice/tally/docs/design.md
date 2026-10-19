@@ -81,10 +81,10 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `defaultCurrency`: the suggested currency for new groups.
 - Locale detection order: the stored choice (`localStorage` `tally.locale`), then `navigator.languages`, then `vi`.
 - Language picker (`language_picker`): `src/components/LanguagePicker.tsx` (+ `.scss`, block `language-picker`) is
-  rendered in `.app__header` in `src/App.tsx`, so it is on every page. It is a `<select>` built from
-  `localeOptions()` (each `LOCALES[x].label`, the language named in itself) and calls `setLocale()`, which writes
-  the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API. A new locale appears in the
-  picker without changes to the component.
+  rendered in `.app__controls` inside `.app__header` in `src/App.tsx`, so it is on every page. It is a `<select>`
+  built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself) and calls `setLocale()`,
+  which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API. A new locale
+  appears in the picker without changes to the component.
 - Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
   selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
   and only a newly opened form takes the default of the current language.
@@ -229,7 +229,7 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   `.app__header` is a flex row: the brand on the left, then `.app__controls` (pushed to the end with
   `margin-inline-start: auto`), which holds the preference controls. Further header controls go inside it.
 - `theme_picker`: the core already exists (`setThemePreference('system'|'light'|'dark')`); only a component is
-  needed, with its `.scss`, in `.app__header`.
+  needed, with its `.scss`, inside `.app__controls`.
 
 ### owner_member_tools
 
