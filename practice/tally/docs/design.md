@@ -115,8 +115,12 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   From `lg` up, the group page shows the form and the list in two columns.
 - Colors come only from the CSS custom properties in `base/_themes.scss`:
   - The default follows `prefers-color-scheme`.
-  - `<html data-theme="light|dark">` overrides it. `src/theme.ts` provides `setThemePreference()`; only the UI is
-    missing (`theme_picker`).
+  - `<html data-theme="light|dark">` overrides it. `src/theme.ts` owns the preference (`system`, `light`,
+    `dark`) and stores light/dark in `localStorage` (`tally.theme`); `system` removes the key.
+  - The choice is applied before first paint by an inline script in `index.html` (same key, checked by a unit
+    test), then again in `main.tsx`.
+  - The picker is `src/components/ThemePicker.tsx` (BEM block `theme-picker`) in `.app__header`: a `fieldset`
+    of native radios styled as a segmented control (built in `theme_picker`).
   - A new theme means one palette mixin and one `[data-theme='...']` selector.
 - The full visual redesign is `ui_redesign`.
 
@@ -225,11 +229,12 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### language_picker, theme_picker
 
-- `language_picker` is built: `src/components/LanguagePicker.tsx` in `.app__header` (see section 5, Language).
-  `.app__header` is a flex row: the brand on the left, then `.app__controls` (pushed to the end with
-  `margin-inline-start: auto`), which holds the preference controls. Further header controls go inside it.
-- `theme_picker`: the core already exists (`setThemePreference('system'|'light'|'dark')`); only a component is
-  needed, with its `.scss`, inside `.app__controls`.
+- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a wrapping flex row
+  with the app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on
+  the right and wraps them as one group. Further header controls go inside it.
+- `language_picker` is built: `src/components/LanguagePicker.tsx` (see section 5, Language).
+- `theme_picker` is built: `src/components/ThemePicker.tsx` and `ThemePicker.scss`, messages under `theme.*`
+  in the locales, tests in `tests/unit/theme.test.ts` and `e2e/theme.spec.ts`.
 
 ### owner_member_tools
 

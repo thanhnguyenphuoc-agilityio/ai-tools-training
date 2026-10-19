@@ -117,6 +117,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
 - OPEN QUESTION: anyone with the link can claim an unclaimed name. Is this risk acceptable? (`wrong_name_claim`)
 
+## Interface preferences
+
+- **Theme:** the header offers three choices: same as the device (the default), light and dark. The choice applies
+  at once and is remembered on this device (in the browser, not in the group), so it is kept after closing the
+  browser and does not affect other members. A stored light or dark choice is applied before the page is drawn,
+  so the page does not flash in the other theme on load. Choosing "same as the device" forgets the stored choice.
+
 ## Planned (in the backlog)
 
 See `tickets/`. The technical design for each feature is in `docs/design.md`.

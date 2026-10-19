@@ -25,7 +25,7 @@
     font-size: font-size(lg);
   }
 
-  // Preference controls (language, theme), pushed to the end of the header row.
+  // Preference controls (language, theme) stay together at the end of the row and wrap as one group.
   &__controls {
     display: flex;
     flex-wrap: wrap;

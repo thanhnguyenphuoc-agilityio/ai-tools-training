@@ -149,6 +149,16 @@ export const en = {
     currencyLocked: 'The currency is fixed once the group has expenses.',
     roundCoarse: 'Round each share to {unit} (applies to new expenses)',
   },
+  theme: {
+    /** Name of the light/dark control in the header, for screen readers. */
+    label: 'Theme',
+    options: {
+      /** Follows the light/dark setting of the device. */
+      system: 'Same as device',
+      light: 'Light',
+      dark: 'Dark',
+    },
+  },
   errors: {
     INTERNAL: 'Something went wrong. Please try again.',
     NOT_FOUND: 'Not found.',
