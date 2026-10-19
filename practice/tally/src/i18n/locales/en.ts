@@ -149,12 +149,11 @@ export const en = {
     /** Name of the light/dark control in the header, for screen readers. */
     label: 'Theme',
     options: {
-      system: 'Auto',
+      /** Follows the light/dark setting of the device. */
+      system: 'Same as device',
       light: 'Light',
       dark: 'Dark',
     },
-    /** Tooltip of the "system" option. */
-    systemHint: 'Same as this device',
   },
   errors: {
     INTERNAL: 'Something went wrong. Please try again.',

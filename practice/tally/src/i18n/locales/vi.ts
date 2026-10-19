@@ -143,11 +143,10 @@ export const vi: Messages = {
   theme: {
     label: 'Giao diện',
     options: {
-      system: 'Tự động',
+      system: 'Theo thiết bị',
       light: 'Sáng',
       dark: 'Tối',
     },
-    systemHint: 'Giống thiết bị này',
   },
   errors: {
     INTERNAL: 'Có lỗi xảy ra. Vui lòng thử lại.',

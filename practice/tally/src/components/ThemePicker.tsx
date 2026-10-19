@@ -21,7 +21,6 @@ export function ThemePicker() {
         <label
           key={option}
           className={`theme-picker__option${option === preference ? ' theme-picker__option--active' : ''}`}
-          title={option === 'system' ? t('theme.systemHint') : undefined}
         >
           <input
             type="radio"
