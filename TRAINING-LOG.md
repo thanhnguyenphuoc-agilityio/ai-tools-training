@@ -174,6 +174,47 @@ Open before the next day:
 - [ ] Make a bad edit on purpose and undo it with `/rewind`
 - [ ] Review `CLAUDE.md` as a team: does it still fit on one screen?
 
+## Day 06: 2026-10-14
+
+Goal: flagship features and parallel work: two tickets in separate worktrees at the same time, an artifact, and
+Developer Checkpoint 2.
+Left over from the previous day: the fresh-session comparison, `/rewind` and the `CLAUDE.md` team review.
+Shipped (merge requests, artifacts, screenshots):
+- `feat/language_picker` and `feat/theme_picker` built in parallel, each in its own git worktree with its own
+  agent, reviewed and merged. The second merge conflicted in the header (`App.tsx`, `App.scss`, `docs/design.md`);
+  both pickers were kept inside `.app__controls`. Typecheck, 132 unit and API tests and 18 e2e tests pass on
+  `develop` after the merge.
+- `stale_language_messages` added to the backlog: found in review, error and status messages keep the language that
+  was active when they appeared.
+- Artifact: a merge request walkthrough of the two pickers (behaviour, code tour, the conflict, review comments,
+  test steps for `ready-to-review`), published privately; it is shared from its own page.
+- `.claude/loop.md` drafted on `chore/loop-md`: the default prompt for a bare `/loop` (test the oldest ticket that
+  waits to merge, report stalled tickets; never push or merge).
+Checkpoint 2 (Developer track):
+- [x] Two parallel sessions, both merged
+- [ ] One plan-mode change steered through diff comments
+- [x] One artifact (published; sharing it with a peer is still open)
+- [ ] One Remote Control steer
+- [ ] One `/loop` run
+Observations (positive / negative):
+- Worktrees kept the two agents apart: no shared working copy, so neither could overwrite the other's files. The
+  conflict appeared only at merge time, in the one place both tickets had to touch, and the merge request had
+  predicted the header conflict.
+- The `theme_picker` ticket was merged without first moving it to `ready-to-review/`. A step that lives only in a
+  checklist is easy to skip under time pressure; it was fixed with a follow-up commit and merge instead of
+  rewriting `develop`.
+For the retro:
+- Parallel agents save time on independent tickets, but the shared files (header, locales, README tables) need a
+  merge order decided up front.
+Open before the next day:
+- [ ] Share the walkthrough artifact with a peer
+- [ ] Steer a plan-mode change through diff comments
+- [ ] `/rc` at the desk, connect from the phone through claude.ai/code and send one steer
+- [ ] `/loop 15m` on an open merge request, then a custom `/loop 5m` check; try the repository `loop.md`
+- [ ] `ultrathink` and `/effort` levels on the same hard bug; compare
+- [ ] A cloud session for a long task, checked from claude.ai/code with the laptop closed
+- [ ] Course: Introduction to subagents
+
 ## For the retro
 
 -
