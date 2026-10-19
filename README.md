@@ -36,7 +36,6 @@ describes how each role is simulated.
 | [`CLAUDE.md`](CLAUDE.md) | Instructions for Claude Code in this repository |
 | `.claude/skills/review-checklist/` | Review skill based on the Day 3 checklist |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
-| `.gitlab-ci.yml` | CI: typecheck, unit/API tests and e2e on every merge request |
 
 ## Language
 
@@ -70,4 +69,4 @@ before Day 2.
   ticket file name without `.md`.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`).
 - A merge request is self-contained: what changed, why, how it was tested, screenshots for UI changes and a
-  ticket link. CI must pass.
+  ticket link. Typecheck, unit/API tests and e2e must pass locally.

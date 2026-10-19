@@ -23,7 +23,7 @@ The original plan assumes a lead has already seeded bugs. Here **a separate Clau
    Keep the diff pane collapsed and read only the final message.
 3. Close the session. Do not reopen it and do not read `git log -p`.
 4. Push `develop` (`git push origin develop`) without reading the diff, so that feature branches and merge requests
-   start from the seeded code and CI runs on it.
+   start from the seeded code.
 
 Seeding is one of the listed exceptions to the merge-request workflow (see `CLAUDE.md`): the lead commits directly
 on `develop`.

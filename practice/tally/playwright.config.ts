@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: 'e2e',
   timeout: 30_000,
-  reporter: process.env.CI ? [['list'], ['junit', { outputFile: 'test-results/junit.xml' }]] : 'list',
+  reporter: 'list',
   // Tests read expected text from the Vietnamese locale (e2e/i18n.ts).
   use: { baseURL: 'http://localhost:5173', locale: 'vi-VN', trace: 'retain-on-failure' },
   projects: [

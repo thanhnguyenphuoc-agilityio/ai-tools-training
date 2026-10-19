@@ -272,7 +272,8 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 3. Pure logic in `shared/` with unit tests. Permissions in `policy.ts`. Endpoints in `routes/`, with API tests.
 4. UI: `src/api.ts`, then components (text in `src/i18n/locales`, BEM styles). E2e tests for main flows.
 5. Update `docs/business-rules.md` (move rules from "Planned" into the main sections) and this file.
-6. Merge request into `develop`: what changed, why, how it was tested, screenshots for UI changes. CI must pass.
+6. Merge request into `develop`: what changed, why, how it was tested, screenshots for UI changes. Typecheck,
+   unit/API tests and e2e must pass locally.
    The AI team lead runs e2e, reviews and merges; the human then tests on `develop` before the release to `main`
    (workflow in `tickets/README.md`).
 
