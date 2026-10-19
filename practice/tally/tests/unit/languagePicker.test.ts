@@ -68,7 +68,7 @@ describe('language picker', () => {
     expect(detectLocale()).toBe('en');
   });
 
-  it('suggests the currency of a newly opened "new group" form from the current language', () => {
+  it('each locale suggests its default currency', () => {
     expect(createTranslator('vi').defaultCurrency).toBe('VND');
     expect(createTranslator('en').defaultCurrency).toBe('USD');
   });

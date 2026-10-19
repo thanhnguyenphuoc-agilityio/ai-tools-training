@@ -42,10 +42,11 @@ test('the language can be changed on the group page', async ({ page }) => {
   await page.getByLabel(t('home.create.yourName')).fill('Jamie');
   await page.getByRole('button', { name: t('home.create.submit') }).click();
   await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  const url = page.url();
   await page.getByRole('button', { name: t('ownerKey.done') }).click();
   await expect(page.getByRole('tab', { name: t('group.tabs.members') })).toBeVisible();
 
   await page.getByLabel(t('languagePicker.label')).selectOption('en');
   await expect(page.getByRole('tab', { name: en.group.tabs.members })).toBeVisible();
-  await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  await expect(page).toHaveURL(url);
 });
