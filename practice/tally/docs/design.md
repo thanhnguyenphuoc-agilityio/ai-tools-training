@@ -226,7 +226,8 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 ### language_picker, theme_picker
 
 - `language_picker` is built: `src/components/LanguagePicker.tsx` in `.app__header` (see section 5, Language).
-  `.app__header` is a flex row with the brand on the left, so further header controls are added after it.
+  `.app__header` is a flex row: the brand on the left, then `.app__controls` (pushed to the end with
+  `margin-inline-start: auto`), which holds the preference controls. Further header controls go inside it.
 - `theme_picker`: the core already exists (`setThemePreference('system'|'light'|'dark')`); only a component is
   needed, with its `.scss`, in `.app__header`.
 

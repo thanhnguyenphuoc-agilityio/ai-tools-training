@@ -21,8 +21,16 @@
   }
 
   &__brand {
-    margin-right: auto;
     font-weight: 700;
     font-size: font-size(lg);
+  }
+
+  // Preference controls (language, theme), pushed to the end of the header row.
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: space(2);
+    margin-inline-start: auto;
   }
 }
