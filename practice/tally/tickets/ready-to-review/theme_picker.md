@@ -85,3 +85,9 @@ The merge request is opened on GitLab from this branch; its link is added when i
 - Checked by the developer: `npm run typecheck` and `npm test` pass. The e2e spec is run by the lead.
 - Expected merge conflict: `language_picker` also adds a component to `.app__header` (`src/App.tsx`, `src/App.scss`)
   and a message section to the locale files; both sides are kept.
+
+## Review
+
+Approved by the AI team lead after review. Merged into `develop` together with `language_picker`; the header
+conflict was resolved by keeping both pickers inside `.app__controls`. On `develop` after the merge, typecheck,
+132 unit and API tests and 18 e2e tests (desktop and mobile) pass.
