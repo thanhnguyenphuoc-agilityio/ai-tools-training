@@ -73,3 +73,15 @@ Tests:
 
 Docs: `docs/design.md` section 5 and the `language_picker, theme_picker` section, `docs/business-rules.md` (a new
 interface preferences rule), `README.md` "Not in the MVP".
+
+## Merge request
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+- Source branch: `feat/theme_picker`. Target branch: `develop`.
+- Changes: `ThemePicker` (system, light, dark) in the app header, `theme.*` messages in en and vi, unit tests for
+  `src/theme.ts` and the pre-paint script, e2e spec `e2e/theme.spec.ts`, updated `docs/business-rules.md`,
+  `docs/design.md` and `README.md`.
+- Checked by the developer: `npm run typecheck` and `npm test` pass. The e2e spec is run by the lead.
+- Expected merge conflict: `language_picker` also adds a component to `.app__header` (`src/App.tsx`, `src/App.scss`)
+  and a message section to the locale files; both sides are kept.
