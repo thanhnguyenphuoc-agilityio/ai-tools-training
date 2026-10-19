@@ -1,6 +1,7 @@
 // Two pages, so a tiny router: "/" and "/g/:code".
 import { useEffect, useState } from 'react';
 import './App.scss';
+import { LanguagePicker } from './components/LanguagePicker';
 import { useI18n } from './i18n';
 import { GroupPage } from './pages/GroupPage';
 import { HomePage } from './pages/HomePage';
@@ -37,6 +38,9 @@ export function App() {
         >
           {t('app.title')}
         </a>
+        <div className="app__controls">
+          <LanguagePicker />
+        </div>
       </header>
       <main>{match ? <GroupPage key={match[1]} code={match[1]} navigate={navigate} /> : <HomePage navigate={navigate} />}</main>
     </div>

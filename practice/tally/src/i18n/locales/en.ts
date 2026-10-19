@@ -7,6 +7,10 @@ export const en = {
   app: {
     title: 'Tally',
   },
+  languagePicker: {
+    /** Accessible name of the language select in the header. */
+    label: 'Language',
+  },
   common: {
     loading: 'Loading…',
     save: 'Save',

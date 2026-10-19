@@ -17,7 +17,21 @@ export type Locale = keyof typeof LOCALES;
 export const DEFAULT_LOCALE: Locale = 'vi';
 const STORAGE_KEY = 'tally.locale';
 
-const isLocale = (value: unknown): value is Locale => typeof value === 'string' && value in LOCALES;
+export const isLocale = (value: unknown): value is Locale => typeof value === 'string' && value in LOCALES;
+
+/** The languages a picker offers, each named in its own language. */
+export function localeOptions(): { value: Locale; label: string }[] {
+  return (Object.keys(LOCALES) as Locale[]).map((value) => ({ value, label: LOCALES[value].label }));
+}
+
+/** Remembers the choice on this device only; detectLocale() reads it first. */
+export function saveLocale(locale: Locale): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // storage unavailable: the choice lasts for this page only
+  }
+}
 
 /** Saved choice, then the browser's languages, then the default. */
 export function detectLocale(): Locale {
@@ -101,11 +115,7 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
   const [locale, setLocaleState] = useState<Locale>(() => initialLocale ?? detectLocale());
 
   const setLocale = useCallback((next: Locale) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // storage unavailable: the choice lasts for this page only
-    }
+    saveLocale(next);
     setLocaleState(next);
   }, []);
 

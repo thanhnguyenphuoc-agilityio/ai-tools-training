@@ -11,12 +11,26 @@
     max-width: map.get($content-width, wide);
   }
 
+  // Brand on the left, preference controls on the right, on every page.
   &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: space(2);
     padding: space(4) 0;
   }
 
   &__brand {
     font-weight: 700;
     font-size: font-size(lg);
+  }
+
+  // Preference controls (language, theme), pushed to the end of the header row.
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: space(2);
+    margin-inline-start: auto;
   }
 }
