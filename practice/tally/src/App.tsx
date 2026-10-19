@@ -38,7 +38,9 @@ export function App() {
         >
           {t('app.title')}
         </a>
-        <ThemePicker />
+        <div className="app__controls">
+          <ThemePicker />
+        </div>
       </header>
       <main>{match ? <GroupPage key={match[1]} code={match[1]} navigate={navigate} /> : <HomePage navigate={navigate} />}</main>
     </div>

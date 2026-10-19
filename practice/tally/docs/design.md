@@ -223,7 +223,9 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 ### language_picker, theme_picker
 
 - The core already exists: `useI18n().setLocale` and `LOCALES[x].label`; `setThemePreference('system'|'light'|'dark')`.
-- Each picker is its own component in `.app__header`, which is a wrapping flex row (app name left, controls right).
+- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a wrapping flex row
+  with the app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on
+  the right and wraps them as one group.
 - `theme_picker` is built: `src/components/ThemePicker.tsx` and `ThemePicker.scss`, messages under `theme.*`
   in the locales, tests in `tests/unit/theme.test.ts` and `e2e/theme.spec.ts`.
 

@@ -11,8 +11,7 @@
     max-width: map.get($content-width, wide);
   }
 
-  // App name on the left; the brand's auto margin pushes any number of controls
-  // to the right as one group. Controls that do not fit wrap onto the next line.
+  // App name on the left, then the controls group pushed to the right.
   &__header {
     display: flex;
     flex-wrap: wrap;
@@ -22,8 +21,16 @@
   }
 
   &__brand {
-    margin-inline-end: auto;
     font-weight: 700;
     font-size: font-size(lg);
+  }
+
+  // Header controls (theme, language) stay together and wrap as one group.
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: space(2);
+    margin-inline-start: auto;
   }
 }
