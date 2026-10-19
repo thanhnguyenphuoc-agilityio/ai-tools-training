@@ -12,9 +12,9 @@ export const isThemePreference = (value: unknown): value is ThemePreference =>
 
 export function getThemePreference(): ThemePreference {
   try {
+    // "system" is never stored (it is the absence of a choice), so reading it back is harmless.
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    // "system" is never stored: it is the absence of a choice.
-    if (saved === 'light' || saved === 'dark') return saved;
+    if (isThemePreference(saved)) return saved;
   } catch {
     // storage unavailable
   }
