@@ -81,3 +81,18 @@ Tests:
 - E2e (`e2e/language-picker.spec.ts`): switching to English changes the interface and survives a reload; the
   picker is available on the group page; an open "new group" form keeps VND after switching to English, and a
   newly opened form defaults to USD.
+
+## Merge request
+
+Branch `feat/language_picker` into `develop`.
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+- Built: `src/components/LanguagePicker.tsx` (+ `.scss`) in `.app__header`, on every page; the choice is stored in
+  `localStorage` (`tally.locale`) on this device only.
+- An open "new group" form keeps its currency when the language changes; a newly opened form defaults from the
+  current language (VND for Vietnamese, USD for English).
+- Checked by the developer: `npm run typecheck` and `npm test` pass. New tests: `tests/unit/languagePicker.test.ts`
+  and `e2e/language-picker.spec.ts` (e2e is run by the team lead).
+- Docs updated: `docs/business-rules.md` (section "Interface language"), `docs/design.md` (sections 5 and 6) and
+  `README.md` ("Not in the MVP").
