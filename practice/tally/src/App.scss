@@ -11,17 +11,18 @@
     max-width: map.get($content-width, wide);
   }
 
-  // App name on the left, preferences on the right; wraps on narrow phones.
+  // App name on the left; the brand's auto margin pushes any number of controls
+  // to the right as one group. Controls that do not fit wrap onto the next line.
   &__header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: space(2);
     padding: space(4) 0;
   }
 
   &__brand {
+    margin-inline-end: auto;
     font-weight: 700;
     font-size: font-size(lg);
   }
