@@ -33,7 +33,8 @@
     }
   }
 
-  &__option:focus-within {
+  // Keyboard focus only: no ring after a mouse click or tap.
+  &__option:has(.theme-picker__input:focus-visible) {
     @include focus-ring;
   }
 
