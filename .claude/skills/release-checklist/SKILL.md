@@ -34,7 +34,9 @@ or tag without the human's explicit confirmation in this conversation.
    Plain language, no file names, one line per ticket.
 4. Append the release to the day's entry in `TRAINING-LOG.md` (shipped: release branch, tickets, notes). Append
    only; past days are never rewritten. This happens here because nothing is committed to `develop` or `main`
-   directly after the merges.
+   directly after the merges. If the day's entry is still on an open `docs/day-NN-log` branch, either merge that
+   branch into `develop` first (and start the release branch after it), or add the release lines on that log
+   branch instead of here, so the two branches do not both insert before `## For the retro`.
 5. Show the staged changes and, once the human confirms, commit on the release branch:
    `chore(release): release <yyyy-mm-dd>` (Conventional Commits, no `Co-Authored-By` trailer).
 
