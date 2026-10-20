@@ -44,7 +44,8 @@ or tag without the human's explicit confirmation in this conversation.
 ## 3. Merges (human confirmation required for each)
 
 1. Merge request `release/<yyyy-mm-dd>` -> `develop`, with the description from
-   `.scratch/mr/release-<yyyy-mm-dd>.md`. Ask before merging.
+   `.scratch/mr/release-<yyyy-mm-dd>.md`. Opening it means pushing `release/<yyyy-mm-dd>`: ask before pushing,
+   and ask again before merging.
 2. Merge request `develop` -> `main`, with the same description from `.scratch/mr/release-<yyyy-mm-dd>.md`.
    Show `git log --oneline main..develop` and the release notes, then ask:
    "Merge develop into main?" Merge only on an explicit yes.
