@@ -215,6 +215,30 @@ Open before the next day:
 - [ ] A cloud session for a long task, checked from claude.ai/code with the laptop closed
 - [ ] Course: Introduction to subagents
 
+## Day 07: 2026-10-14
+
+Goal: skills, commands and plugins: one team skill and one custom slash command, shipped through a merge request
+into `.claude/`.
+Left over from the previous day: the Checkpoint 2 items that need a person (plan-mode steer, Remote Control, `/loop`
+run, sharing the artifact).
+Shipped (merge requests, artifacts, screenshots):
+- `chore/release-checklist-skill` merged after two review rounds: the team skill `release-checklist` (release from
+  `develop` to `main`) and the command `/start-ticket <ticket_name>` (branch, ticket to `in-progress/`, plan before
+  code). `CLAUDE.md` now names `chore/<topic>` branches for tooling changes without a ticket.
+Observations (positive / negative):
+- The first version of the skill stopped only when a ticket had been rejected, so a ticket that nobody had tested
+  yet would still have reached `main`. The rule existed in `tickets/README.md`; the skill had restated it loosely.
+- The first version of `/start-ticket` committed the plan before showing it, which contradicts "do not commit until
+  the user confirms". Instructions written for an agent need the same review as code.
+- A skill that writes to `TRAINING-LOG.md` has to know where the day's entry lives (an open `docs/day-NN-log`
+  branch), or the release and the log collide in the same place.
+For the retro:
+- Encoding a process as a skill exposes the gaps in the written process itself.
+Open before the next day:
+- [ ] Browse a plugin marketplace, install one plugin (for example code intelligence) and evaluate it
+- [ ] Try `/start-ticket` and the `release-checklist` skill in a real session
+- [ ] Course: Introduction to agent skills
+
 ## For the retro
 
 -
