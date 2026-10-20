@@ -13,5 +13,6 @@ Start work on the ticket `$ARGUMENTS` in `practice/tally/tickets/`.
 3. `git mv` the ticket to `tickets/in-progress/` and set `Assignee` to `Developer (trainee)`.
 4. Read the ticket, `docs/business-rules.md` and the ticket's section in `docs/design.md`. Add `## Plan` to the
    ticket: the files to change, the tests to add (for a bug, the test that fails first), and the docs to update.
-5. Commit only the ticket move and the plan: `docs(tickets): start $ARGUMENTS with a plan`.
-6. Show the plan and wait for approval before changing any code.
+5. Show the plan and wait for approval. Do not commit and do not change any code before the human approves.
+6. After approval, commit only the ticket move and the plan: `docs(tickets): start $ARGUMENTS with a plan`. If the
+   human asks for changes, update the plan and show it again.
