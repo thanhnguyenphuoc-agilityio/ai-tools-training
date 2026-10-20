@@ -35,6 +35,8 @@ describes how each role is simulated.
 | [`TRAINING-LOG.md`](TRAINING-LOG.md) | Daily log: goals, shipped work and retro notes |
 | [`CLAUDE.md`](CLAUDE.md) | Instructions for Claude Code in this repository |
 | `.claude/skills/review-checklist/` | Review skill based on the Day 3 checklist |
+| `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
+| `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
 
 ## Language
