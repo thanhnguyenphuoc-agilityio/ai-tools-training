@@ -29,9 +29,10 @@ or tag without the human's explicit confirmation in this conversation.
 1. `git switch -c release/<yyyy-mm-dd> develop` (today's date in the human's time zone).
 2. `git mv` every ticket from `tickets/ready-to-review/` (all confirmed in step 1.4) to `tickets/done/`. Add a line
    `Released in release/<yyyy-mm-dd>.` under its `## Review` section.
-3. Write release notes for the group's users (not developers) into the merge request description, grouped as
-   "New", "Fixed" and "Known questions" (open questions from `docs/business-rules.md` touched by this release).
-   Plain language, no file names, one line per ticket.
+3. Write release notes for the group's users (not developers) to `.scratch/mr/release-<yyyy-mm-dd>.md`, grouped
+   as "New", "Fixed" and "Known questions" (open questions from `docs/business-rules.md` touched by this release).
+   Plain language, no file names, one line per ticket. The same file is the description of both merge requests
+   in section 3.
 4. Append the release to the day's entry in `TRAINING-LOG.md` (shipped: release branch, tickets, notes). Append
    only; past days are never rewritten. This happens here because nothing is committed to `develop` or `main`
    directly after the merges. If the day's entry is still on an open `docs/day-NN-log` branch, either merge that
@@ -42,8 +43,10 @@ or tag without the human's explicit confirmation in this conversation.
 
 ## 3. Merges (human confirmation required for each)
 
-1. Merge request `release/<yyyy-mm-dd>` -> `develop`. Ask before merging.
-2. Merge request `develop` -> `main`. Show `git log --oneline main..develop` and the release notes, then ask:
+1. Merge request `release/<yyyy-mm-dd>` -> `develop`, with the description from
+   `.scratch/mr/release-<yyyy-mm-dd>.md`. Ask before merging.
+2. Merge request `develop` -> `main`, with the same description from `.scratch/mr/release-<yyyy-mm-dd>.md`.
+   Show `git log --oneline main..develop` and the release notes, then ask:
    "Merge develop into main?" Merge only on an explicit yes.
 3. Optionally tag `v<yyyy.mm.dd>` on `main` and deploy (`docs/design.md`, section 8), each only when asked.
 
