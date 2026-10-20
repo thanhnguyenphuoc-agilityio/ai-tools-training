@@ -54,6 +54,7 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
 - Schema changes go in a new numbered migration in `migrations/`; never edit a migration that has been pushed.
 - A bug fix comes with a test that fails before the fix. Run typecheck + tests before saying something works.
 - One ticket per branch (`feat/<ticket_name>`, `fix/<ticket_name>`) off `develop`; merge requests target `develop`.
+  Tooling changes without a ticket use `chore/<topic>` branches off `develop` with the same merge request flow.
 - Workflow (details in `tickets/README.md`): in-progress -> waiting-to-merge (the AI team lead runs typecheck, tests
   and e2e, reviews with `review-checklist`, then merges into `develop`) -> ready-to-review (the human tests on
   `develop`) -> done (`release/<date>` branch, then `develop` merged into `main`). Never merge into `main`
