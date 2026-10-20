@@ -30,3 +30,7 @@ Start work on the ticket `$ARGUMENTS` in `practice/tally/tickets/`.
 8. After approval, commit only the ticket move and the new ticket sections:
    `docs(tickets): start $ARGUMENTS with a plan`. If the human asks for changes, update the ticket and show it
    again.
+9. If the human rejects the plan or decides not to start the ticket, the branch from step 3 and the move from
+   step 4 already exist but nothing is committed. Offer to undo both: restore the ticket to its previous folder
+   and content, switch back to `develop` (or remove the worktree), and delete the new branch. Do each only after
+   the human agrees.
