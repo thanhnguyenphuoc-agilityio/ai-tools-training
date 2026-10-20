@@ -5,7 +5,9 @@ argument-hint: <ticket_name>
 
 Start work on the ticket `$ARGUMENTS` in `practice/tally/tickets/`.
 
-1. If `$ARGUMENTS` is empty, list the tickets in `tickets/todo/` and ask which one to start; do nothing else.
+1. Normalise `$ARGUMENTS` to a bare ticket name: drop a trailing `.md` and any folder path (for example
+   `tickets/todo/csv_export.md` becomes `csv_export`). Use that name wherever `$ARGUMENTS` appears below. If it is
+   empty, list the tickets in `tickets/todo/` and ask which one to start; do nothing else.
 2. Find `$ARGUMENTS.md` in the status folders:
    - Not found: stop and list the tickets in `tickets/todo/` with names close to `$ARGUMENTS`.
    - In `in-progress/`: stop. Report the ticket's `Assignee` and whether a `feat/` or `fix/` branch for it exists;
