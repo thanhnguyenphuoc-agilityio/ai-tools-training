@@ -32,7 +32,11 @@ or tag without the human's explicit confirmation in this conversation.
 3. Write release notes for the group's users (not developers) into the merge request description, grouped as
    "New", "Fixed" and "Known questions" (open questions from `docs/business-rules.md` touched by this release).
    Plain language, no file names, one line per ticket.
-4. Commit: `chore(release): release <yyyy-mm-dd>` (Conventional Commits, no `Co-Authored-By` trailer).
+4. Append the release to the day's entry in `TRAINING-LOG.md` (shipped: release branch, tickets, notes). Append
+   only; past days are never rewritten. This happens here because nothing is committed to `develop` or `main`
+   directly after the merges.
+5. Commit on the release branch: `chore(release): release <yyyy-mm-dd>` (Conventional Commits, no
+   `Co-Authored-By` trailer).
 
 ## 3. Merges (human confirmation required for each)
 
@@ -43,8 +47,9 @@ or tag without the human's explicit confirmation in this conversation.
 
 ## 4. After the release
 
-- Delete the release branch once both merge requests are merged.
-- Append the release to the day's entry in `TRAINING-LOG.md` (shipped: release branch, tickets, notes).
+- Ask the human whether to delete `release/<yyyy-mm-dd>`, or leave it to the "Delete source branch" option of the
+  GitLab merge request. Never delete a branch without asking.
+- If the log entry needs a later correction, make it on the day's `docs/day-NN-log` branch, never on `develop`.
 
 ## Output
 
