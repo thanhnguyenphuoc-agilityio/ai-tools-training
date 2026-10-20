@@ -35,8 +35,8 @@ or tag without the human's explicit confirmation in this conversation.
 4. Append the release to the day's entry in `TRAINING-LOG.md` (shipped: release branch, tickets, notes). Append
    only; past days are never rewritten. This happens here because nothing is committed to `develop` or `main`
    directly after the merges.
-5. Commit on the release branch: `chore(release): release <yyyy-mm-dd>` (Conventional Commits, no
-   `Co-Authored-By` trailer).
+5. Show the staged changes and, once the human confirms, commit on the release branch:
+   `chore(release): release <yyyy-mm-dd>` (Conventional Commits, no `Co-Authored-By` trailer).
 
 ## 3. Merges (human confirmation required for each)
 
