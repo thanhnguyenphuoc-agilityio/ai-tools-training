@@ -52,10 +52,11 @@ From Opus (product owner):
     appears twice, or when the parts do not add up exactly to the amount. No rounding is applied.
   - `exactSplitDifference(amount, parts)` returns `amount - sum(parts)`; the form uses it for the
     remaining or excess line, the API for the sum check.
-  - `parseShareAmount(input, rules, currency)` parses one participant's amount. `parseAmount` rejects `0`
-    (the main amount must be positive), so it cannot be reused unchanged. Decision: an empty field or a typed zero
-    (`0`, `0.00`, `0,00`) means the participant owes zero; anything else goes through `parseAmount` with the
-    locale rules, so `150k`, `150.000` and `12.50` work as in the main field.
+  - `parseShareAmount(input, rules, currency)` parses one participant's share. `parseAmount` rejects `0`
+    (the main amount must be positive), so it cannot be reused unchanged. Decision: an empty field means the
+    participant owes zero; anything else uses the `parseAmount` rules (suffixes, separators, currency marks) with
+    zero allowed, so `150k`, `150.000` and `12.50` work as in the main field, and `0`, `0k`, `0 VND` or `0` with
+    the dong sign are zero. Revised in review round 1; the first version accepted only bare zeros.
   - `SplitMode = 'equal' | 'weight' | 'exact'` in `shared/types.ts`, used by `ExpenseDto` and `NewExpense`.
     `NewExpense.participants` carries an optional `amount` (exact mode) and an optional `weight` (weight mode).
 - **API (`worker/routes/expenses.ts`, `worker/http.ts`):**
@@ -66,27 +67,34 @@ From Opus (product owner):
   - The group rounding setting is not applied to exact expenses.
   - New codes in `shared/errors.ts`, translated in `en.ts` and `vi.ts`.
 - **UI:**
-  - `ExpenseForm`: a third split option "Exact amounts". Each selected participant gets an amount field (an empty
-    field is zero). A line under the list shows the amount left to assign, the excess, or that the parts match.
-    Saving is blocked with a message while a part is invalid or the parts do not add up.
-  - `ExpenseList`: exact expenses show an "exact amounts" label next to the people count, like "by weight".
+  - `ExpenseForm`: a third split option "Exact shares" (the ticket's business term is "exact amounts"). Each
+    selected participant gets a share field (an empty field is zero). A live line under the list shows the amount
+    left to assign, the excess, an invalid share, or that the shares match. Saving is blocked with a message while
+    a share is invalid or the shares do not add up.
+  - `ExpenseList`: exact expenses show an "exact shares" label next to the people count, like "by weight".
   - Settle-up needs no change: balances are computed from the stored shares.
   - `src/api.ts` needs no change beyond the shared `NewExpense` type.
-- **Tests:** unit tests for `splitExact`, `exactSplitDifference` and `parseShareAmount`; API tests for an accepted
-  exact expense (with a zero part and a rounding group) and for rejected requests (sum mismatch, negative,
-  non-integer, missing amount, unknown and duplicate members); an e2e spec for the form (run by the lead).
+- **Tests:** unit tests for `splitExact`, `exactSplitDifference` and `parseShareAmount`; API tests for accepted
+  exact expenses (a zero part in a rounding group; a payer who does not take part) and for rejected requests (sum
+  mismatch, negative, non-integer, missing amount, unknown and duplicate members); an e2e spec for the form (run
+  by the lead).
 - **Docs:** `docs/business-rules.md` (exact split rules), `docs/design.md` (built), README "Not in the MVP".
 
 ## Merge request
 
 `feat/exact_amount_split` into `develop`: a third split mode, "exact shares" (`split_mode = 'exact'`, no
-migration). The total is typed first, then each participant's share; an empty field or a typed zero means the
-participant owes zero and stays listed. Shares are stored exactly as typed, without the group rounding. The form
-shows the amount left to assign or the excess and blocks saving with a message until the shares add up; the API
-rejects mismatches with `SPLIT_SUM_MISMATCH` and invalid shares with `INVALID_SHARE_AMOUNT`. `splitExact`,
-`exactSplitDifference` and `parseShareAmount` in `shared/money.ts` have unit tests;
-`tests/api/exact-split.test.ts` covers accepted and rejected requests; `e2e/exact-split.spec.ts` covers the form.
-The radio and field labels avoid the word used by the main amount label, so existing `getByLabel` lookups stay
-unambiguous.
+migration). The total is typed first, then each participant's share; an empty field or a zero in any form the
+amount field accepts (`0`, `0k`, `0 VND`) means the participant owes zero and stays listed. Shares are stored
+exactly as typed, without the group rounding. The form shows the amount left to assign, the excess or an invalid
+share in a live status line and blocks saving with a message until the shares add up; the API rejects mismatches
+with `SPLIT_SUM_MISMATCH` and invalid shares with `INVALID_SHARE_AMOUNT`. `splitExact`, `exactSplitDifference`
+and `parseShareAmount` in `shared/money.ts` have unit tests; `tests/api/exact-split.test.ts` covers accepted
+requests (a zero share, a payer who does not take part) and rejected ones, comparing shares by member because the
+API does not order them; `e2e/exact-split.spec.ts` covers the form. The radio and field labels avoid the word used
+by the main amount label, so existing `getByLabel` lookups stay unambiguous.
+
+Review round 1 (changes requested) is addressed: order-independent share assertions, zero shares with currency
+marks and suffixes, a payer who does not take part, the "exact shares" term in the docs and this plan, and the
+status line for an invalid share with a live region that stays mounted in exact mode.
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
