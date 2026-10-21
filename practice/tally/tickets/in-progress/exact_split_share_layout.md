@@ -1,0 +1,39 @@
+# Exact share fields hide the member names
+
+| Field | Value |
+|---|---|
+| Labels | `type::bug`, `priority::high`, `area::ui` |
+| Reporter | Team lead (screenshots for the `exact_amount_split` merge request) |
+| Assignee | AI team lead |
+| Depends on | - |
+| Related | `exact_amount_split` |
+
+## Description
+
+With "Exact shares" selected in the expense form, each share field covers the name of the person it belongs to. On
+a desktop only the first letters of each name are visible; on a phone the names and the checkboxes are hidden
+completely, so it is not clear whose share is being typed.
+
+## Reproduce
+
+1. Open a group with several members and choose "Exact shares" in the expense form.
+2. Desktop (1280 px wide): the names read "Al", "Sa", "Ja"...; phone (375 px): no names, and the share fields lie
+   over the checkboxes.
+3. In the browser, the grid of a participant row computes to `0px 164.667px 104px` on a phone: the name column has
+   no width, and the share field is as wide as its column.
+
+## Analysis
+
+`.expense-form__share-input` sets a width of 6.5rem (8rem from `sm` up), but `.field__control` sets `width: 100%`.
+Both selectors have the same specificity, and the stylesheet of the `field` block is loaded after the one of
+`ExpenseForm`, so `width: 100%` wins. The weight field is not affected because its `field__control--narrow`
+modifier is defined in the same file as `field__control`, after it.
+
+The e2e test of `exact_amount_split` finds the fields by their accessible labels, which stay correct, so it passed.
+
+## Plan
+
+- Branch `fix/exact_split_share_layout`.
+- An e2e assertion that the text of every name ends before its share field begins (desktop and mobile projects);
+  it fails on `develop`.
+- Scope the share field width to the participant row so that it no longer depends on the order of the stylesheets.
