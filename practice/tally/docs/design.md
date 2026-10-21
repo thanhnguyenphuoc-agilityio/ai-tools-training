@@ -293,7 +293,7 @@ Built. Rules in `docs/business-rules.md` (Expenses, split modes).
 4. UI: `src/api.ts`, then components (text in `src/i18n/locales`, BEM styles). E2e tests for main flows.
 5. Update `docs/business-rules.md` (move rules from "Planned" into the main sections) and this file.
 6. Merge request into `develop`: what changed, why, how it was tested, screenshots for UI changes. Typecheck,
-   unit/API tests and e2e must pass locally.
+   unit/API tests and e2e must pass locally and in the GitHub Actions run (`.github/workflows/ci.yml`).
    The AI team lead runs e2e, reviews and merges; the human then tests on `develop` before the release to `main`
    (workflow in `tickets/README.md`).
 

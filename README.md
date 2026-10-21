@@ -39,6 +39,7 @@ describes how each role is simulated.
 | `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
 | `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
+| `.github/workflows/ci.yml` | GitHub Actions: typecheck, unit/API tests and e2e on pull requests and on `develop`/`main` |
 
 The Playwright MCP server in `.mcp.json` is a project-scope entry named `playwright`. Claude Code asks for approval
 when it first loads a project MCP server, at the start of a session, and a local-scope entry with the same name
@@ -99,4 +100,6 @@ before Day 2.
   ticket file name without `.md`.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`).
 - A merge request is self-contained: what changed, why, how it was tested, screenshots for UI changes and a
-  ticket link. Typecheck, unit/API tests and e2e must pass locally.
+  ticket link. Typecheck, unit/API tests and e2e must pass locally and in the GitHub Actions run.
+- The repository is mirrored to GitHub (`git@github.com:thanhnguyenphuoc-agilityio/ai-tools-training.git`) for CI;
+  GitLab stays the primary remote for merge requests.
