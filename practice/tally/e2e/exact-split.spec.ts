@@ -12,7 +12,7 @@ test('split an expense by exact amounts', async ({ page }) => {
   await page.getByRole('button', { name: t('ownerKey.done') }).click();
 
   await page.getByRole('tab', { name: t('group.tabs.members') }).click();
-  for (const name of ['Sam', 'Jamie']) {
+  for (const name of ['Sam', 'Jamie', 'Christopher']) {
     await page.getByLabel(t('members.addLabel')).fill(name);
     await page.getByRole('button', { name: t('members.add'), exact: true }).click();
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
@@ -36,7 +36,7 @@ test('split an expense by exact amounts', async ({ page }) => {
       return Math.round(name.getBoundingClientRect().right - field.getBoundingClientRect().left);
     }),
   );
-  expect(overlaps).toHaveLength(3);
+  expect(overlaps).toHaveLength(4);
   expect(overlaps.every((px) => px <= 0), `overlap in px per row: ${overlaps.join(', ')}`).toBe(true);
 
   // The parts do not add up yet: nothing is saved.
