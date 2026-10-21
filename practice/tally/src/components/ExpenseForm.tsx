@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { splitAmount } from '../../shared/money';
-import type { GroupDto } from '../../shared/types';
+import { exactSplitDifference, splitAmount } from '../../shared/money';
+import type { GroupDto, SplitMode } from '../../shared/types';
 import { api } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
@@ -9,24 +9,34 @@ import './ExpenseForm.scss';
 
 export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
   const { t, errorMessage } = useI18n();
-  const { currency, money, parseMoney } = useGroupMoney(group);
+  const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
   const [payerId, setPayerId] = useState(group.me.memberId ?? group.members[0].id);
   const [amountText, setAmountText] = useState('');
   const [description, setDescription] = useState('');
   const [spentOn, setSpentOn] = useState(todayLocal);
-  const [mode, setMode] = useState<'equal' | 'weight'>('equal');
+  const [mode, setMode] = useState<SplitMode>('equal');
   const [selected, setSelected] = useState<Set<string>>(() => new Set(group.members.map((m) => m.id)));
   const [weights, setWeights] = useState<Record<string, string>>({});
+  // Exact mode: the text typed per member. An empty field means the member owes nothing.
+  const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const amount = parseMoney(amountText);
-  const participants = group.members
-    .filter((m) => selected.has(m.id))
-    .map((m) => ({ memberId: m.id, weight: mode === 'equal' ? 1 : Number((weights[m.id] ?? '1').replace(',', '.')) }));
+  const chosen = group.members.filter((m) => selected.has(m.id));
+  const participants = chosen.map((m) => ({
+    memberId: m.id,
+    weight: mode === 'weight' ? Number((weights[m.id] ?? '1').replace(',', '.')) : 1,
+  }));
+
+  // Exact mode: each typed amount, parsed like the main amount field (null when invalid).
+  const typedShares = new Map(chosen.map((m) => [m.id, parseShareMoney(shareTexts[m.id] ?? '')]));
+  const invalidShare = chosen.find((m) => typedShares.get(m.id) === null);
+  const exactParts = chosen.map((m) => ({ memberId: m.id, amount: typedShares.get(m.id) ?? 0 }));
+  const difference = amount ? exactSplitDifference(amount, exactParts) : null;
 
   const participantsKey = JSON.stringify(participants);
-  const preview = useMemo(() => {
+  const computed = useMemo(() => {
     if (!amount || participants.length === 0) return null;
     try {
       return splitAmount(amount, participants, { roundTo: group.roundTo, payerId });
@@ -35,6 +45,8 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
     }
     // participantsKey stands in for participants, which is rebuilt every render.
   }, [amount, participantsKey, group.roundTo, payerId]);
+  // In exact mode the preview shows each typed amount as parsed (no rounding), e.g. what "150k" became.
+  const preview = mode === 'exact' ? typedShares : computed;
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -49,12 +61,24 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
       const examples = t(currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples');
       return setError(t('expenseForm.invalidAmount', { examples }));
     }
+    if (mode === 'exact') {
+      if (invalidShare) return setError(t('expenseForm.invalidShare', { name: invalidShare.name }));
+      if (difference !== 0) return setError(t('expenseForm.exactMismatch'));
+    }
     setBusy(true);
     setError(null);
     try {
-      await api.addExpense(group.code, { payerId, amount, description, spentOn, splitMode: mode, participants });
+      await api.addExpense(group.code, {
+        payerId,
+        amount,
+        description,
+        spentOn,
+        splitMode: mode,
+        participants: mode === 'exact' ? exactParts : participants,
+      });
       setAmountText('');
       setDescription('');
+      setShareTexts({});
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -62,6 +86,15 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
       setBusy(false);
     }
   }
+
+  /** Exact mode: how far the typed amounts are from the total. */
+  function exactStatus(): { text: string; modifier: string } {
+    if (difference === null) return { text: t('expenseForm.exactTotalFirst'), modifier: 'text--muted' };
+    if (difference > 0) return { text: t('expenseForm.exactLeft', { amount: money(difference) }), modifier: 'text--negative' };
+    if (difference < 0) return { text: t('expenseForm.exactOver', { amount: money(-difference) }), modifier: 'text--negative' };
+    return { text: t('expenseForm.exactMatches'), modifier: 'text--positive' };
+  }
+  const status = mode === 'exact' && chosen.length > 0 ? exactStatus() : null;
 
   return (
     <section className="card expense-form">
@@ -118,6 +151,9 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
             <label className="field field--inline">
               <input type="radio" checked={mode === 'weight'} onChange={() => setMode('weight')} /> {t('expenseForm.byWeight')}
             </label>
+            <label className="field field--inline">
+              <input type="radio" checked={mode === 'exact'} onChange={() => setMode('exact')} /> {t('expenseForm.exact')}
+            </label>
           </div>
           <ul className="list">
             {group.members.map((m) => (
@@ -135,16 +171,38 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
                     inputMode="decimal"
                   />
                 )}
+                {mode === 'exact' && selected.has(m.id) && (
+                  <input
+                    className={[
+                      'field__control',
+                      'expense-form__share-input',
+                      typedShares.get(m.id) === null ? 'expense-form__share-input--invalid' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-label={t('expenseForm.shareOf', { name: m.name })}
+                    aria-invalid={typedShares.get(m.id) === null}
+                    value={shareTexts[m.id] ?? ''}
+                    onChange={(e) => setShareTexts({ ...shareTexts, [m.id]: e.target.value })}
+                    placeholder={t('expenseForm.sharePlaceholder')}
+                    inputMode="decimal"
+                  />
+                )}
                 <span className="text text--muted text--small expense-form__share">
-                  {preview?.has(m.id) ? money(preview.get(m.id)!) : ''}
+                  {preview?.get(m.id) != null ? money(preview.get(m.id)!) : ''}
                 </span>
               </li>
             ))}
           </ul>
+          {status && (
+            <p className={`text text--small expense-form__remaining ${status.modifier}`} aria-live="polite">
+              {status.text}
+            </p>
+          )}
         </fieldset>
 
         {error && <p className="text text--error">{error}</p>}
-        <button className="button button--block-mobile" disabled={busy || participants.length === 0}>
+        <button className="button button--block-mobile" disabled={busy || chosen.length === 0}>
           {t('expenseForm.submit')}
         </button>
       </form>

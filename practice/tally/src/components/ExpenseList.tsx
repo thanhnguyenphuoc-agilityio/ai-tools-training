@@ -42,6 +42,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
             }),
             tp('expenseList.people', e.shares.length),
             ...(e.splitMode === 'weight' ? [t('expenseList.byWeight')] : []),
+            ...(e.splitMode === 'exact' ? [t('expenseList.exact')] : []),
           ].join(t('common.separator'));
           return (
             <li key={e.id} className="list__item expense-list__item">

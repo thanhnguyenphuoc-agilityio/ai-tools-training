@@ -12,4 +12,22 @@
     min-width: 6.5rem;
     text-align: right;
   }
+
+  // Exact mode: room for amounts such as "1.250.000" on phones, a little more from sm up.
+  &__share-input {
+    width: 6.5rem;
+
+    @include up(sm) {
+      width: 8rem;
+    }
+
+    &--invalid {
+      border-color: var(--color-negative);
+    }
+  }
+
+  &__remaining {
+    margin: 0;
+    text-align: right;
+  }
 }
