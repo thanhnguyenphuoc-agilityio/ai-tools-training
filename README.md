@@ -38,6 +38,7 @@ describes how each role is simulated.
 | `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
 | `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
+| `.mcp.json` | Playwright MCP server for driving the running app from a session; on native Windows, add it at local scope with `claude mcp add playwright -s local -- cmd /c npx -y @playwright/mcp@0.0.83` if `npx` does not start |
 
 ## Language
 
