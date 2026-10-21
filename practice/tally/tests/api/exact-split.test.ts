@@ -61,6 +61,20 @@ describe('exact-amount split', () => {
     expect(balancesOf(group)).toEqual({ [ids.alex]: 130_000, [ids.sam]: -130_000, [ids.jamie]: 0 });
   });
 
+  it('accepts a payer who does not take part', async () => {
+    const res = await addExpense(
+      exact([
+        { memberId: ids.sam, amount: 100_500 },
+        { memberId: ids.jamie, amount: 150_000 },
+      ]),
+    );
+    expect(res.status).toBe(201);
+
+    const group = await getGroup();
+    expect(sharesOf(group.expenses[0])).toEqual({ [ids.sam]: 100_500, [ids.jamie]: 150_000 });
+    expect(balancesOf(group)).toEqual({ [ids.alex]: 250_500, [ids.sam]: -100_500, [ids.jamie]: -150_000 });
+  });
+
   it.each([
     ['less than the amount', 130_000 - 1],
     ['more than the amount', 130_000 + 1],
