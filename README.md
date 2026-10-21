@@ -54,6 +54,19 @@ overrides the project entry. Local-scope entries cover two machine-specific case
 By default the server blocks navigation to local `file://` URLs and limits file access to the workspace root. The
 `--allow-unrestricted-file-access` flag lifts both limits and is not set in `.mcp.json`.
 
+The GitHub connector lets a session read pull requests, issues and workflow runs on the GitHub mirror. It is not
+in `.mcp.json`, because it needs a personal access token and each person uses their own. Create a fine-grained
+token limited to this repository (read access to contents, pull requests, issues and actions; write access to pull
+requests only to comment), then add the remote server at local scope:
+
+```bash
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ -s local \
+  --header "Authorization: Bearer <token>"
+```
+
+The token stays in the local Claude Code configuration and is never committed. `/mcp` shows whether the server is
+connected.
+
 ## Language
 
 The repository is written in English: code, tests, documentation, tickets and the training log. The only
