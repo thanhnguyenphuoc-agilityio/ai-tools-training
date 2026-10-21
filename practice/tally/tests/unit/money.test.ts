@@ -239,19 +239,36 @@ describe('exactSplitDifference', () => {
 });
 
 describe('parseShareAmount', () => {
-  it.each(['', '   ', '0', '00', '0.00', '0,00'])('treats %j as zero', (input) => {
+  const zeroForms = ['', '   ', '0', '00', '0k', '0tr', '0vnd', ' 0 VND ', `0${DONG}`, `0 ${DONG_SIGN}`];
+  it.each(zeroForms)('vi treats %j as zero for VND', (input) => {
     expect(parseShareAmount(input, vi, VND)).toBe(0);
-    expect(parseShareAmount(input, en, USD)).toBe(0);
   });
 
-  it('parses other input like the main amount field', () => {
-    expect(parseShareAmount('150k', vi, VND)).toBe(150_000);
-    expect(parseShareAmount('150.000', vi, VND)).toBe(150_000);
+  it.each([
+    ['0', en],
+    ['0.00', en],
+    ['0k', en],
+    ['usd 0', en],
+    ['0,00', vi],
+  ])('treats %j as zero for USD', (input, rules) => {
+    expect(parseShareAmount(input, rules, USD)).toBe(0);
+  });
+
+  it('accepts the same marks and shorthand as the amount field', () => {
+    for (const input of ['150k', '150.000', `150.000${DONG}`, '150.000 vnd', `150k${DONG_SIGN}`]) {
+      expect(parseShareAmount(input, vi, VND)).toBe(parseAmount(input, vi, VND));
+      expect(parseShareAmount(input, vi, VND)).toBe(150_000);
+    }
     expect(parseShareAmount('12.50', en, USD)).toBe(1_250);
     expect(parseShareAmount('12,50', vi, USD)).toBe(1_250);
   });
 
-  it.each(['abc', '-5000', '1.5', '0k'])('rejects %s', (input) => {
+  it.each(['abc', '-5000', '-0', '1.5', '0.00', DONG, '0usd', '2000tr'])('vi rejects %j for VND', (input) => {
     expect(parseShareAmount(input, vi, VND)).toBeNull();
+  });
+
+  it('keeps zero invalid for the main amount field', () => {
+    expect(parseAmount('0k', vi, VND)).toBeNull();
+    expect(parseAmount(`0${DONG}`, vi, VND)).toBeNull();
   });
 });

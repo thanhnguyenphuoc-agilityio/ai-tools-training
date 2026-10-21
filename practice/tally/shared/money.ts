@@ -62,6 +62,12 @@ function toMinor(whole: string, frac: string, digits: number): number | null {
  *   in English or "1.250,50" in Vietnamese.
  */
 export function parseAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
+  const value = parseMinorUnits(input, rules, currency);
+  return value === null || value === 0 ? null : value;
+}
+
+/** The input rules of parseAmount, but zero ("0", "0k", "0 VND"...) is a valid result. */
+function parseMinorUnits(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
   let s = input.trim().toLowerCase().replace(/\s+/g, '');
   s = stripMarks(s, [...(rules.currencyMarks[currency.code] ?? []), currency.code.toLowerCase()]);
   if (s === '') return null;
@@ -90,7 +96,7 @@ export function parseAmount(input: string, rules: AmountInputRules, currency: Cu
     if (m) value = toMinor(m[1].replace(new RegExp(thou, 'g'), ''), m[2] ?? '', digits);
   }
 
-  if (value === null || !Number.isSafeInteger(value) || value <= 0 || value > MAX_AMOUNT) return null;
+  if (value === null || !Number.isSafeInteger(value) || value < 0 || value > MAX_AMOUNT) return null;
   return value;
 }
 
@@ -184,12 +190,12 @@ export function splitExact(amount: number, parts: ExactPart[]): Map<string, numb
 }
 
 /**
- * Parses one participant's amount in "exact amounts" mode. An empty field or a typed zero
- * ("0", "0.00", "0,00") means the participant owes nothing; anything else follows
- * parseAmount (same locale rules as the main amount field). Null if the input is invalid.
+ * Parses one participant's share in "exact shares" mode with the same rules as parseAmount
+ * (suffixes, separators, currency marks), except that zero is allowed: an empty field or a zero
+ * in any accepted form ("0", "0k", "0 VND", "0.00" for USD in English) means the participant
+ * owes nothing. Null if the input is invalid.
  */
 export function parseShareAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
-  const s = input.trim();
-  if (s === '' || /^0+(?:[.,]0+)?$/.test(s)) return 0;
-  return parseAmount(s, rules, currency);
+  if (input.trim() === '') return 0;
+  return parseMinorUnits(input, rules, currency);
 }
