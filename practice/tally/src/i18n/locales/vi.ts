@@ -161,6 +161,8 @@ export const vi: Messages = {
     INVALID_AMOUNT: 'Số tiền không hợp lệ. Số tiền phải lớn hơn 0 và không vượt quá mức tối đa.',
     INVALID_DATE: 'Ngày không hợp lệ.',
     INVALID_WEIGHT: 'Hệ số phải lớn hơn 0, không quá {max} và tối đa 2 chữ số thập phân.',
+    INVALID_SHARE_AMOUNT: 'Số tiền của mỗi người phải từ 0 trở lên và không vượt quá mức tối đa.',
+    SPLIT_SUM_MISMATCH: 'Tổng số tiền của từng người phải bằng đúng số tiền của khoản chi.',
     INVALID_CURRENCY: 'Tiền tệ này chưa được hỗ trợ.',
     INVALID_ROUNDING: 'Cách làm tròn này không áp dụng cho tiền tệ đã chọn.',
     CURRENCY_LOCKED: 'Không đổi được tiền tệ khi nhóm đã có khoản chi hoặc giao dịch.',

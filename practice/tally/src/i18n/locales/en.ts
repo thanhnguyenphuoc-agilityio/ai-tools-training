@@ -169,6 +169,8 @@ export const en = {
     INVALID_AMOUNT: 'The amount is not valid. It must be above zero and within the allowed maximum.',
     INVALID_DATE: 'The date is not valid.',
     INVALID_WEIGHT: 'Each weight must be above 0, at most {max}, with at most 2 decimals.',
+    INVALID_SHARE_AMOUNT: "Each person's amount must be zero or more and within the allowed maximum.",
+    SPLIT_SUM_MISMATCH: 'The amounts per person must add up exactly to the expense amount.',
     INVALID_CURRENCY: 'This currency is not supported.',
     INVALID_ROUNDING: 'This rounding option is not available for the currency.',
     CURRENCY_LOCKED: 'The currency cannot change once the group has expenses or transfers.',
