@@ -35,6 +35,12 @@ const exact = (parts: Record<string, unknown>[], total = 250_500) => ({
   participants: parts,
 });
 
+// The API does not promise an order for shares, so they are compared by member.
+const sharesOf = (expense: GroupDto['expenses'][number]) =>
+  Object.fromEntries(expense.shares.map((s) => [s.memberId, s.amount]));
+const balancesOf = (group: GroupDto) =>
+  Object.fromEntries(computeBalances(group.members.map((m) => m.id), group.expenses, group.transfers));
+
 describe('exact-amount split', () => {
   it('stores the typed amounts as they are, a zero part included, without the group rounding', async () => {
     expect((await owner.call('PATCH', `/groups/${code}`, { roundTo: 1000 })).status).toBe(200);
@@ -50,13 +56,9 @@ describe('exact-amount split', () => {
     const group = await getGroup();
     const [expense] = group.expenses;
     expect(expense.splitMode).toBe('exact');
-    expect(expense.shares.map((s) => [s.memberId, s.amount])).toEqual([
-      [ids.alex, 120_500],
-      [ids.sam, 130_000],
-      [ids.jamie, 0],
-    ]);
-    const balances = Object.fromEntries(computeBalances(group.members.map((m) => m.id), group.expenses, group.transfers));
-    expect(balances).toEqual({ [ids.alex]: 130_000, [ids.sam]: -130_000, [ids.jamie]: 0 });
+    expect(sharesOf(expense)).toEqual({ [ids.alex]: 120_500, [ids.sam]: 130_000, [ids.jamie]: 0 });
+    expect(expense.shares).toHaveLength(3);
+    expect(balancesOf(group)).toEqual({ [ids.alex]: 130_000, [ids.sam]: -130_000, [ids.jamie]: 0 });
   });
 
   it.each([
@@ -123,6 +125,6 @@ describe('exact-amount split', () => {
       splitMode: 'equal',
     });
     expect(res.status).toBe(201);
-    expect((await getGroup()).expenses[0].shares.map((s) => s.amount)).toEqual([150_000, 150_000]);
+    expect(sharesOf((await getGroup()).expenses[0])).toEqual({ [ids.alex]: 150_000, [ids.sam]: 150_000 });
   });
 });
