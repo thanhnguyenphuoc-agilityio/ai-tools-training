@@ -87,14 +87,21 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
     }
   }
 
-  /** Exact mode: how far the typed amounts are from the total. */
+  /**
+   * Exact mode: how far the typed shares are from the total. An invalid share is reported first,
+   * because `difference` counts it as zero.
+   */
   function exactStatus(): { text: string; modifier: string } {
+    if (chosen.length === 0) return { text: '', modifier: '' };
     if (difference === null) return { text: t('expenseForm.exactTotalFirst'), modifier: 'text--muted' };
+    if (invalidShare) {
+      return { text: t('expenseForm.invalidShare', { name: invalidShare.name }), modifier: 'text--negative' };
+    }
     if (difference > 0) return { text: t('expenseForm.exactLeft', { amount: money(difference) }), modifier: 'text--negative' };
     if (difference < 0) return { text: t('expenseForm.exactOver', { amount: money(-difference) }), modifier: 'text--negative' };
     return { text: t('expenseForm.exactMatches'), modifier: 'text--positive' };
   }
-  const status = mode === 'exact' && chosen.length > 0 ? exactStatus() : null;
+  const status = exactStatus();
 
   return (
     <section className="card expense-form">
@@ -194,8 +201,12 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
               </li>
             ))}
           </ul>
-          {status && (
-            <p className={`text text--small expense-form__remaining ${status.modifier}`} aria-live="polite">
+          {/* Mounted for the whole time exact mode is on; only its text changes, so screen readers announce it. */}
+          {mode === 'exact' && (
+            <p
+              className={['text text--small expense-form__remaining', status.modifier].filter(Boolean).join(' ')}
+              aria-live="polite"
+            >
               {status.text}
             </p>
           )}
