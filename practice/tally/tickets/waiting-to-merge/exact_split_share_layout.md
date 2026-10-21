@@ -37,3 +37,14 @@ The e2e test of `exact_amount_split` finds the fields by their accessible labels
 - An e2e assertion that the text of every name ends before its share field begins (desktop and mobile projects);
   it fails on `develop`.
 - Scope the share field width to the participant row so that it no longer depends on the order of the stylesheets.
+
+## Merge request
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+- Source branch: `fix/exact_split_share_layout`. Target branch: `develop`.
+- Changes: the share field width in `src/components/ExpenseForm.scss` is scoped to the participant row, so it no
+  longer loses to `field__control` (`width: 100%`); `e2e/exact-split.spec.ts` checks that every name ends before
+  its share field.
+- The new assertion fails on `develop` (overlap of 19-28 px on desktop and 50-60 px on a phone) and passes with the
+  fix. Typecheck and all 22 e2e tests pass.
