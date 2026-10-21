@@ -28,7 +28,7 @@ test('split an expense by exact amounts', async ({ page }) => {
   await expect(page.getByText(t('expenseForm.exactLeft', { amount: vnd(30_000) }))).toBeVisible();
 
   // Each name stays readable: its text ends before its share field starts (desktop and phone).
-  const overlaps = await page.locator('.expense-form__participant').evaluateAll((rows) =>
+  const overlaps = await page.locator('.expense-form__participant:has(.expense-form__share-input)').evaluateAll((rows) =>
     rows.map((row) => {
       const name = document.createRange();
       name.selectNodeContents(row.querySelector('label')!);
@@ -36,6 +36,7 @@ test('split an expense by exact amounts', async ({ page }) => {
       return Math.round(name.getBoundingClientRect().right - field.getBoundingClientRect().left);
     }),
   );
+  expect(overlaps).toHaveLength(3);
   expect(overlaps.every((px) => px <= 0), `overlap in px per row: ${overlaps.join(', ')}`).toBe(true);
 
   // The parts do not add up yet: nothing is saved.
