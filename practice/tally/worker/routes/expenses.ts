@@ -1,9 +1,9 @@
 // Adding and deleting expenses. Shares are computed once, at write time.
 import { Hono } from 'hono';
-import { splitAmount } from '../../shared/money';
-import type { NewExpense } from '../../shared/types';
+import { exactSplitDifference, splitAmount, splitExact } from '../../shared/money';
+import type { NewExpense, SplitMode } from '../../shared/types';
 import { audit, loadGroup, loadMembers } from '../groupData';
-import { amount, ApiError, isoDate, now, readJson, text, weight, type AppEnv } from '../http';
+import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv } from '../http';
 import { requireCanDeleteExpense, requireMember } from '../policy';
 
 export const expenseRoutes = new Hono<AppEnv>();
@@ -19,21 +19,32 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   const total = amount(body.amount);
   const description = text(body.description, 'description', 120);
   const spentOn = isoDate(body.spentOn);
-  const splitMode = body.splitMode === 'weight' ? 'weight' : 'equal';
+  const splitMode: SplitMode = body.splitMode === 'weight' || body.splitMode === 'exact' ? body.splitMode : 'equal';
 
   if (!Array.isArray(body.participants) || body.participants.length === 0) {
     throw new ApiError(400, 'NO_PARTICIPANTS', 'pick at least one participant');
   }
   const seen = new Set<string>();
-  const participants = body.participants.map((p: { memberId?: unknown; weight?: unknown }) => {
+  const participants = body.participants.map((p: { memberId?: unknown; weight?: unknown; amount?: unknown }) => {
     const memberId = text(p?.memberId, 'participant', 64);
     if (!memberIds.has(memberId)) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
     if (seen.has(memberId)) throw new ApiError(400, 'DUPLICATE_PARTICIPANT', 'duplicate participant');
     seen.add(memberId);
-    return { memberId, weight: splitMode === 'equal' ? 1 : weight(p?.weight) };
+    return {
+      memberId,
+      weight: splitMode === 'weight' ? weight(p?.weight) : 1,
+      amount: splitMode === 'exact' ? shareAmount(p?.amount) : 0,
+    };
   });
 
-  const shares = splitAmount(total, participants, { roundTo: group.round_to, payerId });
+  // Exact amounts are stored as typed: the group rounding setting does not apply to them.
+  if (splitMode === 'exact' && exactSplitDifference(total, participants) !== 0) {
+    throw new ApiError(400, 'SPLIT_SUM_MISMATCH', 'participant amounts must add up exactly to the amount');
+  }
+  const shares =
+    splitMode === 'exact'
+      ? splitExact(total, participants)
+      : splitAmount(total, participants, { roundTo: group.round_to, payerId });
   const id = crypto.randomUUID();
   await c.env.DB.batch([
     c.env.DB.prepare(

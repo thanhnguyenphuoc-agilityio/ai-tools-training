@@ -217,9 +217,26 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### exact_amount_split
 
-- **Logic:** `split_mode = 'exact'` (no migration needed, since there is no `CHECK`).
-  `splitExact(amount, parts)` in `shared/money.ts`. The parts must add up to `amount`, otherwise 400.
-- **UI:** one amount field per participant, with a line showing the remaining or excess amount.
+Built. Rules in `docs/business-rules.md` (Expenses, split modes).
+
+- **Data:** `split_mode = 'exact'`; no migration, since `0001_init.sql` has no `CHECK` on `split_mode`. Each share
+  row stores the typed amount (zero allowed) and `weight = 1`, as in equal mode. `SplitMode` in `shared/types.ts`
+  is used by `ExpenseDto` and `NewExpense`; a `NewExpense` participant carries `amount` in exact mode.
+- **Logic (`shared/money.ts`):**
+  - `splitExact(amount, parts)` returns the parts unchanged (no rounding) and throws unless they are integers from
+    0 to `MAX_AMOUNT`, unique per member and add up exactly to `amount`.
+  - `exactSplitDifference(amount, parts)` is `amount - sum(parts)`, used by the form and the API.
+  - `parseShareAmount(input, rules, currency)`: an empty field is 0; anything else uses the `parseAmount` rules
+    (both share the private `parseMinorUnits`), with zero allowed, so `0k` or `0 VND` is 0. `parseAmount` itself
+    still rejects zero, as the total must be positive. Exposed as `parseShareMoney` by `useI18n()` and
+    `useGroupMoney()`.
+- **API (`worker/routes/expenses.ts`):** `shareAmount()` in `worker/http.ts` validates each amount
+  (`INVALID_SHARE_AMOUNT`); a sum that differs from the total is `SPLIT_SUM_MISMATCH`. Tests in
+  `tests/api/exact-split.test.ts`.
+- **UI:** `ExpenseForm` has a third split option, "Exact shares", with one share field per selected participant
+  and a live status line: the amount left to assign, the excess, an invalid share, or that the shares match.
+  Saving is blocked until they match. `ExpenseList` labels exact expenses. Settle-up needs no change, since balances come from the stored shares.
+  E2e test in `e2e/exact-split.spec.ts`.
 
 ### csv_export
 
@@ -248,8 +265,8 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 - Both depend on open questions in `docs/business-rules.md` (who may edit and whether history is kept; what happens
   to a leaving member's balance). The BA exercise settles the rules first; the design is written into this section
   in the same branch as the feature.
-- Constraints already known: shares are recomputed only through `splitAmount`; edits and removals are written to
-  `audit_log`; permission rules go into `policy.ts`.
+- Constraints already known: shares are recomputed only through `splitAmount` (`splitExact` for exact splits);
+  edits and removals are written to `audit_log`; permission rules go into `policy.ts`.
 
 ### ui_redesign
 

@@ -27,13 +27,17 @@ export interface MemberDto extends BankDetails {
   claimed: boolean;
 }
 
+/** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */
+export type SplitMode = 'equal' | 'weight' | 'exact';
+
 export interface ExpenseDto {
   id: string;
   payerId: string;
   amount: number;
   description: string;
   spentOn: string; // YYYY-MM-DD as picked by the user, no timezone
-  splitMode: 'equal' | 'weight';
+  splitMode: SplitMode;
+  /** `weight` is 1 in equal and exact splits. */
   shares: { memberId: string; weight: number; amount: number }[];
   createdBy: string | null; // member id of the author
   createdAt: string; // ISO timestamp (UTC)
@@ -82,6 +86,7 @@ export interface NewExpense {
   amount: number;
   description: string;
   spentOn: string;
-  splitMode: 'equal' | 'weight';
-  participants: { memberId: string; weight: number }[];
+  splitMode: SplitMode;
+  /** `weight` is read in weight mode; `amount` (minor units, zero allowed) in exact mode. */
+  participants: { memberId: string; weight?: number; amount?: number }[];
 }

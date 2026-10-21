@@ -2,7 +2,7 @@
 // through useI18n(). Adding a language = one locale file + one LOCALES entry.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { CURRENCIES, type CurrencyInfo } from '../../shared/currency';
-import { formatMoney, parseAmount } from '../../shared/money';
+import { formatMoney, parseAmount, parseShareAmount } from '../../shared/money';
 import { ApiError } from '../api';
 import { enLocale } from './locales/en';
 import { viLocale } from './locales/vi';
@@ -96,6 +96,8 @@ export function createTranslator(locale: Locale) {
     money: (amount: number, currency: CurrencyInfo) => formatMoney(amount, currency, bundle.intl),
     /** Typed text -> minor units of `currency`, or null. */
     parseMoney: (input: string, currency: CurrencyInfo) => parseAmount(input, bundle.amountInput, currency),
+    /** One participant's amount in an exact split: like parseMoney, but empty or a typed zero is 0. */
+    parseShareMoney: (input: string, currency: CurrencyInfo) => parseShareAmount(input, bundle.amountInput, currency),
     /** e.g. "VND - Vietnamese Dong" in the UI language. */
     currencyName: (code: string) => `${code} - ${currencyNames.of(code) ?? code}`,
     /** "2026-10-10" (a calendar day, no timezone) in the locale's short form. */

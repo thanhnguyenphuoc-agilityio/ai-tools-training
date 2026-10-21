@@ -58,14 +58,28 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Split modes:
   - **Equal** among the selected participants.
   - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
-- Rounding (a group setting, applied to **new** expenses) has two levels, depending on the currency:
+  - **Exact shares** (the ticket calls it a split by exact amounts): the total is typed first (as printed on the
+    bill), then each participant's share.
+    - Each share follows the same input conventions as the amount field (suffixes, separators, currency marks),
+      except that zero is allowed. An empty field or a zero in any of those forms (`0`, `0k`, `0 VND`, `0` with the
+      dong sign; `0.00` for USD in English) means the participant owes zero; they stay listed in the expense with
+      a share of 0.
+    - The shares must add up **exactly** to the total. Until they do, the form shows the amount left to assign or
+      the excess, and saving is blocked with a message. The app does not assign the difference to anyone.
+    - The rounding setting does **not** apply: each share is stored exactly as typed.
+    - The API rejects parts that do not add up (`SPLIT_SUM_MISMATCH`) and amounts that are negative, not integers
+      or above the maximum (`INVALID_SHARE_AMOUNT`); unknown and duplicate participants are rejected as in the other
+      modes.
+- Rounding (a group setting, applied to **new** equal and weighted expenses) has two levels, depending on the
+  currency:
   - Exact: to the dong or to the cent.
   - Rounded: VND and KRW to 1,000; USD, EUR and similar to 1 major unit; JPY to 100.
 - Split rules (must always hold):
   1. The shares add up **exactly** to the amount.
-  2. Units are distributed with the **largest remainder** method. Ties go to the participant listed first.
-  3. The remainder that cannot be split at the rounding unit (for example 500 dong when rounding to 1,000) goes to
-     the **payer** if the payer is a participant, otherwise to the first participant.
+  2. Equal and weighted splits: units are distributed with the **largest remainder** method. Ties go to the
+     participant listed first.
+  3. Equal and weighted splits: the remainder that cannot be split at the rounding unit (for example 500 dong when
+     rounding to 1,000) goes to the **payer** if the payer is a participant, otherwise to the first participant.
   4. Shares are computed **once, when the expense is saved**, and are not recomputed when the rounding setting
      changes.
 - Deleting an expense: only its **author** or the **owner**. Deletion is soft (`deleted_at`) and stays in the audit log.

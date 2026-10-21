@@ -62,6 +62,12 @@ function toMinor(whole: string, frac: string, digits: number): number | null {
  *   in English or "1.250,50" in Vietnamese.
  */
 export function parseAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
+  const value = parseMinorUnits(input, rules, currency);
+  return value === null || value === 0 ? null : value;
+}
+
+/** The input rules of parseAmount, but zero ("0", "0k", "0 VND"...) is a valid result. */
+function parseMinorUnits(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
   let s = input.trim().toLowerCase().replace(/\s+/g, '');
   s = stripMarks(s, [...(rules.currencyMarks[currency.code] ?? []), currency.code.toLowerCase()]);
   if (s === '') return null;
@@ -90,7 +96,7 @@ export function parseAmount(input: string, rules: AmountInputRules, currency: Cu
     if (m) value = toMinor(m[1].replace(new RegExp(thou, 'g'), ''), m[2] ?? '', digits);
   }
 
-  if (value === null || !Number.isSafeInteger(value) || value <= 0 || value > MAX_AMOUNT) return null;
+  if (value === null || !Number.isSafeInteger(value) || value < 0 || value > MAX_AMOUNT) return null;
   return value;
 }
 
@@ -149,4 +155,47 @@ export function splitAmount(amount: number, parts: SplitPart[], opts: SplitOptio
     shares.set(target, shares.get(target)! + leftover);
   }
   return shares;
+}
+
+export interface ExactPart {
+  memberId: string;
+  /** What this participant owes, in minor units. Zero is allowed. */
+  amount: number;
+}
+
+const isValidPartAmount = (n: number) => Number.isSafeInteger(n) && n >= 0 && n <= MAX_AMOUNT;
+
+/** `amount` minus the sum of the parts: positive = still to assign, negative = over the total, 0 = they match. */
+export function exactSplitDifference(amount: number, parts: Pick<ExactPart, 'amount'>[]): number {
+  return parts.reduce((rest, p) => rest - p.amount, amount);
+}
+
+/**
+ * Shares typed per participant ("exact amounts" mode). The parts are stored exactly as given:
+ * the group rounding setting does not apply. Throws unless every part is an integer from 0 to
+ * MAX_AMOUNT, no member appears twice and the parts add up exactly to `amount`.
+ */
+export function splitExact(amount: number, parts: ExactPart[]): Map<string, number> {
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('amount must be a positive integer');
+  if (parts.length === 0) throw new Error('at least one participant is required');
+
+  const shares = new Map<string, number>();
+  for (const p of parts) {
+    if (!isValidPartAmount(p.amount)) throw new Error(`invalid amount for ${p.memberId}`);
+    if (shares.has(p.memberId)) throw new Error(`duplicate participant ${p.memberId}`);
+    shares.set(p.memberId, p.amount);
+  }
+  if (exactSplitDifference(amount, parts) !== 0) throw new Error('parts must add up to the amount');
+  return shares;
+}
+
+/**
+ * Parses one participant's share in "exact shares" mode with the same rules as parseAmount
+ * (suffixes, separators, currency marks), except that zero is allowed: an empty field or a zero
+ * in any accepted form ("0", "0k", "0 VND", "0.00" for USD in English) means the participant
+ * owes nothing. Null if the input is invalid.
+ */
+export function parseShareAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
+  if (input.trim() === '') return 0;
+  return parseMinorUnits(input, rules, currency);
 }

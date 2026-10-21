@@ -48,6 +48,16 @@ export function amount(value: unknown): number {
   return value;
 }
 
+/** One participant's typed amount in an exact split: an integer from 0 (owes nothing) to MAX_AMOUNT. */
+export function shareAmount(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > MAX_AMOUNT) {
+    throw new ApiError(400, 'INVALID_SHARE_AMOUNT', 'participant amount must be an integer from 0, in minor units', {
+      max: MAX_AMOUNT,
+    });
+  }
+  return value;
+}
+
 export function weight(value: unknown): number {
   const n = Number(value);
   if (!isValidWeight(n)) {

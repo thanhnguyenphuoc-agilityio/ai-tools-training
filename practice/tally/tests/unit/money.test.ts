@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '../../shared/currency';
-import { formatMoney, parseAmount, splitAmount } from '../../shared/money';
+import {
+  exactSplitDifference,
+  formatMoney,
+  MAX_AMOUNT,
+  parseAmount,
+  parseShareAmount,
+  splitAmount,
+  splitExact,
+} from '../../shared/money';
 import { enLocale } from '../../src/i18n/locales/en';
 import { viLocale } from '../../src/i18n/locales/vi';
 
@@ -177,5 +185,90 @@ describe('splitAmount', () => {
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.001 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.333 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, equal(['a']), { roundTo: 0, payerId: 'a' })).toThrow();
+  });
+});
+
+describe('splitExact', () => {
+  it('keeps every typed part exactly, including a zero part', () => {
+    const shares = splitExact(250_500, [
+      { memberId: 'a', amount: 120_500 },
+      { memberId: 'b', amount: 130_000 },
+      { memberId: 'c', amount: 0 },
+    ]);
+    expect([...shares]).toEqual([
+      ['a', 120_500],
+      ['b', 130_000],
+      ['c', 0],
+    ]);
+  });
+
+  it('accepts a single part equal to the amount', () => {
+    expect([...splitExact(1, [{ memberId: 'a', amount: 1 }])]).toEqual([['a', 1]]);
+  });
+
+  it.each([
+    ['less than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 599 }]],
+    ['more than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 601 }]],
+    ['all zero', [{ memberId: 'a', amount: 0 }]],
+  ])('rejects parts that add up to %s', (_, parts) => {
+    expect(() => splitExact(1000, parts)).toThrow('add up');
+  });
+
+  it('rejects negative, fractional and too large parts', () => {
+    expect(() => splitExact(1000, [{ memberId: 'a', amount: 1100 }, { memberId: 'b', amount: -100 }])).toThrow();
+    expect(() => splitExact(1000, [{ memberId: 'a', amount: 999.5 }, { memberId: 'b', amount: 0.5 }])).toThrow();
+    expect(() => splitExact(MAX_AMOUNT, [{ memberId: 'a', amount: MAX_AMOUNT + 1 }, { memberId: 'b', amount: -1 }])).toThrow();
+    expect(() => splitExact(1000, [{ memberId: 'a', amount: Number.NaN }])).toThrow();
+  });
+
+  it('rejects duplicate members, empty parts and a bad amount', () => {
+    expect(() => splitExact(1000, [{ memberId: 'a', amount: 500 }, { memberId: 'a', amount: 500 }])).toThrow('duplicate');
+    expect(() => splitExact(1000, [])).toThrow();
+    expect(() => splitExact(0, [{ memberId: 'a', amount: 0 }])).toThrow();
+    expect(() => splitExact(10.5, [{ memberId: 'a', amount: 10.5 }])).toThrow();
+  });
+});
+
+describe('exactSplitDifference', () => {
+  it('is positive while amounts are left to assign, negative over the total and zero when they match', () => {
+    expect(exactSplitDifference(1000, [{ amount: 300 }, { amount: 200 }])).toBe(500);
+    expect(exactSplitDifference(1000, [{ amount: 700 }, { amount: 400 }])).toBe(-100);
+    expect(exactSplitDifference(1000, [{ amount: 1000 }, { amount: 0 }])).toBe(0);
+    expect(exactSplitDifference(1000, [])).toBe(1000);
+  });
+});
+
+describe('parseShareAmount', () => {
+  const zeroForms = ['', '   ', '0', '00', '0k', '0tr', '0vnd', ' 0 VND ', `0${DONG}`, `0 ${DONG_SIGN}`];
+  it.each(zeroForms)('vi treats %j as zero for VND', (input) => {
+    expect(parseShareAmount(input, vi, VND)).toBe(0);
+  });
+
+  it.each([
+    ['0', en],
+    ['0.00', en],
+    ['0k', en],
+    ['usd 0', en],
+    ['0,00', vi],
+  ])('treats %j as zero for USD', (input, rules) => {
+    expect(parseShareAmount(input, rules, USD)).toBe(0);
+  });
+
+  it('accepts the same marks and shorthand as the amount field', () => {
+    for (const input of ['150k', '150.000', `150.000${DONG}`, '150.000 vnd', `150k${DONG_SIGN}`]) {
+      expect(parseShareAmount(input, vi, VND)).toBe(parseAmount(input, vi, VND));
+      expect(parseShareAmount(input, vi, VND)).toBe(150_000);
+    }
+    expect(parseShareAmount('12.50', en, USD)).toBe(1_250);
+    expect(parseShareAmount('12,50', vi, USD)).toBe(1_250);
+  });
+
+  it.each(['abc', '-5000', '-0', '1.5', '0.00', DONG, '0usd', '2000tr'])('vi rejects %j for VND', (input) => {
+    expect(parseShareAmount(input, vi, VND)).toBeNull();
+  });
+
+  it('keeps zero invalid for the main amount field', () => {
+    expect(parseAmount('0k', vi, VND)).toBeNull();
+    expect(parseAmount(`0${DONG}`, vi, VND)).toBeNull();
   });
 });
