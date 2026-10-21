@@ -150,3 +150,46 @@ export function splitAmount(amount: number, parts: SplitPart[], opts: SplitOptio
   }
   return shares;
 }
+
+export interface ExactPart {
+  memberId: string;
+  /** What this participant owes, in minor units. Zero is allowed. */
+  amount: number;
+}
+
+const isValidPartAmount = (n: number) => Number.isSafeInteger(n) && n >= 0 && n <= MAX_AMOUNT;
+
+/** `amount` minus the sum of the parts: positive = still to assign, negative = over the total, 0 = they match. */
+export function exactSplitDifference(amount: number, parts: Pick<ExactPart, 'amount'>[]): number {
+  return parts.reduce((rest, p) => rest - p.amount, amount);
+}
+
+/**
+ * Shares typed per participant ("exact amounts" mode). The parts are stored exactly as given:
+ * the group rounding setting does not apply. Throws unless every part is an integer from 0 to
+ * MAX_AMOUNT, no member appears twice and the parts add up exactly to `amount`.
+ */
+export function splitExact(amount: number, parts: ExactPart[]): Map<string, number> {
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('amount must be a positive integer');
+  if (parts.length === 0) throw new Error('at least one participant is required');
+
+  const shares = new Map<string, number>();
+  for (const p of parts) {
+    if (!isValidPartAmount(p.amount)) throw new Error(`invalid amount for ${p.memberId}`);
+    if (shares.has(p.memberId)) throw new Error(`duplicate participant ${p.memberId}`);
+    shares.set(p.memberId, p.amount);
+  }
+  if (exactSplitDifference(amount, parts) !== 0) throw new Error('parts must add up to the amount');
+  return shares;
+}
+
+/**
+ * Parses one participant's amount in "exact amounts" mode. An empty field or a typed zero
+ * ("0", "0.00", "0,00") means the participant owes nothing; anything else follows
+ * parseAmount (same locale rules as the main amount field). Null if the input is invalid.
+ */
+export function parseShareAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
+  const s = input.trim();
+  if (s === '' || /^0+(?:[.,]0+)?$/.test(s)) return 0;
+  return parseAmount(s, rules, currency);
+}
