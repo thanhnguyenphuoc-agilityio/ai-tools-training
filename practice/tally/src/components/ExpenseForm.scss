@@ -14,7 +14,8 @@
   }
 
   // Exact mode: room for amounts such as "1.250.000" on phones, a little more from sm up.
-  &__share-input {
+  // Scoped to the row so that it wins over `field__control` (width: 100%), whatever the stylesheet order.
+  &__participant &__share-input {
     width: 6.5rem;
 
     @include up(sm) {
