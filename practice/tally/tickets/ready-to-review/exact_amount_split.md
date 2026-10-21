@@ -98,3 +98,10 @@ marks and suffixes, a payer who does not take part, the "exact shares" term in t
 status line for an invalid share with a live region that stays mounted in exact mode.
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 220 unit and API tests (three runs in a row) and 22 e2e
+tests pass. Review comments addressed: API tests no longer depend on the row order of shares (one failed about five
+times in six), zero shares accepted in every form the amount field accepts, the mode named "Exact shares"
+consistently, a test with a payer who does not take part, and the status line naming an invalid share.
