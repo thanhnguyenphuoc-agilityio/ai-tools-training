@@ -76,3 +76,17 @@ From Opus (product owner):
   exact expense (with a zero part and a rounding group) and for rejected requests (sum mismatch, negative,
   non-integer, missing amount, unknown and duplicate members); an e2e spec for the form (run by the lead).
 - **Docs:** `docs/business-rules.md` (exact split rules), `docs/design.md` (built), README "Not in the MVP".
+
+## Merge request
+
+`feat/exact_amount_split` into `develop`: a third split mode, "exact shares" (`split_mode = 'exact'`, no
+migration). The total is typed first, then each participant's share; an empty field or a typed zero means the
+participant owes zero and stays listed. Shares are stored exactly as typed, without the group rounding. The form
+shows the amount left to assign or the excess and blocks saving with a message until the shares add up; the API
+rejects mismatches with `SPLIT_SUM_MISMATCH` and invalid shares with `INVALID_SHARE_AMOUNT`. `splitExact`,
+`exactSplitDifference` and `parseShareAmount` in `shared/money.ts` have unit tests;
+`tests/api/exact-split.test.ts` covers accepted and rejected requests; `e2e/exact-split.spec.ts` covers the form.
+The radio and field labels avoid the word used by the main amount label, so existing `getByLabel` lookups stay
+unambiguous.
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
