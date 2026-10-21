@@ -29,6 +29,9 @@ Both selectors have the same specificity, and the stylesheet of the `field` bloc
 `ExpenseForm`, so `width: 100%` wins. The weight field is not affected because its `field__control--narrow`
 modifier is defined in the same file as `field__control`, after it.
 
+The same order also hides the red border of an invalid share: the `border` shorthand of `field__control` resets the
+`border-color` set by `expense-form__share-input--invalid`.
+
 The e2e test of `exact_amount_split` finds the fields by their accessible labels, which stay correct, so it passed.
 
 ## Plan
@@ -47,4 +50,8 @@ The merge request is opened on GitLab from this branch; its link is added when i
   longer loses to `field__control` (`width: 100%`); `e2e/exact-split.spec.ts` checks that every name ends before
   its share field.
 - The new assertion fails on `develop` (overlap of 19-28 px on desktop and 50-60 px on a phone) and passes with the
-  fix. Typecheck and all 22 e2e tests pass.
+  fix. Typecheck, 220 unit and API tests and all 22 e2e tests pass.
+- Side effect: the red border of an invalid share field shows again; it was hidden on `develop` for the same reason.
+- `docs/design.md` (Interface) explains the stylesheet order and how a component overrides a block property.
+- Not in scope: a long name without spaces can still run under the share field on a phone (also in weight mode,
+  before this change).

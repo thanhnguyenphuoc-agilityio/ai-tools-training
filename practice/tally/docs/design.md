@@ -109,6 +109,9 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 - BEM naming: `.block`, `.block__element`, `.block--modifier`. Selectors are nested at most one level.
   Mixing classes is allowed, for example `class="card stack"`.
+- Component stylesheets load before the shared blocks (`src/main.tsx` imports `./App` first), so a component
+  class cannot override a block property, such as the width of `field__control`, at the same specificity. Scope
+  the component selector to its row or element instead (see `.expense-form__participant .expense-form__share-input`).
 - Tokens (spacing, radius, font sizes, breakpoints) live in `abstracts/_tokens.scss` and are used through
   `space(4)`, `font-size(sm)` and `@include up(md)`.
 - Mobile first: base styles target phones. Breakpoints are `sm` 520px, `md` 768px and `lg` 1024px.
