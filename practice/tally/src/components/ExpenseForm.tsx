@@ -164,8 +164,11 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
           </div>
           <ul className="list">
             {group.members.map((m) => (
-              <li key={m.id} className="list__item expense-form__participant">
-                <label className="field field--inline">
+              <li
+                key={m.id}
+                className={`list__item expense-form__participant${mode === 'exact' ? ' expense-form__participant--exact' : ''}`}
+              >
+                <label className="field field--inline expense-form__name">
                   <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
                   {m.name}
                 </label>
