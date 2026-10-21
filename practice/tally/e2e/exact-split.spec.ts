@@ -27,6 +27,17 @@ test('split an expense by exact amounts', async ({ page }) => {
   await page.getByLabel(t('expenseForm.shareOf', { name: 'Sam' })).fill('100k');
   await expect(page.getByText(t('expenseForm.exactLeft', { amount: vnd(30_000) }))).toBeVisible();
 
+  // Each name stays readable: its text ends before its share field starts (desktop and phone).
+  const overlaps = await page.locator('.expense-form__participant').evaluateAll((rows) =>
+    rows.map((row) => {
+      const name = document.createRange();
+      name.selectNodeContents(row.querySelector('label')!);
+      const field = row.querySelector('.expense-form__share-input')!;
+      return Math.round(name.getBoundingClientRect().right - field.getBoundingClientRect().left);
+    }),
+  );
+  expect(overlaps.every((px) => px <= 0), `overlap in px per row: ${overlaps.join(', ')}`).toBe(true);
+
   // The parts do not add up yet: nothing is saved.
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
   await expect(page.getByText(t('expenseForm.exactMismatch'))).toBeVisible();
