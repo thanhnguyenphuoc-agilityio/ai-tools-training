@@ -55,3 +55,9 @@ The merge request is opened on GitLab from this branch; its link is added when i
 - `docs/design.md` (Interface) explains the stylesheet order and how a component overrides a block property.
 - Not in scope: a long name without spaces can still run under the share field on a phone (also in weight mode,
   before this change).
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 220 unit and API tests and 22 e2e tests pass. Review
+comments addressed: the assertion measures only rows with a share field and requires all three, the invalid border
+side effect is recorded, and `docs/design.md` explains the stylesheet order.
