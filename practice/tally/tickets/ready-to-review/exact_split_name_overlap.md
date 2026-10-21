@@ -37,3 +37,10 @@ A long name without spaces can do the same at any width, as noted under "Not in 
 - The existing assertion in `e2e/exact-split.spec.ts` is the failing test: it fails on Linux before the change and
   passes after it. No new test is needed.
 - `docs/design.md` (Interface) notes that layout checks must hold with the Linux fonts used in CI.
+
+## Review
+
+Approved by the AI team lead: typecheck, 179 unit and API tests and 20 e2e tests pass on Windows, and the 20 e2e
+tests pass on Linux (WSL Ubuntu, Node 22, Playwright Chromium, `CI=1`), where the overlap assertion failed before
+the change. The change is limited to the name element of the participant row; weight and equal modes keep their
+layout.
