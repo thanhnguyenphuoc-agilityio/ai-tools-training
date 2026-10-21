@@ -41,7 +41,7 @@ describes how each role is simulated.
 | `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
 
 The Playwright MCP server in `.mcp.json` is a project-scope entry named `playwright`. Claude Code asks for approval
-the first time a project MCP server is used, and a local-scope entry with the same name overrides the project entry.
+when it first loads a project MCP server, at the start of a session, and a local-scope entry with the same name overrides the project entry.
 Local-scope entries cover two machine-specific cases:
 
 - The server launches the installed Google Chrome. On a machine without Chrome, install the browser build that this
