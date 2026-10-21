@@ -239,6 +239,35 @@ Open before the next day:
 - [ ] Try `/start-ticket` and the `release-checklist` skill in a real session
 - [ ] Course: Introduction to agent skills
 
+## Day 08: 2026-10-14
+
+Goal: MCP and connectors: add the Playwright MCP server and use one MCP tool end to end; ship `exact_amount_split`.
+Left over from the previous day: the plugin evaluation and a real run of the new skill and command.
+Shipped (merge requests, artifacts, screenshots):
+- `chore/playwright-mcp` merged: project `.mcp.json` with `@playwright/mcp` pinned to 0.0.83; README notes on
+  approval, local-scope overrides, Windows and the browser build.
+- `feat/exact_amount_split` merged after one round: a third split mode, "Exact shares", with new error codes
+  `SPLIT_SUM_MISMATCH` and `INVALID_SHARE_AMOUNT`; 220 unit and API tests and 22 e2e tests pass.
+- `fix/exact_split_share_layout` merged: found while taking screenshots for the merge request through the browser
+  pane, where the share fields covered the member names.
+Observations (positive / negative):
+- The review found an API test that passed about one time in six: it expected shares in insertion order, while the
+  query returns them in the order of random ids. The suite had passed once, and the merge request reported it as
+  green.
+- All tests and e2e passed while the form was unusable on a phone. The e2e test found fields by their accessible
+  labels, which stayed correct while the fields covered the names. A screenshot showed it at once, and a second
+  look at phone width after the first fix showed a name that was still cut off.
+- Two claims from a reviewer were wrong when checked against the installed package: the Playwright MCP server
+  blocks `file://` by default, and `--browser chromium` needs a different Chromium build from the one the e2e
+  setup installs.
+For the retro:
+- Look at the screen before merging UI work, at phone width too; tests check what they are told to check.
+Open before the next day:
+- [ ] Add a GitLab connector (the plan suggests GitHub; this repository is on GitLab) and query or comment on a
+  merge request from a session
+- [ ] Drive the app through the Playwright MCP server in a session (approve the project server first)
+- [ ] Course: Introduction to model context protocol
+
 ## For the retro
 
 -
