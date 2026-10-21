@@ -250,6 +250,10 @@ Shipped (merge requests, artifacts, screenshots):
   `SPLIT_SUM_MISMATCH` and `INVALID_SHARE_AMOUNT`; 220 unit and API tests and 22 e2e tests pass.
 - `fix/exact_split_share_layout` merged: found while taking screenshots for the merge request through the browser
   pane, where the share fields covered the member names.
+- `chore/github-mcp` merged: README notes on adding the GitHub connector at local scope with a personal access
+  token; the token is kept out of `.mcp.json`.
+- `chore/github-actions` merged: the repository is mirrored to GitHub, and `.github/workflows/ci.yml` runs
+  typecheck, unit/API tests and e2e on pull requests and on `develop`/`main`.
 Observations (positive / negative):
 - The review found an API test that passed about one time in six: it expected shares in insertion order, while the
   query returns them in the order of random ids. The suite had passed once, and the merge request reported it as
@@ -263,8 +267,9 @@ Observations (positive / negative):
 For the retro:
 - Look at the screen before merging UI work, at phone width too; tests check what they are told to check.
 Open before the next day:
-- [ ] Add a GitLab connector (the plan suggests GitHub; this repository is on GitLab) and query or comment on a
-  merge request from a session
+- [ ] Add the GitHub connector with a personal access token and query a pull request or a workflow run on the
+  GitHub mirror from a session
+- [ ] Push to the GitHub mirror and check the first GitHub Actions run
 - [ ] Drive the app through the Playwright MCP server in a session (approve the project server first)
 - [ ] Course: Introduction to model context protocol
 
