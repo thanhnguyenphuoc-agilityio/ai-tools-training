@@ -29,7 +29,7 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 | Owner | The person who created the group. Proven by a secret owner key, shown once as a recovery link. Can rename the group, change rounding and currency, delete any expense; through the API (no interface yet, see `owner_member_tools`) also edit other members' bank details and record transfers for others. |
 | Member | A person in the group. Either joined from their own device, or added by name by someone else and claimed later ("I am <name>"). |
 | Guest | Someone who opened the link but has not joined. Can only view. |
-| Expense | One payment: who paid, how much, what for, on which date, and who shares it (equally or by weight). Only its author or the owner can delete it. |
+| Expense | One payment: who paid, how much, what for, on which date, and who shares it (equally, by weight or by exact amounts). Only its author or the owner can delete it. |
 | Share | Each participant's part of an expense, computed once when the expense is saved. Shares always add up exactly to the amount. |
 | Balance | Paid minus owed, plus confirmed transfers. Positive means the member is owed money; the balances of a group always sum to zero. |
 | Transfer | A repayment between two members. It is `sent` when the payer says so, and `confirmed` when the receiver says the money arrived. Only confirmed transfers change balances. |
@@ -61,10 +61,9 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): Google sign-in and a
 per-account group list, saved bank details, automatic deletion and locked groups, receipt photos, attendance-based
-splits, exact-amount splits, spreadsheet export, owner tools for other members, editing
-expenses, removing members, currency conversion and a visual redesign. `docs/design.md` holds a design for each of
-them; for `remove_member` the design waits on the open business question, and the rules agreed for `edit_expense`
-are in its ticket until the feature lands.
+splits, spreadsheet export, owner tools for other members, editing expenses, removing members, currency conversion
+and a visual redesign. `docs/design.md` holds a design for each of them; for `remove_member` the design waits on the
+open business question, and the rules agreed for `edit_expense` are in its ticket until the feature lands.
 
 ### Who reports tickets
 
