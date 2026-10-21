@@ -6,6 +6,31 @@
     grid-template-columns: 1fr auto auto;
     align-items: center;
     gap: space(2);
+
+    // Exact mode on phones: the name gets its own line, the share field and the amount go below it.
+    &--exact {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        'name name'
+        'input share';
+
+      @include up(sm) {
+        grid-template-columns: 1fr auto auto;
+        grid-template-areas: 'name input share';
+      }
+    }
+  }
+
+  &__participant--exact &__name {
+    grid-area: name;
+  }
+
+  &__participant--exact &__share-input {
+    grid-area: input;
+  }
+
+  &__participant--exact &__share {
+    grid-area: share;
   }
 
   &__share {
@@ -14,7 +39,8 @@
   }
 
   // Exact mode: room for amounts such as "1.250.000" on phones, a little more from sm up.
-  &__share-input {
+  // Scoped to the row so that it wins over `field__control` (width: 100%), whatever the stylesheet order.
+  &__participant &__share-input {
     width: 6.5rem;
 
     @include up(sm) {
