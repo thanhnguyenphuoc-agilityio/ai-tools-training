@@ -38,6 +38,21 @@ describes how each role is simulated.
 | `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
 | `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
+| `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
+
+The Playwright MCP server in `.mcp.json` is a project-scope entry named `playwright`. Claude Code asks for approval
+when it first loads a project MCP server, at the start of a session, and a local-scope entry with the same name
+overrides the project entry. Local-scope entries cover two machine-specific cases:
+
+- The server launches the installed Google Chrome. On a machine without Chrome, install the browser build that this
+  server version expects with `npx @playwright/mcp@0.0.83 install-browser chromium`, then add the entry at local
+  scope with `--browser chromium`. The Chromium installed for the e2e tests does not work here: the server bundles
+  its own Playwright build, which expects a different Chromium revision.
+- On native Windows, if `npx` does not start, add the entry through `cmd /c`:
+  `claude mcp add playwright -s local -- cmd /c npx -y @playwright/mcp@0.0.83`.
+
+By default the server blocks navigation to local `file://` URLs and limits file access to the workspace root. The
+`--allow-unrestricted-file-access` flag lifts both limits and is not set in `.mcp.json`.
 
 ## Language
 
