@@ -226,15 +226,16 @@ Built. Rules in `docs/business-rules.md` (Expenses, split modes).
   - `splitExact(amount, parts)` returns the parts unchanged (no rounding) and throws unless they are integers from
     0 to `MAX_AMOUNT`, unique per member and add up exactly to `amount`.
   - `exactSplitDifference(amount, parts)` is `amount - sum(parts)`, used by the form and the API.
-  - `parseShareAmount(input, rules, currency)`: empty or a typed zero is 0, anything else goes through
-    `parseAmount` (which rejects zero, as the total must be positive). Exposed as `parseShareMoney` by `useI18n()`
-    and `useGroupMoney()`.
+  - `parseShareAmount(input, rules, currency)`: an empty field is 0; anything else uses the `parseAmount` rules
+    (both share the private `parseMinorUnits`), with zero allowed, so `0k` or `0 VND` is 0. `parseAmount` itself
+    still rejects zero, as the total must be positive. Exposed as `parseShareMoney` by `useI18n()` and
+    `useGroupMoney()`.
 - **API (`worker/routes/expenses.ts`):** `shareAmount()` in `worker/http.ts` validates each amount
   (`INVALID_SHARE_AMOUNT`); a sum that differs from the total is `SPLIT_SUM_MISMATCH`. Tests in
   `tests/api/exact-split.test.ts`.
-- **UI:** `ExpenseForm` has a third split option with one amount field per selected participant and a line showing
-  the amount left to assign, the excess, or that the parts match; saving is blocked until they match.
-  `ExpenseList` labels exact expenses. Settle-up needs no change, since balances come from the stored shares.
+- **UI:** `ExpenseForm` has a third split option, "Exact shares", with one share field per selected participant
+  and a live status line: the amount left to assign, the excess, an invalid share, or that the shares match.
+  Saving is blocked until they match. `ExpenseList` labels exact expenses. Settle-up needs no change, since balances come from the stored shares.
   E2e test in `e2e/exact-split.spec.ts`.
 
 ### csv_export

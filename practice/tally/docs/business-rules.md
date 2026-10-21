@@ -58,10 +58,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Split modes:
   - **Equal** among the selected participants.
   - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
-  - **Exact amounts**: the total is typed first (as printed on the bill), then each participant's amount.
-    - Each participant's amount follows the same input conventions as the amount field. An empty field or a typed
-      zero (`0`, `0.00`, `0,00`) means the participant owes zero; they stay listed in the expense with a share of 0.
-    - The amounts must add up **exactly** to the total. Until they do, the form shows the amount left to assign or
+  - **Exact shares** (the ticket calls it a split by exact amounts): the total is typed first (as printed on the
+    bill), then each participant's share.
+    - Each share follows the same input conventions as the amount field (suffixes, separators, currency marks),
+      except that zero is allowed. An empty field or a zero in any of those forms (`0`, `0k`, `0 VND`, `0` with the
+      dong sign; `0.00` for USD in English) means the participant owes zero; they stay listed in the expense with
+      a share of 0.
+    - The shares must add up **exactly** to the total. Until they do, the form shows the amount left to assign or
       the excess, and saving is blocked with a message. The app does not assign the difference to anyone.
     - The rounding setting does **not** apply: each share is stored exactly as typed.
     - The API rejects parts that do not add up (`SPLIT_SUM_MISMATCH`) and amounts that are negative, not integers
