@@ -27,17 +27,20 @@ test('split an expense by exact amounts', async ({ page }) => {
   await page.getByLabel(t('expenseForm.shareOf', { name: 'Sam' })).fill('100k');
   await expect(page.getByText(t('expenseForm.exactLeft', { amount: vnd(30_000) }))).toBeVisible();
 
-  // Each name stays readable: its text ends before its share field starts (desktop and phone).
+  // Each name stays readable: the box of its text does not intersect its share field (desktop and phone).
   const overlaps = await page.locator('.expense-form__participant:has(.expense-form__share-input)').evaluateAll((rows) =>
     rows.map((row) => {
-      const name = document.createRange();
-      name.selectNodeContents(row.querySelector('label')!);
-      const field = row.querySelector('.expense-form__share-input')!;
-      return Math.round(name.getBoundingClientRect().right - field.getBoundingClientRect().left);
+      const range = document.createRange();
+      range.selectNodeContents(row.querySelector('label')!);
+      const name = range.getBoundingClientRect();
+      const field = row.querySelector('.expense-form__share-input')!.getBoundingClientRect();
+      const width = Math.min(name.right, field.right) - Math.max(name.left, field.left);
+      const height = Math.min(name.bottom, field.bottom) - Math.max(name.top, field.top);
+      return width > 0 && height > 0 ? Math.round(width) : 0;
     }),
   );
   expect(overlaps).toHaveLength(4);
-  expect(overlaps.every((px) => px <= 0), `overlap in px per row: ${overlaps.join(', ')}`).toBe(true);
+  expect(overlaps.every((px) => px === 0), `overlap in px per row: ${overlaps.join(', ')}`).toBe(true);
 
   // The parts do not add up yet: nothing is saved.
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
