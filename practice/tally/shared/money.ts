@@ -18,6 +18,21 @@ export function formatMoney(amount: number, currency: CurrencyInfo, intlLocale: 
 }
 
 /**
+ * Minor units as a plain decimal string in major units, for files rather than screens: "." as the decimal
+ * separator, no grouping, no currency sign (125050 USD cents -> "1250.50", 300000 VND -> "300000").
+ * Built from the digits of the integer, so no floating-point division is involved.
+ */
+export function toDecimalString(amount: number, currency: CurrencyInfo): string {
+  if (!Number.isSafeInteger(amount)) throw new RangeError(`amount must be an integer, got ${amount}`);
+  const digits = currency.minorDigits;
+  const sign = amount < 0 ? '-' : '';
+  const abs = String(Math.abs(amount));
+  if (digits === 0) return sign + abs;
+  const padded = abs.padStart(digits + 1, '0');
+  return `${sign}${padded.slice(0, -digits)}.${padded.slice(-digits)}`;
+}
+
+/**
  * How people type amounts in one locale. Lives in the locale files
  * (src/i18n/locales) because separators and shorthand are language-specific.
  */
