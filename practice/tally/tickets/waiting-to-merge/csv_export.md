@@ -127,6 +127,12 @@ Vietnamese text, so it is not used.
   and text from `csvExport.*` in the locales. No API change, no migration, no permission rule.
 - Docs: "Spreadsheet export" in `docs/business-rules.md`, `csv_export (built)` in `docs/design.md`, and spreadsheet
   export removed from "Not in the MVP" in the README.
-- How tested: `npm run typecheck` and `npm test` pass (15 files, 220 tests), including the new unit tests in
+- How tested: `npm run typecheck` and `npm test` pass (15 files, 221 tests), including the new unit tests in
   `tests/unit/csv.test.ts`, `tests/unit/groupCsv.test.ts` and `tests/unit/money.test.ts`. The new e2e test
   `e2e/csv-export.spec.ts` passes on desktop and mobile; the full e2e run is left to the AI team lead.
+- Review round 1: share columns of missing members are numbered (`csvExport.unknownMember`, `(unknown 1)`,
+  `(unknown 2)`) with a unit test for two missing members; the e2e test checks the exact local date of the transfer
+  row; `docs/business-rules.md` states how a zero share is written in a two-digit currency and the full file-name
+  rule; `docs/design.md` uses the `### csv_export` / "Built." heading style and no longer calls the CSV functions
+  pure, since the transfer date depends on the device time zone. The merge request link stays a placeholder until
+  the branch is pushed, which happens only when the user asks.
