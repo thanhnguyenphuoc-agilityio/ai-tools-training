@@ -64,3 +64,26 @@ Tests:
 
 Docs: a row in the contents table of the repository `README.md` (with the test command) and one sentence in
 `CLAUDE.md` stating that the hook exists and the rule still applies.
+
+## Merge request
+
+Branch `chore/answer_key_guard` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- `.claude/hooks/guard-answer-keys.mjs` (new): a `PreToolUse` hook that exits with code 2 when a `Read`, `Edit`,
+  `NotebookEdit`, `Grep` or `Glob` call, or a `Bash` or `PowerShell` command, names an answer key, uses a glob that
+  could match one, or searches the folder that holds the keys. It finds the keys folder from a git worktree too,
+  and allows input it cannot parse. The header comment lists the known limits.
+- `.claude/settings.json` (new): registers the hook for those tools.
+- `.claude/hooks/guard-answer-keys.test.mjs` (new): `node:test` cases with synthetic paths only.
+- `README.md`: a contents-table row with the test command. `CLAUDE.md`: one sentence stating that the hook exists
+  and the rule still applies.
+
+How it was tested:
+
+- `node --test .claude/hooks/guard-answer-keys.test.mjs`: 9 tests, 9 passed. They cover blocked file tool, glob,
+  search, Bash and PowerShell cases, a worktree layout, normal repository work (reading `README.md`, `Grep` in
+  `practice/tally`, `npm test`, a `git commit -m` message that mentions answers) and unparsable input.
+- The app code is unchanged, so typecheck, unit/API tests and e2e are not affected.
