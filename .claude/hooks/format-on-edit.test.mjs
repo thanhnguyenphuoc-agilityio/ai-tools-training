@@ -44,6 +44,11 @@ test('uses single quotes and a 120 character line from .prettierrc', () => {
   assert.equal(edit('practice/tally/src/label.ts', long, { tool: 'Write' }), long.replace(/"/g, "'"));
 });
 
+test('keeps the line endings the file already uses', () => {
+  const out = edit('practice/tally/src/crlf.ts', 'export const a = {b:1}\r\nexport const c = 2\r\n');
+  assert.equal(out, 'export const a = { b: 1 };\r\nexport const c = 2;\r\n');
+});
+
 test('formats SCSS', () => {
   assert.equal(edit('practice/tally/src/a.scss', '.a{color:red}\n'), '.a {\n  color: red;\n}\n');
 });
