@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react"],
+  "jsPlugins": ["./lint/tally-plugin.mjs"],
+  "rules": {
+    "tally/no-literal-ui-text": "error"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    ".wrangler/**",
+    "test-results/**",
+    "playwright-report/**"
+  ],
+  "overrides": [
+    {
+      "files": ["tests/**", "e2e/**", "scripts/**", "worker/**"],
+      "rules": {
+        "tally/no-literal-ui-text": "off"
+      }
+    }
+  ]
+}
