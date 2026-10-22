@@ -12,7 +12,7 @@
 
 The answer keys for the review exercises (`tally-*-answers.md`) are written to the folder that holds the repository,
 so they are never committed. `CLAUDE.md` tells Claude Code never to read them, but that rule only works while the
-model remembers and applies it. A hook should enforce the rule, so that a session cannot open a key by mistake.
+model remembers and applies it. A hook should enforce the rule, so that common accidental reads of a key are blocked.
 
 ## Analysis
 
@@ -41,7 +41,7 @@ tool, which the hook does not match.
 
 ## Plan
 
-Branch: `chore/answer_key_guard` from `develop`.
+Branch: `feat/answer_key_guard` from `develop`.
 
 Files:
 
@@ -67,7 +67,7 @@ Docs: a row in the contents table of the repository `README.md` (with the test c
 
 ## Merge request
 
-Branch `chore/answer_key_guard` into `develop`. The merge request is opened on GitLab from this branch; its link is
+Branch `feat/answer_key_guard` into `develop`. The merge request is opened on GitLab from this branch; its link is
 added when it exists.
 
 What changed:
