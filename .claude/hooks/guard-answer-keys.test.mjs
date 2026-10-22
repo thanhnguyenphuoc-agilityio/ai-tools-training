@@ -85,9 +85,21 @@ test('checks the first word of each shell segment', () => {
   blocked('PowerShell', { command: '@"\n$(Get-Content ..\\tally-seeded-answers.md)\n"@' });
 });
 
+test('treats -e and --regexp as the pattern of a recursive search', () => {
+  blocked('Bash', { command: 'grep -r -ebug ..' });
+  blocked('Bash', { command: 'grep -r --regexp=bug ..' });
+  blocked('Bash', { command: 'rg --regexp=bug ..' });
+  allowed('Bash', { command: 'grep -rn -e parseAmount practice/tally' });
+});
+
 test('checks the script of a shell fed by a quoted heredoc', () => {
   blocked('Bash', { command: "bash <<'EOF'\ncat ../tally-seeded-answers.md\nEOF" });
   blocked('Bash', { command: "cat <<'EOF' | sh\ncat ../tally-seeded-answers.md\nEOF" });
+});
+
+test('checks option values glued to the option', () => {
+  blocked('PowerShell', { command: 'Get-Content -Path:..\\tally-seeded-answers.md' });
+  blocked('Bash', { command: 'grep -f../tally-seeded-answers.md x' });
 });
 
 test('treats the PowerShell backtick as an escape character', () => {
@@ -97,6 +109,13 @@ test('treats the PowerShell backtick as an escape character', () => {
 test('checks nested substitutions', () => {
   blocked('Bash', { command: 'echo "$(cat $(echo ../tally-seeded-answers.md))"' });
   allowed('Bash', { command: "git commit -m \"$(cat <<'EOF'\nfix: handle (nested) parentheses\nEOF\n)\"" });
+});
+
+test('treats only ls -R as a recursive listing in Bash', () => {
+  allowed('Bash', { command: 'ls -ltr ..' });
+  allowed('Bash', { command: 'ls -lart ..' });
+  blocked('Bash', { command: 'ls -R ..' });
+  blocked('PowerShell', { command: 'ls -r ..' });
 });
 
 test('blocks PowerShell commands that read a key or search the keys folder', () => {

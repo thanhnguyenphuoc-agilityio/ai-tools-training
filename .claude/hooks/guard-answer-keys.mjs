@@ -8,7 +8,8 @@
 // - Grep: `path` (default: the working directory) and `glob`. The search `pattern` is ignored.
 // - Glob: `pattern`, resolved against `path` (default: the working directory).
 // - Bash, PowerShell: the command, split into words, the command name and `VAR=value` prefixes included. `cd` /
-//   `Set-Location` move the base for later words.
+//   `Set-Location` move the base for later words. Option values are checked in the `--opt=value` and PowerShell
+//   `-Param:value` forms; a value glued to a short option (`-fvalue`) is checked by name only.
 //   Text-only words are skipped: `git -m` / `--message` values, `echo` / `printf` / `Write-Output` / `Write-Host`
 //   arguments and quoted heredoc bodies (`<<'EOF'`, PowerShell `@'...'@`). A `$(...)` (nested too) or backtick
 //   substitution inside such text is still checked, and so is the script of `bash -c` / `pwsh -Command` and a
@@ -20,8 +21,9 @@
 // - it is the keys folder (or an ancestor) used as the root of Grep, Glob or a recursive shell search
 //   (`grep -r`, `rg`, `find`, `Get-ChildItem -Recurse`, ...).
 //
-// Allowed on purpose: listing the keys folder (`ls ..`) shows names only; the Write tool is not matched, because
-// the seeding prompts in practice/tally/PRACTICE.md create the keys with it.
+// Allowed on purpose: listing the keys folder (`ls ..`, `ls -ltr ..`; in Bash only `ls -R` recurses) shows names
+// only; the Write tool is not matched, because the seeding prompts in practice/tally/PRACTICE.md create the keys
+// with it.
 //
 // Known limits. The hook guards against mistakes, not deliberate evasion; the CLAUDE.md rule still applies.
 // - Names built at run time are not seen: variables (`f=answers; cat ../tally-x-$f.md`), concatenation, encoded
@@ -240,13 +242,27 @@ function checkCommand(command, base, bash) {
         checkCommand(w, base, !['pwsh', 'powershell', 'cmd'].includes(name));
       } else if (!textOnly) checked.push(w);
     }
-    for (const w of checked) checkPath(w.startsWith('-') ? w.replace(/^[^=]*=?/, '') : w, base);
+    for (const w of checked) {
+      if (!w.startsWith('-')) {
+        checkPath(w, base);
+        continue;
+      }
+      // Option value: `--file=x`, PowerShell `-Path:x`; a value glued without a separator (`-fx`) is name-checked.
+      if (namesKey(w)) block('names an answer key or a glob that could match one');
+      const value = bash ? /=(.*)$/s.exec(w) : /[=:](.*)$/s.exec(w);
+      if (value) checkPath(value[1], base);
+    }
+    // `ls -r` is reverse order in Bash and `-Recurse` in PowerShell; grep takes `-r` and `-R`.
+    const posixFlag = name === 'ls' ? /^(-[a-zA-Z]*R[a-zA-Z]*|--recursive)$/ : /^(-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)$/;
     const recursive =
       SEARCHES.has(name) ||
-      (POSIX_RECURSIVE.has(name) && rest.some((w) => /^(-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)$/.test(w))) ||
-      (PS_RECURSIVE.has(name) && rest.some((w) => /^-r(e(c(u(r(se?)?)?)?)?)?$/i.test(w)));
+      (POSIX_RECURSIVE.has(name) && (bash || name !== 'ls') && rest.some((w) => posixFlag.test(w))) ||
+      (PS_RECURSIVE.has(name) && (!bash || name !== 'ls') && rest.some((w) => /^-r(e(c(u(r(se?)?)?)?)?)?$/i.test(w)));
     if (recursive) {
-      const operands = checked.filter((w) => !w.startsWith('-')).slice(PATTERN_FIRST.has(name) ? 1 : 0);
+      // grep and rg take the pattern as the first operand, unless it is given with -e / --regexp / -f / --file.
+      const patternOption = rest.some((w) => /^(-[a-zA-Z]*[ef]|--(regexp|file)(=|$))/.test(w));
+      const skip = PATTERN_FIRST.has(name) && !patternOption ? 1 : 0;
+      const operands = checked.filter((w) => !w.startsWith('-')).slice(skip);
       for (const op of operands.length ? operands : ['.']) checkPath(op, base, { root: true });
     }
   }
