@@ -73,3 +73,25 @@ Tests (`node:test`):
 
 Docs: the hooks row of the repository `README.md` (with the test command) and a `CLAUDE.md` rule that Prettier is
 the code layout and whole folders are not reformatted.
+
+## Merge request
+
+Branch `feat/claude_code_hooks` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- `.claude/hooks/format-on-edit.mjs` (new): a `PostToolUse` hook for `Edit`, `MultiEdit` and `Write` that formats
+  a code or style file inside `practice/tally` with the app's Prettier and keeps its line endings.
+- `.claude/hooks/notify-on-finish.mjs` (new): a `Stop` hook that shows a desktop notification naming the project
+  folder. `CLAUDE_NOTIFY=off` turns it off; it stays silent in CI.
+- `.claude/settings.json`: registers both hooks next to the answer key guard.
+- `practice/tally`: `prettier` as a dev dependency, `.prettierrc`, `.prettierignore`. `npm install` also added the
+  existing `engines` field of `package.json` to `package-lock.json`, which was out of sync.
+- `README.md` hooks row and a `CLAUDE.md` rule on Prettier.
+
+How it was tested:
+
+- `node --test .claude/hooks/*.test.mjs`: 28 tests, 28 passed (16 answer key guard, 7 format, 5 notify).
+- The notify hook was run by hand on Windows: it returned at once with exit code 0 and left the notifier running.
+- The app code is unchanged, so typecheck, unit/API tests and e2e are not affected.
