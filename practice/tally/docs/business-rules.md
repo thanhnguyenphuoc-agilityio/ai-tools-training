@@ -109,7 +109,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - One row per expense or transfer, in chronological order (date, then the time it was recorded). Columns: type,
   date, description, paid by, received by, amount, currency, status, then one "share" column per member.
   - Expense rows: the date picked for the expense, the payer chosen in "Paid by", and each participant's stored
-    share. A member who does not take part has an empty share cell; a share of 0 is written as 0.
+    share. A member who does not take part has an empty share cell; a share of 0 is written as zero (`0`, or
+    `0.00` in a two-digit currency). A share whose member is no longer in the group gets its own numbered column.
   - Transfer rows: the day the transfer was marked as sent (in the time zone of the downloading device), sender and
     receiver, and the status **sent** or **confirmed**. Share cells are empty.
 - **Deleted expenses are left out.** Transfers are included whether they are only sent or confirmed.
@@ -120,7 +121,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   RFC 4180. A text cell that starts with `=`, `+`, `-`, `@`, a tab, a carriage return or a line feed gets a leading
   `'`, so a spreadsheet does not run it as a formula.
 - The file name is the group name followed by the download date (`<group name>-<YYYY-MM-DD>.csv`). Characters that
-  file systems reject, control characters and bidirectional text controls are replaced by `-`. It contains no group
+  file systems reject, control characters and bidirectional text controls are replaced by `-`, whitespace becomes
+  `-`, and the name is capped at 60 characters; if nothing is left, the app title is used. It contains no group
   code and no member data.
 - Known limitation: where the system list separator is `;` (common with a decimal comma), Excel does not split the
   columns on double click; the file opens correctly through Data > From Text/CSV.

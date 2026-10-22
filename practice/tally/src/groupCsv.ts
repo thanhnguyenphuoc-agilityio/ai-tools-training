@@ -1,5 +1,6 @@
 // The spreadsheet export of a group (ticket csv_export): one CSV file with every expense and transfer.
-// Pure, so it is unit tested in Node; the browser download lives in download.ts.
+// No DOM, so it is unit tested in Node; the browser download lives in download.ts. The transfer date depends on
+// the device time zone (todayLocal).
 import { getCurrency } from '../shared/currency';
 import { toDecimalString } from '../shared/money';
 import type { GroupDto, TransferDto } from '../shared/types';

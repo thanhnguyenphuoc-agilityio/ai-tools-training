@@ -241,17 +241,20 @@ Built. Rules in `docs/business-rules.md` (Expenses, split modes).
   Saving is blocked until they match. `ExpenseList` labels exact expenses. Settle-up needs no change, since balances come from the stored shares.
   E2e test in `e2e/exact-split.spec.ts`.
 
-### csv_export (built)
+### csv_export
 
-- Client-only, built from the loaded `GroupDto`; no API change, no migration, no rule in `policy.ts`. The rules are
-  in "Spreadsheet export" in `docs/business-rules.md`.
+Built. Rules in `docs/business-rules.md` (Spreadsheet export).
+
+- Client-only, built from the loaded `GroupDto`; no API change, no migration, no rule in `policy.ts`.
 - `src/csv.ts`: generic CSV text (RFC 4180 quoting, CRLF, UTF-8 BOM). Cells are either `text()` (written by people,
   guarded against formulas with a leading `'`) or `raw()` (formatted by the app: dates, amounts, currency codes).
 - `src/groupCsv.ts`: `buildGroupCsv(group, t)` lays out the table and `csvFileName(name, today, fallback)` builds the
-  file name. Both are pure and unit tested in Node (`tests/unit/csv.test.ts`, `tests/unit/groupCsv.test.ts`).
+  file name. Neither touches the DOM, so both are unit tested in Node (`tests/unit/csv.test.ts`,
+  `tests/unit/groupCsv.test.ts`). The transfer date depends on the device time zone, so the tests fix `TZ`.
   - Expenses and transfers share one table with a type column; each person's share is one column per member,
-    in `GroupDto.members` order. A share whose member is missing gets its own column, so a row's shares always
-    add up to its amount.
+    in `GroupDto.members` order. A share whose member is missing gets its own column, numbered
+    (`csvExport.unknownMember`) so that two missing members never share a header, and a row's shares always add up
+    to its amount.
   - Shares are read from `ExpenseDto.shares`, so the export does not depend on the split mode.
 - `shared/money.ts` `toDecimalString(amount, currency)` turns minor units into a plain major-unit string from the
   integer's digits (`minorDigits`), without floating-point division.
