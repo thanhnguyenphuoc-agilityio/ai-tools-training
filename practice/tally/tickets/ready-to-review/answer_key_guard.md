@@ -94,3 +94,12 @@ nested `$(...)` substitutions, a quoted heredoc fed to a shell, option values gl
 `--regexp`, `-f` or `--file`. Bash `ls` counts only `-R` as recursive, so `ls -ltr ..` is allowed. Each case has a
 test that failed before the fix; the `echo` substitution test uses the quoted form. The branch name is
 `feat/answer_key_guard`, and the README row and the Description no longer claim that every read is blocked.
+
+## Review
+
+Approved by the AI team lead after one round: `node --test .claude/hooks/guard-answer-keys.test.mjs` passes 16 of
+16 tests, and `npm run typecheck` in `practice/tally` passes (the app code is unchanged, so unit/API tests and e2e
+are not affected). Review comments addressed: every word of a shell segment is checked (command name and
+`VAR=value` prefixes included), nested substitutions, quoted heredocs fed to a shell, glued option values, the
+PowerShell backtick escape, `-e` / `--regexp` patterns of a recursive search, `ls -ltr ..` no longer blocked, the
+branch named `feat/answer_key_guard`, and the README row and Description no longer overclaiming.
