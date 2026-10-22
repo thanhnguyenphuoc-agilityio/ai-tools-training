@@ -273,6 +273,40 @@ Open before the next day:
 - [ ] Drive the app through the Playwright MCP server in a session (approve the project server first)
 - [ ] Course: Introduction to model context protocol
 
+## Day 09: 2026-10-14
+
+Goal: hooks and automation: format-on-edit, block-forbidden-command and notify-on-finish hooks through merge
+requests; ship `csv_export`.
+Left over from the previous day: the GitHub connector, the first GitHub Actions run, and a session driven through
+the Playwright MCP server.
+Shipped (merge requests, artifacts, screenshots):
+- `feat/answer_key_guard` merged after one round: a `PreToolUse` hook that blocks common ways to read the
+  `tally-*-answers.md` files (key paths, wildcards, searches of the folder above the repository, Bash and
+  PowerShell commands), with 16 tests (`node --test .claude/hooks/guard-answer-keys.test.mjs`).
+- `feat/claude_code_hooks` merged after one round: a `PostToolUse` hook that formats each app file Claude Code
+  edits with Prettier (only edited files, so no large reformatting diff), and a `Stop` hook that shows a desktop
+  notification when a reply ends (`CLAUDE_NOTIFY=off` turns it off); 28 hook tests
+  (`node --test .claude/hooks/*.test.mjs`).
+- `feat/csv_export` merged after one round: "Download CSV" for joined members, one file of expenses and transfers,
+  UTF-8 with BOM, RFC 4180 quoting and a guard against spreadsheet formulas; 221 unit and API tests and 22 e2e
+  tests pass.
+Observations (positive / negative):
+- The first version of the guard let seven kinds of command through: a key named as the first word of a command,
+  a key inside a nested substitution, a quoted heredoc fed to a shell, and options written as `-Path:value`. The
+  review found them by running each command against the hook; each now has a test that failed before the fix.
+- Prettier rewrote CRLF files as LF on Windows; Git hid it because of `core.autocrlf`. `endOfLine: auto` keeps the
+  ending each file already has.
+- A guard can also fail by blocking ordinary work. The tests check what must stay allowed (commit messages that
+  mention the files, listing the parent folder) as much as what must be blocked.
+- An e2e run reused a dev server left open by another checkout on port 5173 and tested the wrong code; eight
+  failures had nothing to do with the branch.
+For the retro:
+- Check which server an e2e run talks to before reading its failures.
+Open before the next day:
+- [ ] Automation ladder: `/goal` on a bounded task, a Desktop scheduled task (morning briefing), the Routines
+  overview, and `@claude` in GitHub Actions on the GitHub mirror
+- [ ] Evaluate the comments of an automated review on the next pull request
+
 ## For the retro
 
 -
