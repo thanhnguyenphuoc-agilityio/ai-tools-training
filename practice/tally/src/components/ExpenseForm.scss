@@ -21,6 +21,11 @@
     }
   }
 
+  // Long names wrap inside their column instead of running under the share field (fonts differ per OS).
+  &__name {
+    overflow-wrap: anywhere;
+  }
+
   &__participant--exact &__name {
     grid-area: name;
   }
