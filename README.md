@@ -38,6 +38,7 @@ describes how each role is simulated.
 | `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
 | `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
+| `.claude/hooks/`, `.claude/settings.json` | `PreToolUse` hook that blocks reading the exercise answer keys (`tally-*-answers.md`). Tests: `node --test .claude/hooks/guard-answer-keys.test.mjs` |
 | `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
 | `.github/workflows/ci.yml` | GitHub Actions: typecheck, unit/API tests and e2e on pull requests and on `develop`/`main` |
 
