@@ -100,6 +100,31 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - A member can record only **their own** transfers. The owner can record transfers on behalf of others (API only
   in the MVP; the interface is `owner_member_tools`).
 
+## Spreadsheet export
+
+- A member who has joined the group can download **one CSV file** with all of the group's expenses and transfers.
+  There is no date range; the whole group is exported and can be filtered in the spreadsheet.
+- The download button is shown only to joined members. This is an interface rule, not a security boundary: anyone
+  with the link can already view the same data, so the file is built in the browser and there is no server endpoint.
+- One row per expense or transfer, in chronological order (date, then the time it was recorded). Columns: type,
+  date, description, paid by, received by, amount, currency, status, then one "share" column per member.
+  - Expense rows: the date picked for the expense, the payer chosen in "Paid by", and each participant's stored
+    share. A member who does not take part has an empty share cell; a share of 0 is written as 0.
+  - Transfer rows: the day the transfer was marked as sent (in the time zone of the downloading device), sender and
+    receiver, and the status **sent** or **confirmed**. Share cells are empty.
+- **Deleted expenses are left out.** Transfers are included whether they are only sent or confirmed.
+- Amounts are in **major units** with `.` as the decimal separator and no grouping (`12.50` USD, `300000` VND), with
+  the currency code in its own column. They are built from the stored integers, without floating point.
+- Headers and the type and status words are in the interface language at the time of the download.
+- The file is UTF-8 with a byte order mark (so Excel reads Vietnamese text), comma-separated and quoted per
+  RFC 4180. A text cell that starts with `=`, `+`, `-`, `@`, a tab, a carriage return or a line feed gets a leading
+  `'`, so a spreadsheet does not run it as a formula.
+- The file name is the group name followed by the download date (`<group name>-<YYYY-MM-DD>.csv`). Characters that
+  file systems reject, control characters and bidirectional text controls are replaced by `-`. It contains no group
+  code and no member data.
+- Known limitation: where the system list separator is `;` (common with a decimal comma), Excel does not split the
+  columns on double click; the file opens correctly through Data > From Text/CSV.
+
 ## VietQR
 
 - Follows the EMVCo/NAPAS 247 standard: GUID `A000000727`, service `QRIBFTTA` (transfer to account number),
