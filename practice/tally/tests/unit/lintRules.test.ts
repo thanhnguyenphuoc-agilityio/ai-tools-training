@@ -66,6 +66,15 @@ describe('Oxlint tally plugin (no-literal-ui-text)', () => {
     expect(res.output).toContain('tally(no-literal-ui-text)');
   });
 
+  it('reports a symbol-only separator, which is UI text too', () => {
+    const res = runOxlint(
+      'bad-symbol.tsx',
+      'declare const n: number;\nexport function Sym() { return <span>{n} →</span>; }\n',
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
   it('allows translated expressions with t()', () => {
     const res = runOxlint(
       'good-expr.tsx',
@@ -75,10 +84,10 @@ describe('Oxlint tally plugin (no-literal-ui-text)', () => {
     expect(res.output).not.toContain('tally(no-literal-ui-text)');
   });
 
-  it('allows whitespace and punctuation-only text', () => {
+  it('allows whitespace between expressions', () => {
     const res = runOxlint(
-      'good-punct.tsx',
-      'declare const t: (k: string) => string;\nexport function Punct() { return <div>{t("label")}: </div>; }\n',
+      'good-space.tsx',
+      'declare const t: (k: string) => string;\nexport function Space() { return <div>{t("label")} {t("value")}</div>; }\n',
     );
     expect(res.status).toBe(0);
     expect(res.output).not.toContain('tally(no-literal-ui-text)');
@@ -113,6 +122,17 @@ describe('Stylelint conventions', () => {
     expect(result.errored).toBe(true);
     const rules = result.results[0].warnings.map((w) => w.rule);
     expect(rules).toContain('color-no-hex');
+  });
+
+  it('reports rgb() colors outside theme files', async () => {
+    const result = await stylelint.lint({
+      code: '.overlay { background: rgb(0 0 0 / 0.45); }',
+      config: stylelintConfig,
+      codeFilename: 'src/components/Overlay.scss',
+    });
+    expect(result.errored).toBe(true);
+    const rules = result.results[0].warnings.map((w) => w.rule);
+    expect(rules).toContain('function-disallowed-list');
   });
 
   it('allows hex colors inside _themes.scss', async () => {

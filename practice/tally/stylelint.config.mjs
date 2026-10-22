@@ -11,6 +11,7 @@ export default {
     // Project convention: colors only via CSS custom properties.
     'color-no-hex': true,
     'color-named': 'never',
+    'function-disallowed-list': ['rgb', 'rgba', 'hsl', 'hsla', 'hwb', 'lch', 'oklch', 'lab', 'oklab'],
 
     // Prettier controls blank lines around variables and comments.
     'scss/dollar-variable-empty-line-before': null,
@@ -39,6 +40,7 @@ export default {
       rules: {
         'color-no-hex': null,
         'color-named': null,
+        'function-disallowed-list': null,
       },
     },
   ],

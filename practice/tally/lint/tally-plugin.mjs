@@ -1,8 +1,9 @@
 const MESSAGE = 'User-facing text must come from t()/tp() in src/i18n/locales';
 
 const TARGET_ATTRS = new Set(['aria-label', 'title', 'placeholder', 'alt']);
-const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
-const HAS_LETTER = /\p{L}/u;
+// Letters, digits and symbols alike: a hard-coded separator or arrow is UI text too.
+// Only pure whitespace is layout.
+const HAS_VISIBLE_TEXT = /\S/u;
 
 function isStringLiteral(node) {
   if (!node) return false;
@@ -36,7 +37,7 @@ export default {
       create(context) {
         return {
           JSXText(node) {
-            if (node.value && HAS_LETTER_OR_DIGIT.test(node.value)) {
+            if (node.value && HAS_VISIBLE_TEXT.test(node.value)) {
               context.report({
                 node,
                 message: MESSAGE,
@@ -53,7 +54,7 @@ export default {
             // Direct literal attribute: aria-label="Save"
             if (isStringLiteral(val)) {
               const text = getStringValue(val);
-              if (text && HAS_LETTER.test(text)) {
+              if (text && HAS_VISIBLE_TEXT.test(text)) {
                 context.report({
                   node,
                   message: MESSAGE,
@@ -65,7 +66,7 @@ export default {
             // Expression container literal attribute: aria-label={"Save"}
             if (val.type === 'JSXExpressionContainer' && isStringLiteral(val.expression)) {
               const text = getStringValue(val.expression);
-              if (text && HAS_LETTER.test(text)) {
+              if (text && HAS_VISIBLE_TEXT.test(text)) {
                 context.report({
                   node,
                   message: MESSAGE,

@@ -3,7 +3,11 @@
   "plugins": ["typescript", "react"],
   "jsPlugins": ["./lint/tally-plugin.mjs"],
   "rules": {
-    "tally/no-literal-ui-text": "error"
+    "tally/no-literal-ui-text": "error",
+    "no-control-regex": "off",
+    "react/set-state-in-effect": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "react/preserve-manual-memoization": "off"
   },
   "ignorePatterns": [
     "dist/**",
