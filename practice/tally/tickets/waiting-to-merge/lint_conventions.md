@@ -88,3 +88,33 @@ Docs:
 - `practice/tally/README.md` commands list and the repository `CLAUDE.md` Commands section: `npm run lint`.
 - `CLAUDE.md` Styles/Language rules: one line saying `npm run lint` checks UI text, BEM and theme colors.
 - `docs/design.md`: a short "Lint" paragraph (tools, why Oxlint instead of ESLint, where the custom rule lives).
+
+## Merge request
+
+Branch `feat/lint_conventions` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- `practice/tally/package.json`: added dev dependencies `oxlint`, `stylelint`, `stylelint-config-standard-scss` and
+  scripts `lint:js`, `lint:css`, `lint`.
+- `practice/tally/.oxlintrc.json` (new): plugins `typescript` and `react`, `jsPlugins: ["./lint/tally-plugin.mjs"]`,
+  rule `tally/no-literal-ui-text: error`, ignored build output, and overrides disabling the custom rule for `tests/**`,
+  `e2e/**`, `scripts/**` and `worker/**`.
+- `practice/tally/lint/tally-plugin.mjs` (new): custom plugin `tally` with rule `no-literal-ui-text` that reports
+  literal text in JSX children (`JSXText` with letters or digits) and user-facing attributes (`aria-label`, `title`,
+  `placeholder`, `alt`).
+- `practice/tally/stylelint.config.mjs` (new): extends `stylelint-config-standard-scss`, checks BEM selector pattern
+  and disallows hex/named colors outside `_themes.scss`, with rules that Prettier owns turned off with a one-line reason.
+- `.github/workflows/ci.yml`: added `npm run lint` step in the `test` job after `npm run typecheck`.
+- `practice/tally/tests/unit/lintRules.test.ts` (new): unit tests for Oxlint custom plugin and Stylelint rules.
+- Docs: updated `practice/tally/README.md`, repository `CLAUDE.md`, and `docs/design.md`.
+
+How it was tested:
+
+- `npm run lint`: 0 errors.
+- `npm run typecheck`: 0 errors.
+- `npm test`: 16 test files, 229 passed.
+- `npx playwright test`: 22 passed across desktop and mobile.
+- `node --test ../../.claude/hooks/*.test.mjs`: 28 tests, 28 passed.
+
