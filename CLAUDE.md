@@ -48,7 +48,8 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
 ## Rules
 
 - Never read, open, grep or summarise `tally-*-answers.md` or anything outside this repo that looks like an answer key.
-  If a task would require it, stop and ask.
+  If a task would require it, stop and ask. The hook `.claude/hooks/guard-answer-keys.mjs` blocks common ways to
+  reach the keys, not every one; the rule still applies.
 - Fake data only. Fake bank accounts: `0123456789`, `9876543210`. Never real names, accounts or customer data.
 - Identity is resolved only in `worker/auth.ts`; permission rules live only in `worker/policy.ts`.
 - Schema changes go in a new numbered migration in `migrations/`; never edit a migration that has been pushed.
