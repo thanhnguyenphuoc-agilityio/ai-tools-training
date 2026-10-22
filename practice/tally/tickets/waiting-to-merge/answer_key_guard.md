@@ -83,7 +83,14 @@ What changed:
 
 How it was tested:
 
-- `node --test .claude/hooks/guard-answer-keys.test.mjs`: 9 tests, 9 passed. They cover blocked file tool, glob,
+- `node --test .claude/hooks/guard-answer-keys.test.mjs`: 16 tests, 16 passed. They cover blocked file tool, glob,
   search, Bash and PowerShell cases, a worktree layout, normal repository work (reading `README.md`, `Grep` in
   `practice/tally`, `npm test`, a `git commit -m` message that mentions answers) and unparsable input.
 - The app code is unchanged, so typecheck, unit/API tests and e2e are not affected.
+
+Review round 1 (AI team lead): the hook now checks the first word of each shell segment and `VAR=value` prefixes,
+nested `$(...)` substitutions, a quoted heredoc fed to a shell, option values glued to the option (`-Path:x`,
+`-fx`), the PowerShell backtick escape, and every operand of `grep` / `rg` when the pattern comes from `-e`,
+`--regexp`, `-f` or `--file`. Bash `ls` counts only `-R` as recursive, so `ls -ltr ..` is allowed. Each case has a
+test that failed before the fix; the `echo` substitution test uses the quoted form. The branch name is
+`feat/answer_key_guard`, and the README row and the Description no longer claim that every read is blocked.
