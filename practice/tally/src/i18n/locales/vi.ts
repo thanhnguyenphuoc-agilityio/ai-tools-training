@@ -174,6 +174,7 @@ export const vi: Messages = {
       status: 'Trạng thái',
     },
     shareOf: 'Phần của {name}',
+    unknownMember: '(không rõ {n})',
     types: {
       expense: 'Khoản chi',
       transfer: 'Chuyển khoản',

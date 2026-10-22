@@ -50,11 +50,15 @@ export function buildGroupCsv(group: GroupDto, t: Translate): string {
   const amount = (minor: number) => raw(toDecimalString(minor, currency));
   const empty = raw('');
 
-  // One share column per member. A share whose member is gone gets a column of its own, so no share is dropped.
+  // One share column per member. A share whose member is gone gets a column of its own, so no share is dropped;
+  // those columns are numbered so that two missing members never share a header.
   const shareColumns = group.members.map((m) => ({ id: m.id, name: m.name }));
+  let missing = 0;
   for (const e of group.expenses) {
     for (const s of e.shares) {
-      if (!shareColumns.some((c) => c.id === s.memberId)) shareColumns.push({ id: s.memberId, name: unknown });
+      if (shareColumns.some((c) => c.id === s.memberId)) continue;
+      missing += 1;
+      shareColumns.push({ id: s.memberId, name: t('csvExport.unknownMember', { n: missing }) });
     }
   }
 

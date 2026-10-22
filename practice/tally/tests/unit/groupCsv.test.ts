@@ -186,9 +186,30 @@ describe('buildGroupCsv', () => {
       transfers: [],
     });
     expect(lines(buildGroupCsv(gone, en))).toEqual([
-      'Type,Date,Description,Paid by,Received by,Amount,Currency,Status,Share: Alex,Share: (unknown)',
+      'Type,Date,Description,Paid by,Received by,Amount,Currency,Status,Share: Alex,Share: (unknown 1)',
       'Expense,2026-10-01,Expense,Alex,,10.00,USD,,6.00,4.00',
     ]);
+  });
+
+  it('numbers the columns of several missing members so their headers stay distinct', () => {
+    const gone = group({
+      members: [member('alex', 'Alex')],
+      expenses: [
+        expense({ id: 'e2', payerId: 'alex', amount: 900, shares: [share('alex', 300), share('left-b', 600)] }),
+        expense({ id: 'e1', payerId: 'alex', amount: 1_000, shares: [share('alex', 600), share('left-a', 400)] }),
+      ],
+      transfers: [],
+    });
+    const [header, ...rows] = lines(buildGroupCsv(gone, en));
+    const shareHeaders = header.split(',').slice(8);
+    expect(shareHeaders).toEqual(['Share: Alex', 'Share: (unknown 1)', 'Share: (unknown 2)']);
+    expect(new Set(shareHeaders).size).toBe(shareHeaders.length);
+    // Each row's shares still add up to its amount (both columns are in major units, two digits).
+    for (const row of rows) {
+      const cells = row.split(',');
+      const shares = cells.slice(8).filter((c) => c !== '').map((c) => Math.round(Number(c) * 100));
+      expect(shares.reduce((a, b) => a + b, 0)).toBe(Math.round(Number(cells[5]) * 100));
+    }
   });
 
   it('writes only the header for an empty group', () => {
