@@ -65,7 +65,7 @@ test('blocks Bash commands that read a key or search the keys folder', () => {
   blocked('Bash', { command: 'cat ../*.md' });
   blocked('Bash', { command: 'cat < ../tally-seeded-answers.md' });
   blocked('Bash', { command: 'npm test && cat ../tally-review-answers.md' });
-  blocked('Bash', { command: 'echo $(cat ../tally-seeded-answers.md)' });
+  blocked('Bash', { command: 'echo "$(cat ../tally-seeded-answers.md)"' });
   blocked('Bash', { command: 'git commit -m "$(cat ../tally-seeded-answers.md)"' });
   blocked('Bash', { command: 'bash -c "cat ../tally-seeded-answers.md"' });
   blocked('Bash', { command: 'grep -r bug ..' });
@@ -75,6 +75,28 @@ test('blocks Bash commands that read a key or search the keys folder', () => {
   blocked('Bash', { command: 'find .. -name "*.md"' });
   blocked('Bash', { command: 'cd .. && grep -r bug .' });
   blocked('Bash', { command: `grep -R --include=*.md bug "${PARENT.replace(/\\/g, '/')}"` });
+});
+
+test('checks the first word of each shell segment', () => {
+  blocked('Bash', { command: '"$(cat ../tally-seeded-answers.md)"' });
+  blocked('Bash', { command: '< ../tally-seeded-answers.md grep bug' });
+  blocked('Bash', { command: 'echo "$(<../tally-seeded-answers.md)"' });
+  blocked('PowerShell', { command: '"$(Get-Content ..\\tally-seeded-answers.md)"' });
+  blocked('PowerShell', { command: '@"\n$(Get-Content ..\\tally-seeded-answers.md)\n"@' });
+});
+
+test('checks the script of a shell fed by a quoted heredoc', () => {
+  blocked('Bash', { command: "bash <<'EOF'\ncat ../tally-seeded-answers.md\nEOF" });
+  blocked('Bash', { command: "cat <<'EOF' | sh\ncat ../tally-seeded-answers.md\nEOF" });
+});
+
+test('treats the PowerShell backtick as an escape character', () => {
+  blocked('PowerShell', { command: 'Write-Output "a`"b"; gc ..\\tally-seeded-answers.md' });
+});
+
+test('checks nested substitutions', () => {
+  blocked('Bash', { command: 'echo "$(cat $(echo ../tally-seeded-answers.md))"' });
+  allowed('Bash', { command: "git commit -m \"$(cat <<'EOF'\nfix: handle (nested) parentheses\nEOF\n)\"" });
 });
 
 test('blocks PowerShell commands that read a key or search the keys folder', () => {

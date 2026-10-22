@@ -7,10 +7,12 @@
 // - Read, Edit, NotebookEdit: `file_path` / `notebook_path`. Content fields (`old_string`, ...) are ignored.
 // - Grep: `path` (default: the working directory) and `glob`. The search `pattern` is ignored.
 // - Glob: `pattern`, resolved against `path` (default: the working directory).
-// - Bash, PowerShell: the command, split into words. `cd` / `Set-Location` move the base for later words.
+// - Bash, PowerShell: the command, split into words, the command name and `VAR=value` prefixes included. `cd` /
+//   `Set-Location` move the base for later words.
 //   Text-only words are skipped: `git -m` / `--message` values, `echo` / `printf` / `Write-Output` / `Write-Host`
-//   arguments and quoted heredoc bodies (`<<'EOF'`, PowerShell `@'...'@`). A `$(...)` or backtick substitution
-//   inside such text is still checked, and so is the script of `bash -c` / `pwsh -Command`.
+//   arguments and quoted heredoc bodies (`<<'EOF'`, PowerShell `@'...'@`). A `$(...)` (nested too) or backtick
+//   substitution inside such text is still checked, and so is the script of `bash -c` / `pwsh -Command` and a
+//   quoted heredoc fed to a shell (`bash <<'EOF'`, `cat <<'EOF' | sh`).
 //
 // A path or word is blocked when:
 // - one of its path segments names `answer` together with `tally` or a glob character, or is a `tally*` glob;
@@ -121,8 +123,13 @@ function checkPath(value, base, { root = false } = {}) {
   }
 }
 
-/** Splits a command into segments of words. Quotes group text; `| ; & ( )`, newlines and Bash backticks split. */
+/**
+ * Splits a command into segments of words. Quotes and `$(...)` group text; `| ; & ( )`, newlines and Bash
+ * backticks split.
+ * The escape character (`\` in Bash, backtick in PowerShell) works outside quotes and inside double quotes.
+ */
 function parseCommand(command, bash) {
+  const escape = bash ? '\\' : '`';
   const segments = [[]];
   let word = null;
   let quote = null;
@@ -134,13 +141,18 @@ function parseCommand(command, bash) {
     const c = command[i];
     if (quote) {
       if (c === quote) quote = null;
-      else if (bash && quote === '"' && c === '\\') word += command[++i] ?? '';
+      else if (quote === '"' && c === escape) word += command[++i] ?? '';
       else word += c;
-    } else if (bash && c === '\\') {
+    } else if (c === escape) {
       word = (word ?? '') + (command[++i] ?? '');
     } else if (c === "'" || c === '"') {
       quote = c;
       word ??= '';
+    } else if (c === '$' && command[i + 1] === '(') {
+      // Keep a substitution inside its word: `cat $(echo x)` reads the file the inner command prints.
+      const end = substitutionEnd(command, i, bash);
+      word = (word ?? '') + command.slice(i, end + 1);
+      i = end;
     } else if (c === '#' && word === null) {
       while (i + 1 < command.length && command[i + 1] !== '\n') i++;
     } else if ('|;&()\n'.includes(c) || (bash && c === '`')) {
@@ -156,21 +168,63 @@ function parseCommand(command, bash) {
   return segments.filter((words) => words.length);
 }
 
-/** Checks the `$(...)` and backtick substitutions inside a word as commands of their own. */
+/** Index of the `)` that closes the `$(` at `start`, counting nested parentheses outside quotes. */
+function substitutionEnd(text, start, bash) {
+  const escape = bash ? '\\' : '`';
+  let depth = 0;
+  let quote = null;
+  for (let i = start + 1; i < text.length; i++) {
+    const c = text[i];
+    if (c === escape && quote !== "'") i++;
+    else if (quote) {
+      if (c === quote) quote = null;
+    } else if (c === "'" || c === '"') quote = c;
+    else if (c === '(') depth++;
+    else if (c === ')' && --depth === 0) return i;
+  }
+  return text.length;
+}
+
+/** Checks the `$(...)` and backtick substitutions inside a word as commands of their own, nested ones included. */
 function checkSubstitutions(text, base, bash) {
-  const pattern = bash ? /\$\(([^()]*)\)|`([^`]*)`/g : /\$\(([^()]*)\)/g;
-  for (const match of text.matchAll(pattern)) checkCommand(match[1] ?? match[2], base, bash);
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '$' && text[i + 1] === '(') {
+      const end = substitutionEnd(text, i, bash);
+      checkCommand(text.slice(i + 2, end), base, bash);
+      i = end;
+    } else if (bash && text[i] === '`') {
+      const end = text.indexOf('`', i + 1);
+      if (end < 0) break;
+      checkCommand(text.slice(i + 1, end), base, bash);
+      i = end;
+    }
+  }
+}
+
+/** The lower-case command name of a word: `C:\Tools\Grep.exe` gives `grep`. */
+function commandName(word) {
+  return path.basename(word.replace(/\\/g, '/')).toLowerCase().replace(/\.exe$/, '');
 }
 
 function checkCommand(command, base, bash) {
   const text = command
-    .replace(/<<-?[ \t]*(['"])(\w+)\1([^\n]*)\n[\s\S]*?\n[ \t]*\2[ \t]*\r?(?=\n|$)/g, (_, q, d, line) => line)
+    .replace(/<<-?[ \t]*(['"])(\w+)\1([^\n]*)\n([\s\S]*?)\n[ \t]*\2[ \t]*\r?(?=\n|$)/g, (_, q, d, line, body, at, all) => {
+      // A quoted heredoc body is text, unless it is the script of a shell (`bash <<'EOF'`, `cat <<'EOF' | sh`).
+      const before = commandName(all.slice(0, at).split(/[\n;|&(]/).at(-1).trim().split(/\s+/)[0] ?? '');
+      const piped = line.split('|').slice(1).map((part) => commandName(part.trim().split(/\s+/)[0] ?? ''));
+      const shell = [before, ...piped].find((word) => SHELLS.has(word));
+      if (shell) checkCommand(body, base, !['pwsh', 'powershell', 'cmd'].includes(shell));
+      return line;
+    })
     .replace(/@'[ \t]*\r?\n[\s\S]*?\r?\n'@/g, "''");
   for (const all of parseCommand(text, bash)) {
-    const start = all.findIndex((w) => !/^\w+=/.test(w)); // skip `VAR=value` prefixes
+    for (const w of all) checkSubstitutions(w, base, bash);
+    const start = all.findIndex((w) => !/^\w+=/.test(w)); // `VAR=value` prefixes
+    for (const w of all.slice(0, start < 0 ? all.length : start)) checkPath(w.replace(/^\w+=/, ''), base);
     if (start < 0) continue;
     const words = all.slice(start);
-    const name = path.basename(words[0].replace(/\\/g, '/')).toLowerCase().replace(/\.exe$/, '');
+    const name = commandName(words[0]);
+    checkPath(words[0], base);
     const rest = words.slice(1);
     if (CD_COMMANDS.has(name)) {
       base = toPath(rest.find((w) => !w.startsWith('-')) ?? homedir(), base);
@@ -185,7 +239,6 @@ function checkCommand(command, base, bash) {
       if (SHELLS.has(name) && /^[-/](c|command)$/i.test(rest[i - 1] ?? '')) {
         checkCommand(w, base, !['pwsh', 'powershell', 'cmd'].includes(name));
       } else if (!textOnly) checked.push(w);
-      checkSubstitutions(w, base, bash);
     }
     for (const w of checked) checkPath(w.startsWith('-') ? w.replace(/^[^=]*=?/, '') : w, base);
     const recursive =
