@@ -28,6 +28,7 @@ jobs:
           cache-dependency-path: practice/tally/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
 
   e2e:

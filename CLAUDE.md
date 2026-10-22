@@ -17,7 +17,7 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
 ## Commands (run inside practice/tally)
 
 - `npm run dev`: migrate local D1, then serve UI + API on http://localhost:5173
-- `npm run typecheck`, `npm test` (Vitest: unit + API via Miniflare), `npm run e2e` (Playwright)
+- `npm run typecheck`, `npm run lint`, `npm test` (Vitest: unit + API via Miniflare), `npm run e2e` (Playwright)
 - `npm run seed`: demo group through the API (dev server must be running)
 
 ## Language
@@ -44,6 +44,7 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   `src/styles/abstracts/`, component blocks in a `.scss` file next to the component.
 - Mobile first: base styles for phones, `@include up(sm|md|lg)` for larger screens.
 - Colors only through the CSS custom properties in `src/styles/base/_themes.scss` (light/dark).
+- `npm run lint` checks UI text, BEM class names, and theme colors.
 - Prettier (`practice/tally/.prettierrc`) is the code layout. The `format-on-edit` hook formats each app file
   Claude Code edits; untouched files keep their layout until they are edited. Do not reformat whole folders.
 

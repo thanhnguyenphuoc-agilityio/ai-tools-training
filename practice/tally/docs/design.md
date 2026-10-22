@@ -273,6 +273,12 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 - `theme_picker` is built: `src/components/ThemePicker.tsx` and `ThemePicker.scss`, messages under `theme.*`
   in the locales, tests in `tests/unit/theme.test.ts` and `e2e/theme.spec.ts`.
 
+### lint_conventions
+
+Built. Project conventions are checked automatically by `npm run lint`:
+- **JavaScript/TypeScript:** `oxlint` parses TypeScript 7.x directly without needing `typescript-eslint` peer dependencies. A custom JS plugin (`practice/tally/lint/tally-plugin.mjs`, rule `tally/no-literal-ui-text`) ensures all user-facing JSX text and attributes (`aria-label`, `title`, `placeholder`, `alt`) come from `t()`/`tp()` in `src/i18n/locales`. Built-in plugins `typescript` and `react` provide correctness checks and React hooks validation (`exhaustive-deps`).
+- **Styles:** `stylelint` with `stylelint-config-standard-scss` enforces BEM class selectors (`selector-class-pattern`) and forbids raw hex and named colors outside `src/styles/base/_themes.scss` (`color-no-hex`, `color-named`). Stylistic and layout rules managed by Prettier are turned off in `stylelint.config.mjs`.
+
 ### owner_member_tools
 
 - No API change: `PATCH /groups/:code/members/:id` and `POST /groups/:code/transfers` with `fromId` already allow the

@@ -96,6 +96,7 @@ Local data is stored in `.wrangler/` and survives restarts. Deleting that folder
 
 ```bash
 npm run typecheck
+npm run lint       # oxlint (JS/TS + UI text convention) and stylelint (BEM + theme colors)
 npm test           # unit (shared/) and API (worker/, in-memory D1 via Miniflare)
 npx playwright install chromium   # first run only
 npm run e2e        # Playwright, desktop and mobile
