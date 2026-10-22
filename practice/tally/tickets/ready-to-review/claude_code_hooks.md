@@ -95,3 +95,11 @@ How it was tested:
 - `node --test .claude/hooks/*.test.mjs`: 28 tests, 28 passed (16 answer key guard, 7 format, 5 notify).
 - The notify hook was run by hand on Windows: it returned at once with exit code 0 and left the notifier running.
 - The app code is unchanged, so typecheck, unit/API tests and e2e are not affected.
+
+## Review
+
+Approved by the AI team lead after one round: `node --test .claude/hooks/*.test.mjs` passes 28 of 28 tests, and
+`npm run typecheck` in `practice/tally` passes (the app code is unchanged, so unit/API tests and e2e are not
+affected). Review comments addressed: Prettier rewrote CRLF files as LF on Windows, so `.prettierrc` sets
+`endOfLine: auto` and a test with CRLF input failed before the fix; the merge request notes were added, including
+the `engines` field that `npm install` synced into `package-lock.json`.
