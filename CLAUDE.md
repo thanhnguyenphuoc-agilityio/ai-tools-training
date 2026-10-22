@@ -44,6 +44,8 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   `src/styles/abstracts/`, component blocks in a `.scss` file next to the component.
 - Mobile first: base styles for phones, `@include up(sm|md|lg)` for larger screens.
 - Colors only through the CSS custom properties in `src/styles/base/_themes.scss` (light/dark).
+- Prettier (`practice/tally/.prettierrc`) is the code layout. The `format-on-edit` hook formats each app file
+  Claude Code edits; untouched files keep their layout until they are edited. Do not reformat whole folders.
 
 ## Rules
 
