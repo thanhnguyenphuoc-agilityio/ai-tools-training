@@ -161,6 +161,29 @@ export const vi: Messages = {
       dark: 'Tối',
     },
   },
+  csvExport: {
+    download: 'Tải file CSV',
+    columns: {
+      type: 'Loại',
+      date: 'Ngày',
+      description: 'Nội dung',
+      paidBy: 'Người trả',
+      receivedBy: 'Người nhận',
+      amount: 'Số tiền',
+      currency: 'Tiền tệ',
+      status: 'Trạng thái',
+    },
+    shareOf: 'Phần của {name}',
+    unknownMember: '(không rõ {n})',
+    types: {
+      expense: 'Khoản chi',
+      transfer: 'Chuyển khoản',
+    },
+    status: {
+      sent: 'Đã chuyển',
+      confirmed: 'Đã xác nhận',
+    },
+  },
   errors: {
     INTERNAL: 'Có lỗi xảy ra. Vui lòng thử lại.',
     NOT_FOUND: 'Không tìm thấy.',

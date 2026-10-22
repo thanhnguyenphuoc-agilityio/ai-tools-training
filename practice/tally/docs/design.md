@@ -243,9 +243,26 @@ Built. Rules in `docs/business-rules.md` (Expenses, split modes).
 
 ### csv_export
 
-- Client-only, built from `GroupDto`. Column headers come from the locale. Amounts are exported in major units,
-  with a currency code column.
-- A UTF-8 BOM is needed so that Excel reads non-ASCII text correctly.
+Built. Rules in `docs/business-rules.md` (Spreadsheet export).
+
+- Client-only, built from the loaded `GroupDto`; no API change, no migration, no rule in `policy.ts`.
+- `src/csv.ts`: generic CSV text (RFC 4180 quoting, CRLF, UTF-8 BOM). Cells are either `text()` (written by people,
+  guarded against formulas with a leading `'`) or `raw()` (formatted by the app: dates, amounts, currency codes).
+- `src/groupCsv.ts`: `buildGroupCsv(group, t)` lays out the table and `csvFileName(name, today, fallback)` builds the
+  file name. Neither touches the DOM, so both are unit tested in Node (`tests/unit/csv.test.ts`,
+  `tests/unit/groupCsv.test.ts`). The transfer date depends on the device time zone, so the tests fix `TZ`.
+  - Expenses and transfers share one table with a type column; each person's share is one column per member,
+    in `GroupDto.members` order. A share whose member is missing gets its own column, numbered
+    (`csvExport.unknownMember`) so that two missing members never share a header, and a row's shares always add up
+    to its amount.
+  - Shares are read from `ExpenseDto.shares`, so the export does not depend on the split mode.
+- `shared/money.ts` `toDecimalString(amount, currency)` turns minor units into a plain major-unit string from the
+  integer's digits (`minorDigits`), without floating-point division.
+- `src/download.ts` is the only DOM part (Blob, object URL, temporary link). The "Download CSV" button sits in the
+  group header in `GroupPage.tsx` and is rendered only when `me.memberId` is set.
+- Text comes from `csvExport.*` in the locales. The e2e test `e2e/csv-export.spec.ts` reads the downloaded file
+  through Playwright's download event.
+- A date range filter, if requested later, only needs a filter on the rows in `buildGroupCsv`.
 
 ### language_picker, theme_picker
 

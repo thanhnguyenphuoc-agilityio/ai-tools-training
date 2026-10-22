@@ -8,6 +8,7 @@ import {
   parseShareAmount,
   splitAmount,
   splitExact,
+  toDecimalString,
 } from '../../shared/money';
 import { enLocale } from '../../src/i18n/locales/en';
 import { viLocale } from '../../src/i18n/locales/vi';
@@ -98,6 +99,31 @@ describe('formatMoney', () => {
     expect(formatMoney(1_250_000, VND, 'vi-VN')).toBe(intlVnd);
     expect(formatMoney(125_050, USD, 'en-US')).toBe('$1,250.50');
     expect(formatMoney(1_500, JPY, 'en-US')).toBe('\u00a51,500');
+  });
+});
+
+describe('toDecimalString', () => {
+  it('writes zero-digit currencies as whole numbers without grouping', () => {
+    expect(toDecimalString(1_250_000, VND)).toBe('1250000');
+    expect(toDecimalString(1_500, JPY)).toBe('1500');
+    expect(toDecimalString(0, VND)).toBe('0');
+  });
+
+  it('writes two-digit currencies with a dot and both minor digits', () => {
+    expect(toDecimalString(125_050, USD)).toBe('1250.50');
+    expect(toDecimalString(5, USD)).toBe('0.05');
+    expect(toDecimalString(70, THB)).toBe('0.70');
+    expect(toDecimalString(0, USD)).toBe('0.00');
+    expect(toDecimalString(1_000_000_001, USD)).toBe('10000000.01');
+  });
+
+  it('keeps the sign of a negative amount', () => {
+    expect(toDecimalString(-5, USD)).toBe('-0.05');
+    expect(toDecimalString(-1_000, VND)).toBe('-1000');
+  });
+
+  it('rejects an amount that is not an integer', () => {
+    expect(() => toDecimalString(12.5, USD)).toThrow(RangeError);
   });
 });
 

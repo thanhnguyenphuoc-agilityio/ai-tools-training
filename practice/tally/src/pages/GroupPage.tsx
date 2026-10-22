@@ -8,6 +8,9 @@ import { JoinPanel } from '../components/JoinPanel';
 import { MembersPanel } from '../components/MembersPanel';
 import { OwnerKeyBanner } from '../components/OwnerKeyBanner';
 import { SettlePanel } from '../components/SettlePanel';
+import { todayLocal } from '../dates';
+import { downloadTextFile } from '../download';
+import { buildGroupCsv, csvFileName } from '../groupCsv';
 import { rememberGroup } from '../history';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/types';
@@ -74,6 +77,12 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   if (!group) return <p className="text text--muted">{t('common.loading')}</p>;
 
   const link = `${location.origin}/g/${group.code}`;
+  const exportCsv = () =>
+    downloadTextFile(
+      csvFileName(group.name, todayLocal(), t('app.title')),
+      buildGroupCsv(group, t),
+      'text/csv;charset=utf-8',
+    );
   return (
     <div className="group-page">
       <section className="card stack stack--tight">
@@ -86,6 +95,12 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
           <button className="button button--ghost button--small" onClick={() => navigator.clipboard?.writeText(link)}>
             {t('group.copyInvite')}
           </button>
+          {/* Joined members only. An interface rule, not a security boundary: anyone with the link sees the same data. */}
+          {group.me.memberId && (
+            <button className="button button--ghost button--small" onClick={exportCsv}>
+              {t('csvExport.download')}
+            </button>
+          )}
         </div>
       </section>
 

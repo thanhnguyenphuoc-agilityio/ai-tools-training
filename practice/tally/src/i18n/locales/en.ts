@@ -170,6 +170,32 @@ export const en = {
       dark: 'Dark',
     },
   },
+  csvExport: {
+    download: 'Download CSV',
+    /** Column headers of the exported spreadsheet file. */
+    columns: {
+      type: 'Type',
+      date: 'Date',
+      description: 'Description',
+      paidBy: 'Paid by',
+      receivedBy: 'Received by',
+      amount: 'Amount',
+      currency: 'Currency',
+      status: 'Status',
+    },
+    /** Header of the column with one member's share of each expense. */
+    shareOf: 'Share: {name}',
+    /** Name in a share column for a member who is no longer in the group, numbered from 1. */
+    unknownMember: '(unknown {n})',
+    types: {
+      expense: 'Expense',
+      transfer: 'Transfer',
+    },
+    status: {
+      sent: 'Sent',
+      confirmed: 'Confirmed',
+    },
+  },
   errors: {
     INTERNAL: 'Something went wrong. Please try again.',
     NOT_FOUND: 'Not found.',
