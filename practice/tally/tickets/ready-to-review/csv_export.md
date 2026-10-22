@@ -136,3 +136,11 @@ Vietnamese text, so it is not used.
   rule; `docs/design.md` uses the `### csv_export` / "Built." heading style and no longer calls the CSV functions
   pure, since the transfer date depends on the device time zone. The merge request link stays a placeholder until
   the branch is pushed, which happens only when the user asks.
+
+## Review
+
+Approved by the AI team lead after one round: typecheck, 221 unit and API tests (15 files) and 22 e2e tests
+(desktop and mobile) pass. Review comments addressed: numbered share columns for members no longer in the group, an
+exact transfer date in the e2e test, the zero-share and file-name rules in `docs/business-rules.md`, and the
+heading style and wording in `docs/design.md`. The merge request link is still to be added when the branch is
+pushed.
