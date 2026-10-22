@@ -116,3 +116,17 @@ Known limitation: Excel opens a comma-separated file by double click only when t
 comma. Where the regional settings use `;` (common with a decimal comma), the file is still readable through
 Data > From Text/CSV. A `sep=,` first line would fix the split but makes Excel ignore the BOM, which breaks
 Vietnamese text, so it is not used.
+
+## Merge request
+
+- Branch: `feat/csv_export` into `develop`. The merge request is opened on GitLab from this branch; its link is
+  added when it exists.
+- What changed: a "Download CSV" button in the group header, shown to joined members, saves one CSV file with the
+  group's expenses and transfers. The file is built in the browser from the loaded `GroupDto` (`src/csv.ts`,
+  `src/groupCsv.ts`, `src/download.ts`), with amounts in major units from `toDecimalString` in `shared/money.ts`
+  and text from `csvExport.*` in the locales. No API change, no migration, no permission rule.
+- Docs: "Spreadsheet export" in `docs/business-rules.md`, `csv_export (built)` in `docs/design.md`, and spreadsheet
+  export removed from "Not in the MVP" in the README.
+- How tested: `npm run typecheck` and `npm test` pass (15 files, 220 tests), including the new unit tests in
+  `tests/unit/csv.test.ts`, `tests/unit/groupCsv.test.ts` and `tests/unit/money.test.ts`. The new e2e test
+  `e2e/csv-export.spec.ts` passes on desktop and mobile; the full e2e run is left to the AI team lead.
