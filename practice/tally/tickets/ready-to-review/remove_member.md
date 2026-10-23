@@ -80,3 +80,23 @@ a share column for removed members.
 - Replaced browser native `window.prompt` with an accessible in-app `RemoveMemberDialog` (follows `QrDialog` pattern with aria attributes, Escape key, backdrop click, autofocus, error banner, Cancel and Remove buttons). `e2e/remove-member.spec.ts` updated.
 
 Typecheck, lint, 262 unit and API tests, 28 hook tests, and 24 e2e tests pass on the branch.
+
+Second review (8 findings, all fixed; each bug fix has a test that fails before the fix):
+
+- Removal race with new expenses and transfers: fixed. Their INSERT repeats the removed-member check
+  (`INSERT ... SELECT ... WHERE NOT EXISTS`, shares in the same batch), and the removal checks the balance again
+  after its UPDATE and undoes it with `MEMBER_HAS_BALANCE`. Five API tests simulate the interleavings with
+  `interleave()` in `tests/api/helpers.ts`.
+- Expense delete race: fixed. The removed-member check is a `NOT EXISTS` inside the soft-delete UPDATE.
+- Settle-up suggestions naming a removed member: fixed. `src/settleView.ts` suggests transfers between current
+  members only; a removed member with a non-zero balance is named in a note. Unit tests added.
+- Remove dialog closing when a press inside it ends on the backdrop: fixed. It closes only when the press starts
+  and ends on the backdrop. Covered in `e2e/remove-member.spec.ts`.
+- Expense form keeping a removed payer: fixed. The form falls back to a current payer, shows the error through
+  `t()` and reloads the group. New e2e test.
+- Delete button on an expense the API refuses to delete: fixed. A note replaces it (`involvesRemovedMember()`,
+  unit tests added).
+- `hasPendingTransfer` reading transfers twice: fixed. `memberSettlement()` reads both from one ledger.
+- Reason input focused twice: fixed. Only `autoFocus` remains.
+
+Typecheck, lint, 273 unit and API tests, 28 hook tests, and 26 e2e tests pass on the branch.
