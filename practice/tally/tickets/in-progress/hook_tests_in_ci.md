@@ -4,7 +4,7 @@
 |---|---|
 | Labels | `type::improvement`, `priority::low`, `area::security` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `answer_key_guard`, `claude_code_hooks` |
 
