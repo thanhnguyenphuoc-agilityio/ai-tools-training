@@ -60,6 +60,25 @@ describe('removing a member', () => {
     expect(group.transfers[0].fromId).toBe(ids.jamie);
   });
 
+  it('refuses a reason longer than 200 characters', async () => {
+    const res = await remove(owner, ids.jamie, 'x'.repeat(201));
+    expect(res.status).toBe(400);
+    expect(res.json.code).toBe('FIELD_TOO_LONG');
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+
+    expect((await remove(owner, ids.jamie, `  ${'x'.repeat(200)}  `)).status).toBe(200);
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removedReason).toBe('x'.repeat(200));
+  });
+
+  it('refuses a reason that is not text', async () => {
+    for (const reason of [123, true, { text: 'Moved out' }, ['Moved out']]) {
+      const res = await owner.call('POST', `/groups/${code}/members/${ids.jamie}/remove`, { reason });
+      expect(res.status).toBe(400);
+      expect(res.json.code).toBe('FIELD_REQUIRED');
+    }
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+  });
+
   it('turns the removed member device into a guest', async () => {
     expect((await remove(owner, ids.sam)).status).toBe(200);
     expect((await getGroup(sam)).me).toEqual({ memberId: null, isOwner: false });

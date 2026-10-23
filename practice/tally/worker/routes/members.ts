@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
 import { audit, hasPendingTransfer, loadActiveMember, loadGroup, loadMembers, memberBalance } from '../groupData';
-import { ApiError, bankDetails, now, readJson, text, type AppEnv } from '../http';
+import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv } from '../http';
 import { requireCanEditMember, requireCanRemoveMember, requireMember } from '../policy';
 
 export const memberRoutes = new Hono<AppEnv>();
@@ -78,7 +78,7 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_REMOVE_OWNER', 'the group owner cannot be removed');
 
   const body = await readJson(c);
-  const reason = body.reason ? String(body.reason) : null;
+  const reason = optionalText(body.reason, 'reason', 200);
 
   // A member who still owes or is owed money settles up first: a debt is never written off or moved.
   const balance = await memberBalance(c.env.DB, group.code, member.id);
