@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
-import { memberName, payerName } from '../expenseRow';
+import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
 import './ExpenseList.scss';
@@ -35,6 +35,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
         {group.expenses.map((e) => {
           const isAuthor = !!group.me.memberId && e.createdBy === group.me.memberId;
           const canDelete = group.me.isOwner || isAuthor;
+          const locked = involvesRemovedMember(e, group.members);
           const meta = [
             t('expenseList.meta', {
               payer: payerName(e, group.members, t('common.unknownMember')),
@@ -52,7 +53,8 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
               </div>
               <div className="expense-list__row text text--muted text--small">
                 <span>{meta}</span>
-                {canDelete && (
+                {canDelete && locked && <span className="text text--muted">{t('expenseList.deleteLocked')}</span>}
+                {canDelete && !locked && (
                   <button className="button button--ghost button--small" onClick={() => remove(e.id, e.description)}>
                     {t('expenseList.delete')}
                   </button>

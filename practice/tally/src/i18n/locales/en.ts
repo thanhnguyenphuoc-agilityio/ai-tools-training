@@ -109,6 +109,7 @@ export const en = {
     exact: 'exact shares',
     delete: 'Delete',
     confirmDelete: 'Delete "{description}"?',
+    deleteLocked: 'Kept: involves a removed member',
   },
   settle: {
     balancesTitle: 'Balances',

@@ -103,6 +103,7 @@ export const vi: Messages = {
     exact: 'nhập phần từng người',
     delete: 'Xoá',
     confirmDelete: 'Xoá khoản "{description}"?',
+    deleteLocked: 'Không xoá được: có thành viên đã bị xoá',
   },
   settle: {
     balancesTitle: 'Số dư',
