@@ -1,0 +1,44 @@
+@use '../abstracts' as *;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: space(1);
+  padding: space(2) space(4);
+  border: 1px solid var(--color-accent);
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity $transition-fast, background-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--color-accent);
+  }
+
+  &--small {
+    padding: space(1) space(2);
+    font-size: font-size(sm);
+  }
+
+  // Full width on phones, natural width from `sm` up.
+  &--block-mobile {
+    width: 100%;
+
+    @include up(sm) {
+      width: auto;
+    }
+  }
+}

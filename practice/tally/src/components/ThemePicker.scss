@@ -1,0 +1,45 @@
+@use '../styles/abstracts' as *;
+
+// Segmented control: one pill per theme preference. Native radios stay in the
+// DOM (visually hidden) for keyboard use and screen readers.
+.theme-picker {
+  display: inline-flex;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-pill;
+  background: var(--color-surface);
+  font-size: font-size(sm);
+
+  &__legend {
+    @include visually-hidden;
+  }
+
+  &__input {
+    @include visually-hidden;
+  }
+
+  &__option {
+    position: relative;
+    padding: space(1) space(2);
+    border-radius: $radius-pill;
+    color: var(--color-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    @include up(sm) {
+      padding: space(1) space(3);
+    }
+  }
+
+  // Keyboard focus only: no ring after a mouse click or tap.
+  &__option:has(.theme-picker__input:focus-visible) {
+    @include focus-ring;
+  }
+
+  &__option--active {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+}

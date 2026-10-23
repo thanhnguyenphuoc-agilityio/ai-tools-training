@@ -1,0 +1,160 @@
+// Create, read and configure a group; recover owner access.
+import { Hono } from 'hono';
+import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
+import { generateGroupCode } from '../../shared/groupCode';
+import type { CreateGroupResponse, ExpenseDto, GroupDto, TransferDto } from '../../shared/types';
+import { memberCookieName, ownerCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
+import { audit, loadGroup, loadMembers, toMemberDto, touch } from '../groupData';
+import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
+import { requireOwner } from '../policy';
+
+export const groupRoutes = new Hono<AppEnv>();
+
+// Deleted expenses count: they stay in the history with amounts in the current currency.
+async function isCurrencyLocked(db: D1Database, code: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT EXISTS (SELECT 1 FROM expenses WHERE group_code = ?1) OR EXISTS (SELECT 1 FROM transfers WHERE group_code = ?1) AS used`,
+    )
+    .bind(code)
+    .first<{ used: number }>();
+  return !!row?.used;
+}
+
+// The creator becomes the owner and the first member.
+groupRoutes.post('/', async (c) => {
+  const body = await readJson(c);
+  const name = text(body.name, 'name', 80);
+  const ownerName = text(body.ownerName, 'ownerName', 40);
+  const groupCurrency = currency(body.currency ?? DEFAULT_CURRENCY);
+  const rounding = roundTo(body.roundTo, groupCurrency);
+
+  const code = generateGroupCode();
+  const ownerKey = randomToken();
+  const memberId = crypto.randomUUID();
+  const memberToken = randomToken();
+  const at = now();
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), at, at),
+    c.env.DB.prepare(
+      'INSERT INTO members (id, group_code, name, token_hash, is_owner, created_at) VALUES (?, ?, ?, ?, 1, ?)',
+    ).bind(memberId, code, ownerName, await sha256Hex(memberToken), at),
+  ]);
+
+  setGroupCookie(c, code, ownerCookieName(code), ownerKey);
+  setGroupCookie(c, code, memberCookieName(code), `${memberId}.${memberToken}`);
+  return c.json({ code, ownerKey } satisfies CreateGroupResponse, 201);
+});
+
+// Anyone with the link can read the whole group.
+groupRoutes.get('/:code', async (c) => {
+  const { group, me } = await loadGroup(c);
+  const db = c.env.DB;
+
+  const [members, expenseRows, shareRows, transferRows] = await Promise.all([
+    loadMembers(db, group.code),
+    db
+      .prepare('SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC')
+      .bind(group.code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT s.* FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
+         WHERE e.group_code = ? AND e.deleted_at IS NULL`,
+      )
+      .bind(group.code)
+      .all<{ expense_id: string; member_id: string; weight: number; amount: number }>()
+      .then((r) => r.results),
+    db
+      .prepare('SELECT * FROM transfers WHERE group_code = ? ORDER BY created_at DESC')
+      .bind(group.code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+  ]);
+
+  const expenses: ExpenseDto[] = expenseRows.map((e) => ({
+    id: e.id as string,
+    payerId: e.payer_id as string,
+    amount: e.amount as number,
+    description: e.description as string,
+    spentOn: e.spent_on as string,
+    splitMode: e.split_mode as ExpenseDto['splitMode'],
+    shares: shareRows
+      .filter((s) => s.expense_id === e.id)
+      .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
+    createdBy: e.created_by as string | null,
+    createdAt: e.created_at as string,
+  }));
+  const transfers: TransferDto[] = transferRows.map((t) => ({
+    id: t.id as string,
+    fromId: t.from_id as string,
+    toId: t.to_id as string,
+    amount: t.amount as number,
+    status: t.status as TransferDto['status'],
+    createdAt: t.created_at as string,
+    confirmedAt: t.confirmed_at as string | null,
+  }));
+
+  // A member opening the group counts as activity; an anonymous visitor does not.
+  if (me.memberId) await touch(db, group.code);
+
+  const dto: GroupDto = {
+    code: group.code,
+    name: group.name,
+    currency: group.currency,
+    roundTo: group.round_to,
+    createdAt: group.created_at,
+    lastActivityAt: group.last_activity_at,
+    currencyLocked: await isCurrencyLocked(db, group.code),
+    members: members.map(toMemberDto),
+    expenses,
+    transfers,
+    me,
+  };
+  return c.json(dto);
+});
+
+// Owner settings: name, currency, rounding. The currency can only change
+// while the group has no expenses or transfers, so no amount is reinterpreted.
+groupRoutes.patch('/:code', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireOwner(me);
+  const body = await readJson(c);
+  const name = body.name === undefined ? group.name : text(body.name, 'name', 80);
+
+  const current = getCurrency(group.currency)!;
+  const next = body.currency === undefined ? current : currency(body.currency);
+  if (next.code !== current.code) {
+    if (await isCurrencyLocked(c.env.DB, group.code)) {
+      throw new ApiError(409, 'CURRENCY_LOCKED', 'currency cannot change once the group has expenses or transfers');
+    }
+  }
+  // Keep the current rounding if the (new) currency allows it, else fall back to exact.
+  const rounding =
+    body.roundTo !== undefined
+      ? roundTo(body.roundTo, next)
+      : next.roundOptions.includes(group.round_to)
+        ? group.round_to
+        : next.roundOptions[0];
+
+  await c.env.DB.prepare('UPDATE groups SET name = ?, currency = ?, round_to = ? WHERE code = ?')
+    .bind(name, next.code, rounding, group.code)
+    .run();
+  await audit(c.env.DB, group.code, me, 'group.update', null);
+  return c.json({ ok: true });
+});
+
+// Recover owner access on a new device with the owner key.
+groupRoutes.post('/:code/owner/claim', async (c) => {
+  const { group, me } = await loadGroup(c);
+  const body = await readJson(c);
+  const key = text(body.ownerKey, 'ownerKey', 200);
+  if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+  setGroupCookie(c, group.code, ownerCookieName(group.code), key);
+  await audit(c.env.DB, group.code, { ...me, isOwner: true }, 'owner.claim', null);
+  return c.json({ ok: true });
+});

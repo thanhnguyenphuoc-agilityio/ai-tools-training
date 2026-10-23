@@ -1,0 +1,43 @@
+// Layout blocks. Use as mixes on any element: class="stack expense-form".
+@use '../abstracts' as *;
+
+// Vertical rhythm.
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+
+  &--tight {
+    gap: space(2);
+  }
+
+  &--loose {
+    gap: space(5);
+  }
+}
+
+// Horizontal group that wraps on small screens.
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: space(2);
+
+  &--between {
+    justify-content: space-between;
+  }
+
+  &--nowrap {
+    flex-wrap: nowrap;
+  }
+}
+
+// Responsive columns: one column on phones, two from `sm` up.
+.columns {
+  display: grid;
+  gap: space(3);
+
+  @include up(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

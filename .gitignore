@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+.dev.vars
+.claude/settings.local.json
+node_modules/
+.npm/
+.DS_Store
+Thumbs.db
+.playwright-mcp/

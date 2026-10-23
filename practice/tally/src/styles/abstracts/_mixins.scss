@@ -1,0 +1,38 @@
+@use 'sass:map';
+@use 'tokens' as *;
+
+@function space($step) {
+  @return map.get($space, $step);
+}
+
+@function font-size($name) {
+  @return map.get($font-size, $name);
+}
+
+/// Min-width media query from $breakpoints: @include up(md) { ... }
+@mixin up($name) {
+  @media (min-width: map.get($breakpoints, $name)) {
+    @content;
+  }
+}
+
+/// Max-width media query, for the rare phone-only rule.
+@mixin down($name) {
+  @media (max-width: map.get($breakpoints, $name) - 0.02px) {
+    @content;
+  }
+}
+
+@mixin focus-ring {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,0 +1,11 @@
+@use '../abstracts' as *;
+
+.badge {
+  display: inline-block;
+  padding: 2px space(2);
+  border-radius: $radius-pill;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 0.75rem;
+  vertical-align: middle;
+}

@@ -1,0 +1,4 @@
+// Import in any .scss file with: @use '<relative path>/styles/abstracts' as *;
+// Emits no CSS, only variables, functions and mixins.
+@forward 'tokens';
+@forward 'mixins';

@@ -1,93 +1,106 @@
-# ai-tools-training
+# AI Tools Training
 
+Practice repository for the 15-day AI Tools training for developers.
 
+- Training plan: <https://dojo.agilityio.dev/>
+
+All exercises are done in this repository, never in customer code. Secrets and customer data are never pasted
+into AI tools.
+
+## Simulated roles
+
+This is a personal project with a single developer. To practise the way a real project team works, AI models play
+the other roles: they report tickets, answer business questions, test, review and seed bugs. Ticket reporters are
+named after the model that plays them, together with the role:
+
+| Name | Role in the project |
+|---|---|
+| Opus | Product owner: business rules, priorities, acceptance |
+| Sonnet | QA tester: test reports, security questions |
+| Haiku | End user (group member) |
+| Gemini | End user (group treasurer) |
+| Team lead | A Claude Code session: runs the e2e tests, reviews merge requests and merges them into `develop`; prepares releases to `main` |
+
+The trainee plays the developer, and in some exercises the BA, QA or reviewer. The trainee is also the final human
+check: every feature is tested by hand on `develop` before it reaches `main`. `practice/tally/PRACTICE.md`
+describes how each role is simulated.
+
+## Contents
+
+| Path | Description |
+|---|---|
+| [`practice/tally/`](practice/tally/README.md) | Training app **Tally**: group expenses with VietQR settle-up (React + Hono on Cloudflare Workers + D1) |
+| [`practice/tally/tickets/`](practice/tally/tickets/README.md) | Tickets, one folder per status (backlog, todo, in-progress, waiting-to-merge, ready-to-review, done) |
+| [`practice/tally/PRACTICE.md`](practice/tally/PRACTICE.md) | Practice method, simulated roles, bug-seeding prompts, 15-day schedule |
+| [`TRAINING-LOG.md`](TRAINING-LOG.md) | Daily log: goals, shipped work and retro notes |
+| [`CLAUDE.md`](CLAUDE.md) | Instructions for Claude Code in this repository |
+| `.claude/skills/review-checklist/` | Review skill based on the Day 3 checklist |
+| `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
+| `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
+| `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
+| `.claude/hooks/`, `.claude/settings.json` | Claude Code hooks: `guard-answer-keys` (`PreToolUse`) blocks common ways to read the exercise answer keys (`tally-*-answers.md`), the CLAUDE.md rule still applies; `format-on-edit` (`PostToolUse`) formats an edited app file with Prettier; `notify-on-finish` (`Stop`) shows a desktop notification when a reply ends (`CLAUDE_NOTIFY=off` turns it off). Tests: `npm run test:hooks` inside `practice/tally` (or `node --test .claude/hooks/*.test.mjs`) |
+| `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
+| `.github/workflows/ci.yml` | GitHub Actions: typecheck, unit/API tests and e2e on pull requests and on `develop`/`main` |
+
+The Playwright MCP server in `.mcp.json` is a project-scope entry named `playwright`. Claude Code asks for approval
+when it first loads a project MCP server, at the start of a session, and a local-scope entry with the same name
+overrides the project entry. Local-scope entries cover two machine-specific cases:
+
+- The server launches the installed Google Chrome. On a machine without Chrome, install the browser build that this
+  server version expects with `npx @playwright/mcp@0.0.83 install-browser chromium`, then add the entry at local
+  scope with `--browser chromium`. The Chromium installed for the e2e tests does not work here: the server bundles
+  its own Playwright build, which expects a different Chromium revision.
+- On native Windows, if `npx` does not start, add the entry through `cmd /c`:
+  `claude mcp add playwright -s local -- cmd /c npx -y @playwright/mcp@0.0.83`.
+
+By default the server blocks navigation to local `file://` URLs and limits file access to the workspace root. The
+`--allow-unrestricted-file-access` flag lifts both limits and is not set in `.mcp.json`.
+
+The GitHub connector lets a session read pull requests, issues and workflow runs on the GitHub mirror. It is not
+in `.mcp.json`, because it needs a personal access token and each person uses their own. Create a fine-grained
+token limited to this repository (read access to contents, pull requests, issues and actions; write access to pull
+requests only to comment), then add the remote server at local scope:
+
+```bash
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ -s local \
+  --header "Authorization: Bearer <token>"
+```
+
+The token stays in the local Claude Code configuration and is never committed. `/mcp` shows whether the server is
+connected.
+
+## Language
+
+The repository is written in English: code, tests, documentation, tickets and the training log. The only
+exception is the localization files (`practice/tally/src/i18n/locales/*.ts`), which contain the user-facing text
+for each supported language.
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Start with the **Business overview** in [`practice/tally/README.md`](practice/tally/README.md#business-overview):
+what the app does, its concepts, the main flow and its constraints. Then clone the integration branch and run it
+(`develop` is the default branch on GitLab once Day 0 is pushed):
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.asoft-python.com/thanh.nguyenphuoc/ai-tools-training.git
-git branch -M main
-git push -uf origin main
+```bash
+git clone -b develop git@gitlab.asoft-python.com:thanh.nguyenphuoc/ai-tools-training.git
+cd ai-tools-training/practice/tally
+npm install
+npm run dev
 ```
 
-## Integrate with your tools
+Section 0 of `practice/tally/PRACTICE.md` describes the bug-seeding step, which runs in a separate session
+before Day 2.
 
-* [Set up project integrations](https://gitlab.asoft-python.com/thanh.nguyenphuoc/ai-tools-training/-/settings/integrations)
+## Git flow
 
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- `develop`: integration branch. Every feature merge request targets it; the AI team lead runs the e2e tests,
+  reviews and merges.
+- `main`: released code. `develop` is merged into `main` only after a human has tested and confirmed the new
+  features (see the workflow in `practice/tally/tickets/README.md`).
+- Work branches: `feat/<ticket_name>`, `fix/<ticket_name>`, `chore/...`, `docs/...`, where `<ticket_name>` is the
+  ticket file name without `.md`.
+- Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`).
+- A merge request is self-contained: what changed, why, how it was tested, screenshots for UI changes and a
+  ticket link. Typecheck, unit/API tests and e2e must pass locally and in the GitHub Actions run.
+- The repository is mirrored to GitHub (`git@github.com:thanhnguyenphuoc-agilityio/ai-tools-training.git`) for CI;
+  GitLab stays the primary remote for merge requests.

@@ -1,0 +1,13 @@
+// Global entry: themes, base elements and shared BEM blocks.
+// Component-specific blocks live next to their component (e.g. ExpenseForm.scss).
+@use 'base/themes';
+@use 'base/base';
+@use 'blocks/layout';
+@use 'blocks/card';
+@use 'blocks/button';
+@use 'blocks/field';
+@use 'blocks/list';
+@use 'blocks/badge';
+@use 'blocks/tabs';
+@use 'blocks/dialog';
+@use 'blocks/text';
