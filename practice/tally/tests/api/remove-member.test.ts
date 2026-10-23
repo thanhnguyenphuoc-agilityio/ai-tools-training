@@ -79,6 +79,11 @@ describe('removing a member', () => {
     expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
   });
 
+  it('treats a reason of only spaces as no reason', async () => {
+    expect((await remove(owner, ids.jamie, '   ')).status).toBe(200);
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removedReason).toBeNull();
+  });
+
   it('turns the removed member device into a guest', async () => {
     expect((await remove(owner, ids.sam)).status).toBe(200);
     expect((await getGroup(sam)).me).toEqual({ memberId: null, isOwner: false });

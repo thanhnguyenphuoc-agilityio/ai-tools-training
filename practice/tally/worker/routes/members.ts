@@ -78,7 +78,9 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_REMOVE_OWNER', 'the group owner cannot be removed');
 
   const body = await readJson(c);
-  const reason = optionalText(body.reason, 'reason', 200);
+  // A reason of only spaces counts as no reason.
+  const blank = typeof body.reason === 'string' && body.reason.trim() === '';
+  const reason = blank ? null : optionalText(body.reason, 'reason', 200);
 
   // A member who still owes or is owed money settles up first: a debt is never written off or moved.
   const balance = await memberBalance(c.env.DB, group.code, member.id);
