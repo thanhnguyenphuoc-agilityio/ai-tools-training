@@ -303,7 +303,8 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - Data: migration `0002_member_removal.sql` adds `members.removed_at` and `members.removed_reason`. The row is
   kept (soft delete) because expenses, shares and transfers reference it. `MemberDto` gains `removed` and
   `removedReason`.
-- API: `POST /groups/:code/members/:id/remove` with `{ reason? }`. Owner only (`requireOwner`); the owner
+- API: `POST /groups/:code/members/:id/remove` with `{ reason? }`. Owner only: `requireCanRemoveMember` in
+  `policy.ts`, checked before the member is loaded, so a plain member or a guest gets `403 OWNER_ONLY`. The owner
   member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
   `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
   `member.remove`.

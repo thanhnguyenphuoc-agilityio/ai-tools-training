@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
 import { audit, hasPendingTransfer, loadActiveMember, loadGroup, loadMembers, memberBalance } from '../groupData';
 import { ApiError, bankDetails, now, readJson, text, type AppEnv } from '../http';
-import { requireCanEditMember, requireMember } from '../policy';
+import { requireCanEditMember, requireCanRemoveMember, requireMember } from '../policy';
 
 export const memberRoutes = new Hono<AppEnv>();
 
@@ -76,7 +76,7 @@ memberRoutes.patch('/:code/members/:id', async (c) => {
 // past expenses and transfers keep the name; the member's device becomes a guest.
 memberRoutes.post('/:code/members/:id/remove', async (c) => {
   const { group, me } = await loadGroup(c);
-  requireMember(me);
+  requireCanRemoveMember(me);
   const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
   if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_REMOVE_OWNER', 'the group owner cannot be removed');
 

@@ -87,9 +87,17 @@ describe('removing a member', () => {
     expect(res.json.code).toBe('CANNOT_REMOVE_OWNER');
   });
 
+  it('refuses a member who is not the owner', async () => {
+    const res = await remove(sam, ids.jamie);
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('OWNER_ONLY');
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+  });
+
   it('refuses a guest', async () => {
-    const guest = new Browser(env.env);
-    expect((await remove(guest, ids.jamie)).status).toBe(401);
+    const res = await remove(new Browser(env.env), ids.jamie);
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('OWNER_ONLY');
   });
 
   it('returns 404 for an unknown member and 409 for a member already removed', async () => {
