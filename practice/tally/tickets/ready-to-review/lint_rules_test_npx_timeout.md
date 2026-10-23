@@ -4,7 +4,7 @@
 |---|---|
 | Labels | `type::bug`, `priority::high`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `lint_conventions` |
 
@@ -39,3 +39,26 @@ skipped as a result. The test passes on a machine that has already run it once, 
    and no `~/.npm/_npx` folder is created.
 5. Verify: `npm run typecheck`, `npm run lint`, `npm test` in `practice/tally`; then the CI run on the merge request
    is green, including the `e2e` job.
+
+## Merge request
+
+Branch `fix/lint_rules_test_npx_timeout` into `develop`.
+
+What changed:
+
+- `practice/tally/tests/unit/lintRules.test.ts`: resolve the locally installed `oxlint` CLI script path from `node_modules/oxlint/bin/oxlint` and execute it directly via `process.execPath` without shell or network, preventing `npx` fallback downloads and timeout failures in fresh runner environments.
+
+How it was tested:
+
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors.
+- `npm test`: 16 test files passed, 231 passed (unit tests for Oxlint plugin now execute in <2 s).
+
+
+## Review
+
+Reviewed by Opus (AI team lead) with `review-checklist`.
+
+- The test now runs `node_modules/oxlint/bin/oxlint` (the `bin` entry of the locked `oxlint` package) with
+  `process.execPath` and no shell, so it needs no network and tests the same oxlint version as `npm run lint`.
+- No findings. `npm run typecheck`, `npm run lint` and `npm test` (231 tests) pass; the 10 rule tests take about 2 s.

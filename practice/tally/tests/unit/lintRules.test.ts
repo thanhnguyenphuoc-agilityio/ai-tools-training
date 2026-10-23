@@ -10,6 +10,7 @@ import stylelintConfig from '../../stylelint.config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const oxlintBin = path.resolve(__dirname, '../../node_modules/oxlint/bin/oxlint');
 
 describe('Oxlint tally plugin (no-literal-ui-text)', () => {
   let tmpDir: string;
@@ -36,9 +37,8 @@ describe('Oxlint tally plugin (no-literal-ui-text)', () => {
   function runOxlint(filename: string, content: string) {
     const filePath = path.join(tmpDir, filename);
     fs.writeFileSync(filePath, content, 'utf8');
-    const result = spawnSync('npx', ['oxlint', filename], {
+    const result = spawnSync(process.execPath, [oxlintBin, filename], {
       cwd: tmpDir,
-      shell: true,
       encoding: 'utf8',
       timeout: 30000,
     });
