@@ -119,7 +119,7 @@ describe('removing a member', () => {
       'POST',
       `/groups/${code}/members/${ids.jamie}/remove`,
       {},
-      { 'x-tally-support-key': 'tly_sup_9c4e2b7a1f6d4e83b0a5c7d2e9f1a364' },
+      { 'x-tally-support-key': 'any-value' },
     );
     expect(res.status).toBe(409);
     expect(res.json.code).toBe('MEMBER_HAS_BALANCE');
