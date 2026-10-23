@@ -39,7 +39,16 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
   `owner_member_tools`). Clearing the account
   number clears all three fields.
-- OPEN QUESTION: what happens when a member leaves while they still owe or are owed money? (`remove_member`)
+- **Removing a member** (`remove_member`):
+  - Only the **owner** can remove a member. The owner cannot be removed.
+  - A member can be removed only when their balance is **zero** and no transfer to or from them is waiting for
+    confirmation. A member who still owes **or is owed** money must settle up first (`MEMBER_HAS_BALANCE`). The app
+    never writes off a debt or moves it to someone else.
+  - The owner may give a reason (optional, at most 200 characters). It is shown next to the removed member.
+  - Removal is soft: the member stays in the history of expenses and transfers with their name, and the name stays
+    taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
+    or named in a new transfer. Their device becomes a guest (view only).
+  - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
 ## Expenses

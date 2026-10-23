@@ -289,13 +289,31 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - UI: `MembersPanel` shows an edit action per member for the owner, reusing `BankForm`; `SettlePanel` shows the
   "Pay" action on every suggested transfer for the owner, and `api.recordTransfer` gains an optional `fromId`.
 
-### edit_expense, remove_member
+### edit_expense
 
-- Both depend on open questions in `docs/business-rules.md` (who may edit and whether history is kept; what happens
-  to a leaving member's balance). The BA exercise settles the rules first; the design is written into this section
-  in the same branch as the feature.
+- Depends on an open question in `docs/business-rules.md` (who may edit and whether history is kept). The BA
+  exercise settles the rules first; the design is written into this section in the same branch as the feature.
 - Constraints already known: shares are recomputed only through `splitAmount` (`splitExact` for exact splits);
-  edits and removals are written to `audit_log`; permission rules go into `policy.ts`.
+  edits are written to `audit_log`; permission rules go into `policy.ts`.
+
+### remove_member
+
+- Rules: `docs/business-rules.md`, "Removing a member". A member leaves only with a zero balance, so no stored
+  share or transfer is ever rewritten.
+- Data: migration `0002_member_removal.sql` adds `members.removed_at` and `members.removed_reason`. The row is
+  kept (soft delete) because expenses, shares and transfers reference it. `MemberDto` gains `removed` and
+  `removedReason`.
+- API: `POST /groups/:code/members/:id/remove` with `{ reason? }`. Owner only (`requireOwner`); the owner
+  member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
+  `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
+  `member.remove`.
+- `groupData.ts`: `memberBalance()` (same formula as `computeBalances` in `shared/settle.ts`),
+  `hasPendingTransfer()`, `loadActiveMember()` (claim, edit, remove) and `loadActiveMemberIds()` (new expenses
+  and transfers).
+- `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
+- UI: `MembersPanel` shows a remove action per member for the owner (the reason is asked in a prompt) and lists
+  removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
+  current members only.
 
 ### ui_redesign
 
