@@ -18,12 +18,6 @@ export function RemoveMemberDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const reasonInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    reasonInputRef.current?.focus();
-  }, []);
-
   // True when the current press started on the backdrop itself; a press that starts in the panel (e.g. selecting
   // the reason with the mouse) and ends on the backdrop must not close the dialog and lose the typed reason.
   const pressedOnBackdrop = useRef(false);
@@ -76,7 +70,6 @@ export function RemoveMemberDialog({
             <span className="field__label">{t('members.removeReason')}</span>
             <input
               id="remove-member-reason"
-              ref={reasonInputRef}
               className="field__control"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
