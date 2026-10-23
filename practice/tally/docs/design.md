@@ -320,7 +320,8 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
 - UI: `MembersPanel` shows a remove action per member for the owner (the reason is asked in a prompt) and lists
   removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
-  current members only.
+  current members only. The CSV export keeps a share column for every member, removed ones included, because
+  their past shares are part of the history.
 
 ### ui_redesign
 
