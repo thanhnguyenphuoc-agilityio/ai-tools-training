@@ -29,10 +29,11 @@ Observations (positive / negative):
 For the retro:
 - Writing conventions down in `CLAUDE.md` early avoids repeating the same corrections.
 Open before the next day:
-- [ ] Sign in to claude.ai, Claude Desktop and the Claude mobile app
-- [ ] Push `develop` to GitLab, set it as the default branch, enable a CI runner and confirm the pipeline passes
-- [ ] Run Prompt A (`practice/tally/PRACTICE.md`) in a separate session to create the seeded bug tickets
-- [ ] Select the Day 11 role: web (Windows)
+- [x] Sign in to claude.ai, Claude Desktop and the Claude mobile app
+- [x] Push `develop` to GitLab, set it as the default branch, enable a CI runner and confirm the pipeline passes
+  (the GitLab pipeline was later removed; CI runs on GitHub Actions since Day 08)
+- [x] Run Prompt A (`practice/tally/PRACTICE.md`) in a separate session to create the seeded bug tickets
+- [x] Select the Day 11 role: web (Windows)
 
 ## Day 01: 2026-10-14
 
@@ -52,10 +53,10 @@ Observations (positive / negative):
 For the retro:
 - "Works on my machine" includes the folder path; a clean-clone check belongs in onboarding.
 Open before the next day:
-- [ ] Day 01 exercise in Claude chat: three real work questions (a bug summary, an explanation, a draft) and the
+- [x] Day 01 exercise in Claude chat: three real work questions (a bug summary, an explanation, a draft) and the
   prompt changes that improved each answer
-- [ ] Git block on GitLab: clone, branch, commit, push
-- [ ] Push `develop` with the seeded commits so that feature branches start from them
+- [x] Git block on GitLab: clone, branch, commit, push
+- [x] Push `develop` with the seeded commits so that feature branches start from them
 
 ## Day 02: 2026-10-14
 
@@ -81,7 +82,7 @@ For the retro:
   were the useful part of the exercise.
 Open before the next day:
 - [ ] Role-play reporter and developer with a person, and compare the analysis with a partner's
-- [ ] Finish Claude 101
+- [x] Finish Claude 101
 
 ## Day 03: 2026-10-14
 
@@ -113,8 +114,7 @@ For the retro:
   a factual slip in it (the commit count).
 Open before the next day:
 - [ ] Peer swap with a person: could they review or implement from the merge request description alone?
-- [ ] Push the branches and open the merge requests on GitLab, so CI runs on them
-- [ ] Course (BA/QA path, optional): Real-World AI for Everyone
+- [x] Push the branches and open the merge requests on GitLab, so CI runs on them
 
 ## Day 04: 2026-10-14
 
@@ -137,11 +137,11 @@ Observations (positive / negative):
 For the retro:
 - Running a new test against the unfixed code is a cheap step that catches tests that do not test anything.
 Open before the next day:
-- [ ] Permission modes tour (default, acceptEdits, plan, auto) on a throwaway change
-- [ ] "Explain how feature X works" in a fresh session, then verify two of its claims by reading the code
-- [ ] Repeat the full loop on a ticket in the Code tab without help, steering once with a hunk comment in the diff
+- [x] Permission modes tour (default, acceptEdits, plan, auto) on a throwaway change
+- [x] "Explain how feature X works" in a fresh session, then verify two of its claims by reading the code
+- [x] Repeat the full loop on a ticket in the Code tab without help, steering once with a hunk comment in the diff
   pane
-- [ ] Course: Claude Code in action
+- [x] Course: Claude Code in action
 
 ## Day 05: 2026-10-14
 
@@ -169,10 +169,10 @@ Observations (positive / negative):
 For the retro:
 - Write progress down as it happens; a summary written at the end of a long session misses steps.
 Open before the next day:
-- [ ] Prove that context matters: the same task in a fresh session and in one that has read the codebase; compare
+- [x] Prove that context matters: the same task in a fresh session and in one that has read the codebase; compare
   quality and token use
-- [ ] Make a bad edit on purpose and undo it with `/rewind`
-- [ ] Review `CLAUDE.md` as a team: does it still fit on one screen?
+- [x] Make a bad edit on purpose and undo it with `/rewind`
+- [x] Review `CLAUDE.md` as a team: does it still fit on one screen?
 
 ## Day 06: 2026-10-14
 
@@ -192,10 +192,10 @@ Shipped (merge requests, artifacts, screenshots):
   waits to merge, report stalled tickets; never push or merge).
 Checkpoint 2 (Developer track):
 - [x] Two parallel sessions, both merged
-- [ ] One plan-mode change steered through diff comments
-- [x] One artifact (published; sharing it with a peer is still open)
-- [ ] One Remote Control steer
-- [ ] One `/loop` run
+- [x] One plan-mode change steered through diff comments
+- [x] One artifact (published and shared with a peer)
+- [x] One Remote Control steer (2026-10-21)
+- [x] One `/loop` run (2026-10-19)
 Observations (positive / negative):
 - Worktrees kept the two agents apart: no shared working copy, so neither could overwrite the other's files. The
   conflict appeared only at merge time, in the one place both tickets had to touch, and the merge request had
@@ -207,13 +207,14 @@ For the retro:
 - Parallel agents save time on independent tickets, but the shared files (header, locales, README tables) need a
   merge order decided up front.
 Open before the next day:
-- [ ] Share the walkthrough artifact with a peer
-- [ ] Steer a plan-mode change through diff comments
-- [ ] `/rc` at the desk, connect from the phone through claude.ai/code and send one steer
-- [ ] `/loop 15m` on an open merge request, then a custom `/loop 5m` check; try the repository `loop.md`
-- [ ] `ultrathink` and `/effort` levels on the same hard bug; compare
-- [ ] A cloud session for a long task, checked from claude.ai/code with the laptop closed
-- [ ] Course: Introduction to subagents
+- [x] Share the walkthrough artifact with a peer
+- [x] Steer a plan-mode change through diff comments
+- [x] `/rc` at the desk, connect from the phone through claude.ai/code and send one steer
+- [x] `/loop 15m` on an open merge request, then a custom `/loop 5m` check; try the repository `loop.md`
+- [x] `ultrathink` and `/effort` levels on the same hard bug; compare (in Claude Code 2.1.306, `ultrathink` and
+  `ultracode` only add a message to the prompt)
+- [x] A cloud session for a long task, checked from claude.ai/code with the laptop closed
+- [x] Course: Introduction to subagents
 
 ## Day 07: 2026-10-14
 
@@ -235,9 +236,9 @@ Observations (positive / negative):
 For the retro:
 - Encoding a process as a skill exposes the gaps in the written process itself.
 Open before the next day:
-- [ ] Browse a plugin marketplace, install one plugin (for example code intelligence) and evaluate it
+- [x] Browse a plugin marketplace, install one plugin (for example code intelligence) and evaluate it
 - [ ] Try `/start-ticket` and the `release-checklist` skill in a real session
-- [ ] Course: Introduction to agent skills
+- [x] Course: Introduction to agent skills
 
 ## Day 08: 2026-10-14
 
@@ -267,11 +268,12 @@ Observations (positive / negative):
 For the retro:
 - Look at the screen before merging UI work, at phone width too; tests check what they are told to check.
 Open before the next day:
-- [ ] Add the GitHub connector with a personal access token and query a pull request or a workflow run on the
+- [x] Add the GitHub connector with a personal access token and query a pull request or a workflow run on the
   GitHub mirror from a session
-- [ ] Push to the GitHub mirror and check the first GitHub Actions run
-- [ ] Drive the app through the Playwright MCP server in a session (approve the project server first)
-- [ ] Course: Introduction to model context protocol
+- [x] Push to the GitHub mirror and check the first GitHub Actions run (the e2e failure on Linux fonts became
+  `fix/exact_split_name_overlap` on Day 10)
+- [x] Drive the app through the Playwright MCP server in a session (approve the project server first)
+- [x] Course: Introduction to model context protocol
 
 ## Day 09: 2026-10-14
 
@@ -303,9 +305,10 @@ Observations (positive / negative):
 For the retro:
 - Check which server an e2e run talks to before reading its failures.
 Open before the next day:
-- [ ] Automation ladder: `/goal` on a bounded task, a Desktop scheduled task (morning briefing), the Routines
-  overview, and `@claude` in GitHub Actions on the GitHub mirror
-- [ ] Evaluate the comments of an automated review on the next pull request
+- [x] Automation ladder: `/goal` on a bounded task, a Desktop scheduled task (morning briefing), the Routines
+  overview, and `@claude` in GitHub Actions on the GitHub mirror (the Desktop scheduled task produced
+  `chore/daily-review-2026-10-22`)
+- [x] Evaluate the comments of an automated review on the next pull request
 
 ## Day 10: 2026-10-23
 
@@ -340,11 +343,11 @@ For the retro:
 - A seeded review branch is the clearest way to measure a review: the defects are known, so missed and false
   findings can be counted.
 Open before the next day:
-- [ ] Compare the 12 findings with the answer key (`tally-review-answers.md`, human only) and note missed and false
+- [x] Compare the 12 findings with the answer key (`tally-review-answers.md`, human only) and note missed and false
   findings
-- [ ] Run `/code-review ultra` on `seeded/review` and compare its signal with the two local reviews
-- [ ] Security plugins walkthrough (security-guidance, Claude Security scan)
-- [ ] Install the `frontend-design` plugin before Day 11 (`ui_redesign`)
+- [x] Run `/code-review ultra` on `seeded/review` and compare its signal with the two local reviews
+- [x] Security plugins walkthrough (security-guidance, Claude Security scan)
+- [x] Install the `frontend-design` plugin before Day 11 (`ui_redesign`)
 
 ## For the retro
 
