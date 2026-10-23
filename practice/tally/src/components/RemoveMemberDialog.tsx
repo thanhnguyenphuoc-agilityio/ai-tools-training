@@ -24,6 +24,10 @@ export function RemoveMemberDialog({
     reasonInputRef.current?.focus();
   }, []);
 
+  // True when the current press started on the backdrop itself; a press that starts in the panel (e.g. selecting
+  // the reason with the mouse) and ends on the backdrop must not close the dialog and lose the typed reason.
+  const pressedOnBackdrop = useRef(false);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape' && !busy) {
@@ -55,11 +59,16 @@ export function RemoveMemberDialog({
       role="dialog"
       aria-modal="true"
       aria-label={t('members.removeTitle', { name: member.name })}
-      onClick={() => {
-        if (!busy) onClose();
+      onMouseDown={(e) => {
+        pressedOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        const onBackdrop = pressedOnBackdrop.current && e.target === e.currentTarget;
+        pressedOnBackdrop.current = false;
+        if (onBackdrop && !busy) onClose();
       }}
     >
-      <div className="dialog__panel card stack" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog__panel card stack">
         <h2 className="card__title">{t('members.removeTitle', { name: member.name })}</h2>
         <p className="text text--muted text--small">{t('members.removeHint')}</p>
         <form onSubmit={submit} className="stack">

@@ -33,10 +33,25 @@ test('remove a member who has settled up', async ({ page }) => {
   await expect(removeDialog.getByText(t('errors.MEMBER_HAS_BALANCE'))).toBeVisible();
   await removeDialog.getByRole('button', { name: t('common.cancel') }).click();
   await expect(removeDialog).toHaveCount(0);
+  // A click on the backdrop still closes the dialog.
+  await page.getByRole('button', { name: t('members.removeLabel', { name: 'Sam' }) }).click();
+  await expect(removeDialog).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(removeDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: t('members.removeLabel', { name: 'Jamie' }) }).click();
   await expect(removeDialog).toBeVisible();
-  await removeDialog.getByLabel(t('members.removeReason')).fill('Moved out');
+  const reasonInput = removeDialog.getByLabel(t('members.removeReason'));
+  await expect(reasonInput).toBeFocused();
+  await reasonInput.fill('Moved out');
+  // Selecting the text with the mouse and releasing it over the backdrop keeps the dialog and the typed reason.
+  const box = (await reasonInput.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(2, 2);
+  await page.mouse.up();
+  await expect(removeDialog).toBeVisible();
+  await expect(reasonInput).toHaveValue('Moved out');
   await removeDialog.getByRole('button', { name: t('members.remove') }).click();
   await expect(removeDialog).toHaveCount(0);
   const jamie = page.locator('.list__item', { hasText: 'Jamie' });
