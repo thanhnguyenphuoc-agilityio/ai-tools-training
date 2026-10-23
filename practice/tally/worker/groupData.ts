@@ -40,7 +40,7 @@ export async function loadGroup(c: Ctx): Promise<{ group: GroupRow; me: Identity
 
 export async function loadMembers(db: D1Database, code: string): Promise<MemberRow[]> {
   const { results } = await db
-    .prepare('SELECT * FROM members WHERE group_code = ? ORDER BY is_owner DESC, name COLLATE NOCASE, id')
+    .prepare('SELECT * FROM members WHERE group_code = ? ORDER BY created_at, id')
     .bind(code)
     .all<MemberRow>();
   return results;
