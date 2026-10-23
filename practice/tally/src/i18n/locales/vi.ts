@@ -118,6 +118,7 @@ export const vi: Messages = {
     pendingItem: '{from} báo đã chuyển {amount} cho {to}',
     confirm: 'Xác nhận đã nhận',
     doneTitle: 'Đã thanh toán',
+    removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
   },
   qr: {
     title: 'Trả {name} {amount}',

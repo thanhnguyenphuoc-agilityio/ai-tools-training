@@ -124,6 +124,7 @@ export const en = {
     pendingItem: '{from} says they sent {amount} to {to}',
     confirm: 'Confirm received',
     doneTitle: 'Paid',
+    removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
   },
   qr: {
     title: 'Pay {name} {amount}',

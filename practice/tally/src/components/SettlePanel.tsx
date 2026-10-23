@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { computeBalances, simplifyDebts, type Settlement } from '../../shared/settle';
+import type { Settlement } from '../../shared/settle';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { settleView } from '../settleView';
 import { QrDialog } from './QrDialog';
 
 export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
@@ -13,10 +14,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const [error, setError] = useState<string | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
 
-  const balances = computeBalances(group.members.map((m) => m.id), group.expenses, group.transfers);
-  const plan = simplifyDebts(balances);
-  // A removed member has settled up (remove_member), so only current members are listed.
-  const activeMembers = group.members.filter((m) => !m.removed);
+  // A removed member has settled up (remove_member), so only current members are listed and suggested.
+  const { balances, activeMembers, plan, removedWithBalance } = settleView(group);
   const pending = group.transfers.filter((t) => t.status === 'sent');
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
 
@@ -66,6 +65,11 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           ))}
         </ul>
         {pending.length > 0 && <p className="text text--muted text--small">{t('settle.pendingNote')}</p>}
+        {removedWithBalance.map((m) => (
+          <p key={m.id} className="text text--muted text--small">
+            {t('settle.removedWithBalance', { name: m.name, amount: money(Math.abs(balances.get(m.id) ?? 0)) })}
+          </p>
+        ))}
       </section>
 
       {error && <p className="text text--error">{error}</p>}
