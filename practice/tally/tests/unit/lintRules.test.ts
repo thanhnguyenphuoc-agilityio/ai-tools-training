@@ -92,6 +92,69 @@ describe('Oxlint tally plugin (no-literal-ui-text)', () => {
     expect(res.status).toBe(0);
     expect(res.output).not.toContain('tally(no-literal-ui-text)');
   });
+
+  it('reports string literal inside JSX expression container in children', () => {
+    const res = runOxlint(
+      'bad-expr-text.tsx',
+      "export function BadExprText() { return <p>{'Hello world'}</p>; }\n",
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
+  it('reports symbol-only separator in JSX expression container', () => {
+    const res = runOxlint(
+      'bad-expr-sym.tsx',
+      "declare const n: number;\nexport function SymExpr() { return <span>{n}{' \\u2192 '}</span>; }\n",
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
+  it('reports template literal in JSX children', () => {
+    const res = runOxlint(
+      'bad-template.tsx',
+      'declare const n: number;\nexport function BadTemplate() { return <p>{`Total: ${n}`}</p>; }\n',
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
+  it('reports template literal in user-facing attributes', () => {
+    const res = runOxlint(
+      'bad-attr-template.tsx',
+      'declare const icon: unknown;\nexport function BadAttrTemplate() { return <button aria-label={`Close`}>{icon}</button>; }\n',
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
+  it('reports literal branch in conditional expressions', () => {
+    const res = runOxlint(
+      'bad-conditional.tsx',
+      "declare const n: number;\ndeclare const t: (k: string) => string;\nexport function BadCond() { return <p>{n > 0 ? 'Yes' : t('no')}</p>; }\n",
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
+  it('allows whitespace-only literal inside JSX expression container', () => {
+    const res = runOxlint(
+      'good-space-expr.tsx',
+      "declare const t: (k: string) => string;\nexport function GoodSpace() { return <span>{t('a')}{' '}{t('b')}</span>; }\n",
+    );
+    expect(res.status).toBe(0);
+    expect(res.output).not.toContain('tally(no-literal-ui-text)');
+  });
+
+  it('allows conditional expression where all branches use t()', () => {
+    const res = runOxlint(
+      'good-conditional.tsx',
+      "declare const cond: boolean;\ndeclare const t: (k: string) => string;\nexport function GoodCond() { return <p>{cond ? t('a') : t('b')}</p>; }\n",
+    );
+    expect(res.status).toBe(0);
+    expect(res.output).not.toContain('tally(no-literal-ui-text)');
+  });
 });
 
 describe('Stylelint conventions', () => {
