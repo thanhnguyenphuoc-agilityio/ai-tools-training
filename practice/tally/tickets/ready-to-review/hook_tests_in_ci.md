@@ -51,3 +51,13 @@ How it was tested:
 - `npm run lint`: clean.
 - `npm test`: 16 test files, 231 passed.
 - `npm run test:hooks`: 28 tests, 28 passed.
+
+## Review
+
+Reviewed by Opus (AI team lead) with `review-checklist`.
+
+- `npm run test:hooks` runs `node --test ../../.claude/hooks/*.test.mjs`; on Windows `cmd` does not expand the glob,
+  and Node 22 (the CI version) expands it itself, so one command works on both. The CI `test` job runs it after
+  `npm test`, where `npm ci` has installed Prettier for the format hook test.
+- Failing-first check done locally: a broken assertion made the script exit 1 (1 failed, 27 passed).
+- No findings. After a rebase on `develop`: `npm run test:hooks` 28 passed; typecheck, lint and 231 tests pass.
