@@ -15,6 +15,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
 
   const balances = computeBalances(group.members.map((m) => m.id), group.expenses, group.transfers);
   const plan = simplifyDebts(balances);
+  // A removed member has settled up (remove_member), so only current members are listed.
+  const activeMembers = group.members.filter((m) => !m.removed);
   const pending = group.transfers.filter((t) => t.status === 'sent');
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
 
@@ -32,7 +34,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
       <section className="card">
         <h2 className="card__title">{t('settle.balancesTitle')}</h2>
         <ul className="list">
-          {group.members.map((m) => {
+          {activeMembers.map((m) => {
             const b = balances.get(m.id) ?? 0;
             return (
               <li key={m.id} className="list__item cluster cluster--between">

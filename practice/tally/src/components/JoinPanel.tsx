@@ -8,7 +8,7 @@ export function JoinPanel({ group, onDone }: { group: GroupDto; onDone: () => vo
   const { t, errorMessage } = useI18n();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const unclaimed = group.members.filter((m) => !m.claimed);
+  const unclaimed = group.members.filter((m) => !m.claimed && !m.removed);
 
   const run = (action: Promise<unknown>) => action.then(onDone).catch((err) => setError(errorMessage(err)));
 

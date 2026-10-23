@@ -159,6 +159,10 @@ export const en = {
     currency: 'Currency',
     currencyLocked: 'The currency is fixed once the group has expenses.',
     roundCoarse: 'Round each share to {unit} (applies to new expenses)',
+    remove: 'Remove',
+    removeLabel: 'Remove {name} from the group',
+    removePrompt: 'Remove {name} from the group? Their expenses stay in the history. Reason (optional):',
+    removed: 'removed',
   },
   theme: {
     /** Name of the light/dark control in the header, for screen readers. */
@@ -232,6 +236,9 @@ export const en = {
     DUPLICATE_PARTICIPANT: 'A person was picked twice.',
     SELF_TRANSFER: 'You cannot transfer money to yourself.',
     ALREADY_CONFIRMED: 'This transfer is already confirmed.',
+    MEMBER_REMOVED: 'This member has been removed from the group.',
+    MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
+    CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
   } satisfies Record<ErrorCode, string>,
 };
 

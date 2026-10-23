@@ -152,6 +152,10 @@ export const vi: Messages = {
     currency: 'Tiền tệ',
     currencyLocked: 'Không đổi được tiền tệ khi nhóm đã có khoản chi.',
     roundCoarse: 'Làm tròn phần chia đến {unit} (áp dụng cho khoản chi mới)',
+    remove: 'Xoá',
+    removeLabel: 'Xoá {name} khỏi nhóm',
+    removePrompt: 'Xoá {name} khỏi nhóm? Các khoản chi của họ vẫn được giữ trong lịch sử. Lý do (không bắt buộc):',
+    removed: 'đã rời nhóm',
   },
   theme: {
     label: 'Giao diện',
@@ -220,6 +224,9 @@ export const vi: Messages = {
     DUPLICATE_PARTICIPANT: 'Một người bị chọn hai lần.',
     SELF_TRANSFER: 'Không thể tự chuyển tiền cho chính mình.',
     ALREADY_CONFIRMED: 'Giao dịch này đã được xác nhận.',
+    MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
+    MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
+    CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
   },
 };
 

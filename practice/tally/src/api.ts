@@ -40,6 +40,8 @@ export const api = {
   claimMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/claim`),
   updateMember: (code: string, id: string, patch: Partial<BankDetails> & { name?: string }) =>
     call('PATCH', `${g(code)}/members/${id}`, patch),
+  removeMember: (code: string, id: string, reason: string) =>
+    call('POST', `${g(code)}/members/${id}/remove`, { reason }),
 
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),

@@ -10,12 +10,14 @@ import './ExpenseForm.scss';
 export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
   const { t, errorMessage } = useI18n();
   const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
-  const [payerId, setPayerId] = useState(group.me.memberId ?? group.members[0].id);
+  // Removed members stay in the history but cannot pay or share new expenses.
+  const members = group.members.filter((m) => !m.removed);
+  const [payerId, setPayerId] = useState(group.me.memberId ?? members[0].id);
   const [amountText, setAmountText] = useState('');
   const [description, setDescription] = useState('');
   const [spentOn, setSpentOn] = useState(todayLocal);
   const [mode, setMode] = useState<SplitMode>('equal');
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(group.members.map((m) => m.id)));
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(members.map((m) => m.id)));
   const [weights, setWeights] = useState<Record<string, string>>({});
   // Exact mode: the text typed per member. An empty field means the member owes nothing.
   const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
@@ -23,7 +25,7 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
   const [busy, setBusy] = useState(false);
 
   const amount = parseMoney(amountText);
-  const chosen = group.members.filter((m) => selected.has(m.id));
+  const chosen = members.filter((m) => selected.has(m.id));
   const participants = chosen.map((m) => ({
     memberId: m.id,
     weight: mode === 'weight' ? Number((weights[m.id] ?? '1').replace(',', '.')) : 1,
@@ -123,7 +125,7 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
           <label className="field">
             <span className="field__label">{t('expenseForm.paidBy')}</span>
             <select className="field__control" value={payerId} onChange={(e) => setPayerId(e.target.value)}>
-              {group.members.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
@@ -163,7 +165,7 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
             </label>
           </div>
           <ul className="list">
-            {group.members.map((m) => (
+            {members.map((m) => (
               <li
                 key={m.id}
                 className={`list__item expense-form__participant${mode === 'exact' ? ' expense-form__participant--exact' : ''}`}

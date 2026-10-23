@@ -9,6 +9,8 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
+  const active = group.members.filter((m) => !m.removed);
+  const removed = group.members.filter((m) => m.removed);
 
   const run = (action: Promise<unknown>) =>
     action
@@ -18,14 +20,20 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       })
       .catch((err) => setError(errorMessage(err)));
 
+  function remove(member: MemberDto) {
+    const reason = window.prompt(t('members.removePrompt', { name: member.name }), '');
+    if (reason === null) return;
+    run(api.removeMember(group.code, member.id, reason.trim()));
+  }
+
   return (
     <div className="stack">
       {me && <BankForm key={me.id} code={group.code} member={me} onSaved={onChanged} />}
 
       <section className="card stack">
-        <h2 className="card__title">{t('members.listTitle', { count: group.members.length })}</h2>
+        <h2 className="card__title">{t('members.listTitle', { count: active.length })}</h2>
         <ul className="list list--divided">
-          {group.members.map((m) => {
+          {active.map((m) => {
             const bank = findBank(m.bankBin);
             return (
               <li key={m.id} className="list__item cluster cluster--between">
@@ -34,12 +42,30 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                   {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
                   {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
                 </span>
-                <span className="text text--muted text--small">
-                  {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                <span className="cluster">
+                  <span className="text text--muted text--small">
+                    {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                  </span>
+                  {group.me.isOwner && !m.isOwner && (
+                    <button
+                      className="button button--ghost button--small"
+                      onClick={() => remove(m)}
+                      aria-label={t('members.removeLabel', { name: m.name })}
+                    >
+                      {t('members.remove')}
+                    </button>
+                  )}
                 </span>
               </li>
             );
           })}
+          {removed.map((m) => (
+            <li key={m.id} className="list__item cluster">
+              <span className="text text--muted">{m.name}</span>
+              <span className="badge">{t('members.removed')}</span>
+              {m.removedReason && <span className="text text--muted text--small">{m.removedReason}</span>}
+            </li>
+          ))}
         </ul>
         {group.me.memberId && (
           <form
