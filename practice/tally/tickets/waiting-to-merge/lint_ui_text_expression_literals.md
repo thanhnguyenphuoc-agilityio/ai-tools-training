@@ -46,3 +46,12 @@ or a label in JSX pass the lint without an error. The rule tests pass, so the ga
 4. Run `npm run lint` on the whole app and fix or justify anything newly reported.
 5. Update the lint section of `docs/design.md` with the forms the rule now covers.
 6. Verify: `npm run typecheck`, `npm run lint`, `npm test`.
+
+## Merge request
+
+Branch `feat/lint_ui_text_expression_literals` into `develop`.
+
+What changed:
+- `practice/tally/lint/tally-plugin.mjs`: added `JSXExpressionContainer` visitor for JSX child containers and extended target attribute checking to cover string literals, template literals, conditional expression branches, and logical expression right sides.
+- `practice/tally/tests/unit/lintRules.test.ts`: added test cases for string literals, symbol separators, template literals, and conditional branches in children and attributes, plus allowed cases for whitespace and translated conditionals.
+- `practice/tally/docs/design.md`: updated `lint_conventions` section with details on the expressions and literals checked by `tally/no-literal-ui-text`.
