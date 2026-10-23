@@ -4,7 +4,7 @@
 |---|---|
 | Labels | `type::bug`, `priority::high`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `lint_conventions` |
 
