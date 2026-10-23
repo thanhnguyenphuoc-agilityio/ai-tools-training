@@ -80,9 +80,9 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   const body = await readJson(c);
   const reason = body.reason ? String(body.reason) : null;
 
-  // A member who still owes money must settle up before leaving.
+  // A member who still owes or is owed money settles up first: a debt is never written off or moved.
   const balance = await memberBalance(c.env.DB, group.code, member.id);
-  if (balance < 0 || (await hasPendingTransfer(c.env.DB, group.code, member.id))) {
+  if (balance !== 0 ||(await hasPendingTransfer(c.env.DB, group.code, member.id))) {
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
   }
 

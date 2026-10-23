@@ -74,6 +74,14 @@ describe('removing a member', () => {
     expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
   });
 
+  it('refuses while the member is still owed money', async () => {
+    await addExpense(owner, ids.jamie, 90_000, [ids.alex, ids.jamie]);
+    const res = await remove(owner, ids.jamie);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('MEMBER_HAS_BALANCE');
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+  });
+
   it('has no header that skips the balance check', async () => {
     // An earlier draft let this support header write off the debt of the member being removed.
     await addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]);
