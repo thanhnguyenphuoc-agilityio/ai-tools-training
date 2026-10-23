@@ -307,7 +307,10 @@ Built. Project conventions are checked automatically by `npm run lint`:
   `policy.ts`, checked before the member is loaded, so a plain member or a guest gets `403 OWNER_ONLY`. The owner
   member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
   `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
-  `member.remove`.
+  `member.remove`. The UPDATE repeats `removed_at IS NULL` and checks `meta.changes`, so of two simultaneous
+  removals one gets `MEMBER_REMOVED`. Known gap: an expense or transfer naming the member that is written between
+  the balance check and the UPDATE is not detected (D1 has no interactive transaction); the window is a few
+  milliseconds and an owner action.
 - `groupData.ts`: `loadLedger()` loads the expenses (deleted ones left out) and transfers for both
   `GET /groups/:code` and the removal; `memberBalance()` runs `computeBalances` from `shared/settle.ts` on it, so
   the API and the UI cannot disagree on a balance. Also `hasPendingTransfer()`, `loadActiveMember()` (claim, edit,

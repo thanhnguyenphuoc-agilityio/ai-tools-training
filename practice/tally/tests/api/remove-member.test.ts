@@ -155,6 +155,13 @@ describe('removing a member', () => {
     expect(again.json.code).toBe('MEMBER_REMOVED');
   });
 
+  it('removes a member once when two removals arrive together', async () => {
+    const results = await Promise.all([remove(owner, ids.jamie, 'First'), remove(owner, ids.jamie, 'Second')]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    const winner = results[0].status === 200 ? 'First' : 'Second';
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removedReason).toBe(winner);
+  });
+
   it('keeps a removed member out of new expenses, transfers and claims', async () => {
     await remove(owner, ids.jamie);
 

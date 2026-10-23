@@ -82,13 +82,17 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
 
   // A member who still owes or is owed money settles up first: a debt is never written off or moved.
   const balance = await memberBalance(c.env.DB, group.code, member.id);
-  if (balance !== 0 ||(await hasPendingTransfer(c.env.DB, group.code, member.id))) {
+  if (balance !== 0 || (await hasPendingTransfer(c.env.DB, group.code, member.id))) {
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
   }
 
-  await c.env.DB.prepare('UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ?')
+  // The guard is repeated in the UPDATE so that two simultaneous removals cannot both win.
+  const result = await c.env.DB.prepare('UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ? AND removed_at IS NULL')
     .bind(now(), reason, member.id)
     .run();
+  if (result.meta.changes === 0) {
+    throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+  }
   await audit(c.env.DB, group.code, me, 'member.remove', member.id);
   return c.json({ ok: true });
 });
