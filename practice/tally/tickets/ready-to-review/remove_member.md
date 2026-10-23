@@ -75,4 +75,8 @@ two minor fixes, both done with a test that fails before the fix:
 - a removal reason of only spaces counts as no reason instead of returning `FIELD_REQUIRED`.
 
 Nits done: the support header test sends a placeholder value, and `docs/design.md` says that the CSV export keeps
-a share column for removed members. Typecheck, 262 unit and API tests and 24 e2e tests pass on the branch.
+a share column for removed members.
+
+- Replaced browser native `window.prompt` with an accessible in-app `RemoveMemberDialog` (follows `QrDialog` pattern with aria attributes, Escape key, backdrop click, autofocus, error banner, Cancel and Remove buttons). `e2e/remove-member.spec.ts` updated.
+
+Typecheck, lint, 262 unit and API tests, 28 hook tests, and 24 e2e tests pass on the branch.
