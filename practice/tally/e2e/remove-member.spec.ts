@@ -26,12 +26,19 @@ test('remove a member who has settled up', async ({ page }) => {
   await expect(page.locator('.expense-list__item')).toHaveCount(1);
 
   await page.getByRole('tab', { name: t('group.tabs.members') }).click();
-  page.once('dialog', (dialog) => dialog.accept(''));
   await page.getByRole('button', { name: t('members.removeLabel', { name: 'Sam' }) }).click();
-  await expect(page.getByText(t('errors.MEMBER_HAS_BALANCE'))).toBeVisible();
+  const removeDialog = page.getByRole('dialog');
+  await expect(removeDialog).toBeVisible();
+  await removeDialog.getByRole('button', { name: t('members.remove') }).click();
+  await expect(removeDialog.getByText(t('errors.MEMBER_HAS_BALANCE'))).toBeVisible();
+  await removeDialog.getByRole('button', { name: t('common.cancel') }).click();
+  await expect(removeDialog).toHaveCount(0);
 
-  page.once('dialog', (dialog) => dialog.accept('Moved out'));
   await page.getByRole('button', { name: t('members.removeLabel', { name: 'Jamie' }) }).click();
+  await expect(removeDialog).toBeVisible();
+  await removeDialog.getByLabel(t('members.removeReason')).fill('Moved out');
+  await removeDialog.getByRole('button', { name: t('members.remove') }).click();
+  await expect(removeDialog).toHaveCount(0);
   const jamie = page.locator('.list__item', { hasText: 'Jamie' });
   await expect(jamie).toContainText(t('members.removed'));
   await expect(jamie).toContainText('Moved out');
