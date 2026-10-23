@@ -145,9 +145,10 @@ export const toMemberDto = (m: MemberRow): MemberDto => ({
   claimed: m.token_hash !== null,
   removed: m.removed_at !== null,
   removedReason: m.removed_reason,
-  bankBin: m.bank_bin,
-  accountNo: m.account_no,
-  accountName: m.account_name,
+  // A removed member cannot receive a transfer, so their bank details are no longer shown to the link holders.
+  bankBin: m.removed_at ? null : m.bank_bin,
+  accountNo: m.removed_at ? null : m.account_no,
+  accountName: m.removed_at ? null : m.account_name,
 });
 
 /** Member activity pushes back the (future) auto-delete date. */

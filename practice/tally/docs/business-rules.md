@@ -47,7 +47,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - The owner may give a reason (optional, at most 200 characters). It is shown next to the removed member.
   - Removal is soft: the member stays in the history of expenses and transfers with their name, and the name stays
     taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
-    or named in a new transfer. Their device becomes a guest (view only).
+    or named in a new transfer. Their device becomes a guest (view only). Their bank details are no longer
+    returned by the API (the stored values are kept).
   - An expense that a removed member paid or shared can no longer be deleted (`EXPENSE_HAS_REMOVED_MEMBER`):
     deleting it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.

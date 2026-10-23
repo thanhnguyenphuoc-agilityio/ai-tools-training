@@ -155,6 +155,16 @@ describe('removing a member', () => {
     expect(again.json.code).toBe('MEMBER_REMOVED');
   });
 
+  it('stops showing the bank details of a removed member', async () => {
+    const bank = { bankBin: '970436', accountNo: '9876543210', accountName: 'JAMIE LEE' };
+    expect((await owner.call('PATCH', `/groups/${code}/members/${ids.jamie}`, bank)).status).toBe(200);
+    expect((await remove(owner, ids.jamie)).status).toBe(200);
+
+    const guest = new Browser(env.env);
+    const jamie = (await getGroup(guest)).members.find((m) => m.id === ids.jamie)!;
+    expect([jamie.bankBin, jamie.accountNo, jamie.accountName]).toEqual([null, null, null]);
+  });
+
   it('removes a member once when two removals arrive together', async () => {
     const results = await Promise.all([remove(owner, ids.jamie, 'First'), remove(owner, ids.jamie, 'Second')]);
     expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
