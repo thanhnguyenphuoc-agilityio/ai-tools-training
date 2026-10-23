@@ -63,5 +63,16 @@ The merge request is opened on GitLab from this branch; its link is added when i
   - the Vietnamese label says "removed" instead of "left the group" (no test; text only).
 - Known gap, recorded in `docs/design.md`: an expense written between the balance check and the update is not
   detected, since D1 has no interactive transaction.
-- `e2e/remove-member.spec.ts` covers the flow on desktop and phone. Typecheck, 241 unit and API tests and 24 e2e
+- `e2e/remove-member.spec.ts` covers the flow on desktop and phone. Typecheck, 243 unit and API tests and 24 e2e
   tests pass.
+
+## Review
+
+Round 1 (two independent reviews of `seeded/review`) found 12 issues; all are fixed above. Round 2 approved after
+two minor fixes, both done with a test that fails before the fix:
+
+- an expense in which a removed member owes zero (an exact split with an empty field) can still be deleted;
+- a removal reason of only spaces counts as no reason instead of returning `FIELD_REQUIRED`.
+
+Nits done: the support header test sends a placeholder value, and `docs/design.md` says that the CSV export keeps
+a share column for removed members. Typecheck, 243 unit and API tests and 24 e2e tests pass on the branch.
