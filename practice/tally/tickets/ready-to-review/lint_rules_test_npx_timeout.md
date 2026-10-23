@@ -54,3 +54,11 @@ How it was tested:
 - `npm run lint`: 0 errors.
 - `npm test`: 16 test files passed, 231 passed (unit tests for Oxlint plugin now execute in <2 s).
 
+
+## Review
+
+Reviewed by Opus (AI team lead) with `review-checklist`.
+
+- The test now runs `node_modules/oxlint/bin/oxlint` (the `bin` entry of the locked `oxlint` package) with
+  `process.execPath` and no shell, so it needs no network and tests the same oxlint version as `npm run lint`.
+- No findings. `npm run typecheck`, `npm run lint` and `npm test` (231 tests) pass; the 10 rule tests take about 2 s.
