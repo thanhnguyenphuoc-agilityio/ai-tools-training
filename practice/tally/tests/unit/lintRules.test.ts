@@ -138,6 +138,15 @@ describe('Oxlint tally plugin (no-literal-ui-text)', () => {
     expect(res.output).toContain('tally(no-literal-ui-text)');
   });
 
+  it('reports literal on the right side of a logical expression', () => {
+    const res = runOxlint(
+      'bad-logical.tsx',
+      "declare const cond: boolean;\nexport function BadLogical() { return <p>{cond && 'Yes'}</p>; }\n",
+    );
+    expect(res.status).not.toBe(0);
+    expect(res.output).toContain('tally(no-literal-ui-text)');
+  });
+
   it('allows whitespace-only literal inside JSX expression container', () => {
     const res = runOxlint(
       'good-space-expr.tsx',
