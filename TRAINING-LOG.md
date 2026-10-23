@@ -307,6 +307,45 @@ Open before the next day:
   overview, and `@claude` in GitHub Actions on the GitHub mirror
 - [ ] Evaluate the comments of an automated review on the next pull request
 
+## Day 10: 2026-10-23
+
+Goal: review and quality: review a branch with seeded defects, compare the signal of two reviews, fix what they
+found.
+Left over from the previous day: the automation ladder and an automated review on a merge request.
+Shipped (merge requests, artifacts, screenshots):
+- `seeded/review` created with Prompt B by a separate session: `remove_member` with seeded defects. The answer key
+  was written outside the repository and was not opened by the reviewing sessions; the branch is kept unchanged for
+  the human review against the key.
+- Two independent reviews of `seeded/review`: one with the `review-checklist` skill, one with `/code-review` (high
+  effort) and a security pass. Both found the same 8 core defects; the second added an exposure of bank details and
+  a translation error (12 findings in total, including process).
+- `feat/remove_member` merged after three review rounds: the Prompt B commits rebased onto `develop`, then one commit
+  per finding, each with a test that fails before the fix, an accessible in-app `RemoveMemberDialog` replacing the
+  native prompt, and `e2e/remove-member.spec.ts`. A third round with `/code-review ultra` added 8 findings (two
+  races between a removal and a concurrent write, settle-up suggestions naming a removed member, and UX and cleanup
+  items), all fixed on the same branch. Typecheck, 273 unit and API tests, 28 hook tests, and 26 e2e tests pass.
+Observations (positive / negative):
+- The seeded branch passed its own 141 tests and typecheck; none of the defects was caught by the suite.
+- Running throwaway tests to confirm each finding separated real defects from plausible ones; the security pass
+  also listed what it checked and rejected, which shows its coverage.
+- One test written after a fix passed on the seeded code because an earlier defect hid it; it fails on the commit
+  just before its own fix, which is the commit that matters.
+- Round 2 found two minor defects introduced by the fixes (an expense with a zero exact share could not be deleted;
+  a reason of only spaces was refused).
+- The ultra review found check-then-write races that no single-request test could show; an API test helper that
+  commits a competing write just before the route's write made them reproducible.
+- Replacing `window.prompt` with an in-app `RemoveMemberDialog` makes the confirmation dialog accessible, styleable,
+  and consistent across browsers and devices.
+For the retro:
+- A seeded review branch is the clearest way to measure a review: the defects are known, so missed and false
+  findings can be counted.
+Open before the next day:
+- [ ] Compare the 12 findings with the answer key (`tally-review-answers.md`, human only) and note missed and false
+  findings
+- [ ] Run `/code-review ultra` on `seeded/review` and compare its signal with the two local reviews
+- [ ] Security plugins walkthrough (security-guidance, Claude Security scan)
+- [ ] Install the `frontend-design` plugin before Day 11 (`ui_redesign`)
+
 ## For the retro
 
 -
