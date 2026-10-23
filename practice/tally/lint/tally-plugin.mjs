@@ -19,6 +19,62 @@ function getStringValue(node) {
   return null;
 }
 
+function unwrap(node) {
+  let curr = node;
+  while (
+    curr &&
+    (curr.type === 'TSAsExpression' ||
+      curr.type === 'TSSatisfiesExpression' ||
+      curr.type === 'TSTypeAssertion' ||
+      curr.type === 'TSNonNullExpression' ||
+      curr.type === 'ParenthesizedExpression')
+  ) {
+    curr = curr.expression;
+  }
+  return curr;
+}
+
+function checkExpression(node, context) {
+  if (!node) return;
+  const expr = unwrap(node);
+  if (!expr) return;
+
+  if (isStringLiteral(expr)) {
+    const text = getStringValue(expr);
+    if (text && HAS_VISIBLE_TEXT.test(text)) {
+      context.report({
+        node: expr,
+        message: MESSAGE,
+      });
+    }
+    return;
+  }
+
+  if (expr.type === 'TemplateLiteral') {
+    const hasText = expr.quasis?.some((q) => {
+      const text = q?.value?.cooked ?? q?.value?.raw ?? '';
+      return HAS_VISIBLE_TEXT.test(text);
+    });
+    if (hasText) {
+      context.report({
+        node: expr,
+        message: MESSAGE,
+      });
+    }
+    return;
+  }
+
+  if (expr.type === 'ConditionalExpression') {
+    checkExpression(expr.consequent, context);
+    checkExpression(expr.alternate, context);
+    return;
+  }
+
+  if (expr.type === 'LogicalExpression') {
+    checkExpression(expr.right, context);
+  }
+}
+
 export default {
   meta: {
     name: 'tally',
@@ -44,6 +100,12 @@ export default {
               });
             }
           },
+          JSXExpressionContainer(node) {
+            const parentType = node.parent?.type;
+            if (parentType === 'JSXElement' || parentType === 'JSXFragment') {
+              checkExpression(node.expression, context);
+            }
+          },
           JSXAttribute(node) {
             const attrName = node.name?.name;
             if (!TARGET_ATTRS.has(attrName)) return;
@@ -63,15 +125,9 @@ export default {
               return;
             }
 
-            // Expression container literal attribute: aria-label={"Save"}
-            if (val.type === 'JSXExpressionContainer' && isStringLiteral(val.expression)) {
-              const text = getStringValue(val.expression);
-              if (text && HAS_VISIBLE_TEXT.test(text)) {
-                context.report({
-                  node,
-                  message: MESSAGE,
-                });
-              }
+            // Expression container literal or expression attribute: aria-label={"Save"}, aria-label={`Close`}
+            if (val.type === 'JSXExpressionContainer') {
+              checkExpression(val.expression, context);
             }
           },
         };
