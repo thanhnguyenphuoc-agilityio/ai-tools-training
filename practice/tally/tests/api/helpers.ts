@@ -25,8 +25,13 @@ export class Browser {
 
   constructor(private env: Env) {}
 
-  async call<T = any>(method: string, path: string, body?: unknown): Promise<{ status: number; json: T }> {
-    const headers: Record<string, string> = {};
+  async call<T = any>(
+    method: string,
+    path: string,
+    body?: unknown,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<{ status: number; json: T }> {
+    const headers: Record<string, string> = { ...extraHeaders };
     if (body !== undefined) headers['content-type'] = 'application/json';
     if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
 

@@ -7,9 +7,6 @@ import { requireCanEditMember, requireCanRemoveMember, requireMember } from '../
 
 export const memberRoutes = new Hono<AppEnv>();
 
-// Lets support staff remove a member who left without settling up.
-const SUPPORT_KEY = 'tly_sup_9c4e2b7a1f6d4e83b0a5c7d2e9f1a364';
-
 const sameName = (a: string, b: string) => a.toLocaleLowerCase('vi') === b.toLocaleLowerCase('vi');
 
 // claim=true: "this is me", anyone with the link joins and gets a device token.
@@ -83,13 +80,10 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   const body = await readJson(c);
   const reason = body.reason ? String(body.reason) : null;
 
-  const force = c.req.header('x-tally-support-key') === SUPPORT_KEY;
-  if (!force) {
-    // A member who still owes money must settle up before leaving.
-    const balance = await memberBalance(c.env.DB, group.code, member.id);
-    if (balance < 0 || (await hasPendingTransfer(c.env.DB, group.code, member.id))) {
-      throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
-    }
+  // A member who still owes money must settle up before leaving.
+  const balance = await memberBalance(c.env.DB, group.code, member.id);
+  if (balance < 0 || (await hasPendingTransfer(c.env.DB, group.code, member.id))) {
+    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
   }
 
   await c.env.DB.prepare('UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ?')

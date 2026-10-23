@@ -74,6 +74,20 @@ describe('removing a member', () => {
     expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
   });
 
+  it('has no header that skips the balance check', async () => {
+    // An earlier draft let this support header write off the debt of the member being removed.
+    await addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]);
+    const res = await owner.call(
+      'POST',
+      `/groups/${code}/members/${ids.jamie}/remove`,
+      {},
+      { 'x-tally-support-key': 'tly_sup_9c4e2b7a1f6d4e83b0a5c7d2e9f1a364' },
+    );
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('MEMBER_HAS_BALANCE');
+    expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+  });
+
   it('refuses while a transfer of the member waits for confirmation', async () => {
     await owner.call('POST', `/groups/${code}/transfers`, { fromId: ids.sam, toId: ids.alex, amount: 10_000 });
     const res = await remove(owner, ids.sam);
