@@ -17,7 +17,7 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
 ## Commands (run inside practice/tally)
 
 - `npm run dev`: migrate local D1, then serve UI + API on http://localhost:5173
-- `npm run typecheck`, `npm run lint`, `npm test` (Vitest: unit + API via Miniflare), `npm run e2e` (Playwright)
+- `npm run typecheck`, `npm run lint`, `npm test` (Vitest: unit + API via Miniflare), `npm run test:hooks` (Claude Code hook tests), `npm run e2e` (Playwright)
 - `npm run seed`: demo group through the API (dev server must be running)
 
 ## Language

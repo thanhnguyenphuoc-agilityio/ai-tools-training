@@ -18,6 +18,7 @@
     "lint:css": "stylelint \"src/**/*.scss\"",
     "lint": "npm run lint:js && npm run lint:css",
     "test": "vitest run",
+    "test:hooks": "node --test ../../.claude/hooks/*.test.mjs",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "seed": "node scripts/seed-demo.mjs"
