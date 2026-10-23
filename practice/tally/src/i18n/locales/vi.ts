@@ -155,7 +155,7 @@ export const vi: Messages = {
     remove: 'Xoá',
     removeLabel: 'Xoá {name} khỏi nhóm',
     removePrompt: 'Xoá {name} khỏi nhóm? Các khoản chi của họ vẫn được giữ trong lịch sử. Lý do (không bắt buộc):',
-    removed: 'đã rời nhóm',
+    removed: 'đã bị xoá khỏi nhóm',
   },
   theme: {
     label: 'Giao diện',
