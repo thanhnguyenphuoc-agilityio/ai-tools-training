@@ -77,7 +77,9 @@ export async function loadLedger(
 ): Promise<{ expenses: ExpenseDto[]; transfers: TransferDto[] }> {
   const [expenseRows, shareRows, transferRows] = await Promise.all([
     db
-      .prepare('SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC')
+      .prepare(
+        'SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC',
+      )
       .bind(code)
       .all<Record<string, string | number | null>>()
       .then((r) => r.results),
@@ -121,21 +123,21 @@ export async function loadLedger(
   return { expenses, transfers };
 }
 
-/** Balance of one member in minor units (positive = the group owes them), from computeBalances. */
-export async function memberBalance(db: D1Database, code: string, memberId: string): Promise<number> {
+/**
+ * What stands between a member and their removal, from one read of the ledger: their balance in minor units
+ * (positive = the group owes them, from computeBalances) and whether a transfer to or from them is marked sent but
+ * not confirmed yet.
+ */
+export async function memberSettlement(
+  db: D1Database,
+  code: string,
+  memberId: string,
+): Promise<{ balance: number; pending: boolean }> {
   const { expenses, transfers } = await loadLedger(db, code);
-  return computeBalances([memberId], expenses, transfers).get(memberId) ?? 0;
-}
-
-/** True while a transfer to or from the member is marked sent but not confirmed yet. */
-export async function hasPendingTransfer(db: D1Database, code: string, memberId: string): Promise<boolean> {
-  const row = await db
-    .prepare(
-      `SELECT EXISTS (SELECT 1 FROM transfers WHERE group_code = ?1 AND status = 'sent' AND (from_id = ?2 OR to_id = ?2)) AS pending`,
-    )
-    .bind(code, memberId)
-    .first<{ pending: number }>();
-  return !!row?.pending;
+  return {
+    balance: computeBalances([memberId], expenses, transfers).get(memberId) ?? 0,
+    pending: transfers.some((t) => t.status === 'sent' && (t.fromId === memberId || t.toId === memberId)),
+  };
 }
 
 export const toMemberDto = (m: MemberRow): MemberDto => ({
