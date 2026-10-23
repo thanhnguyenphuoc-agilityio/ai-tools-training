@@ -308,13 +308,18 @@ Built. Project conventions are checked automatically by `npm run lint`:
   member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
   `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
   `member.remove`. The UPDATE repeats `removed_at IS NULL` and checks `meta.changes`, so of two simultaneous
-  removals one gets `MEMBER_REMOVED`. Known gap: an expense or transfer naming the member that is written between
-  the balance check and the UPDATE is not detected (D1 has no interactive transaction); the window is a few
-  milliseconds and an owner action.
+  removals one gets `MEMBER_REMOVED`.
+- Races (D1 has no interactive transaction, but runs one statement or batch at a time): new expenses and transfers
+  repeat the "no named member is removed" check inside their INSERT (`noneRemovedSql()` in `groupData.ts`, an
+  `INSERT ... SELECT ... WHERE NOT EXISTS`); when it writes nothing the route returns `PAYER_NOT_IN_GROUP` or
+  `PARTICIPANT_NOT_IN_GROUP`. An expense's shares are inserted in the same batch, only next to an expense row. The
+  removal checks the balance again after its UPDATE, when no new write can name the member any more, and undoes the
+  UPDATE with `MEMBER_HAS_BALANCE` if an expense or transfer committed in between. Tests simulate each interleaving
+  with `interleave()` in `tests/api/helpers.ts`.
 - `groupData.ts`: `loadLedger()` loads the expenses (deleted ones left out) and transfers for both
-  `GET /groups/:code` and the removal; `memberBalance()` runs `computeBalances` from `shared/settle.ts` on it, so
-  the API and the UI cannot disagree on a balance. Also `hasPendingTransfer()`, `loadActiveMember()` (claim, edit,
-  remove) and `loadActiveMemberIds()` (new expenses and transfers).
+  `GET /groups/:code` and the removal; `memberSettlement()` runs `computeBalances` from `shared/settle.ts` on it,
+  so the API and the UI cannot disagree on a balance, and finds a pending transfer in the same ledger. Also
+  `loadActiveMember()` (claim, edit, remove) and `loadActiveMemberIds()` (new expenses and transfers).
 - `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
   been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero.
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.

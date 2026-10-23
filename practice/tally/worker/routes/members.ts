@@ -96,13 +96,26 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   }
 
   // The guard is repeated in the UPDATE so that two simultaneous removals cannot both win.
+  const removedAt = now();
   const result = await c.env.DB.prepare(
     'UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ? AND removed_at IS NULL',
   )
-    .bind(now(), reason, member.id)
+    .bind(removedAt, reason, member.id)
     .run();
   if (result.meta.changes === 0) {
     throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+  }
+  // D1 has no interactive transaction, so an expense or transfer may have committed between the check above and
+  // the UPDATE. From the UPDATE on, new writes refuse the member (noneRemovedSql), so one more look at the ledger
+  // sees everything: if the member is no longer settled up, the removal is undone.
+  const after = await memberSettlement(c.env.DB, group.code, member.id);
+  if (after.balance !== 0 || after.pending) {
+    await c.env.DB.prepare(
+      'UPDATE members SET removed_at = NULL, removed_reason = NULL WHERE id = ? AND removed_at = ?',
+    )
+      .bind(member.id, removedAt)
+      .run();
+    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
   }
   await audit(c.env.DB, group.code, me, 'member.remove', member.id);
   return c.json({ ok: true });

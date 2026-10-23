@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { exactSplitDifference, splitAmount, splitExact } from '../../shared/money';
 import type { NewExpense, SplitMode } from '../../shared/types';
-import { audit, loadActiveMemberIds, loadGroup } from '../groupData';
+import { audit, loadActiveMemberIds, loadGroup, noneRemovedSql } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv } from '../http';
 import { requireCanDeleteExpense, requireMember } from '../policy';
 
@@ -28,7 +28,8 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   const seen = new Set<string>();
   const participants = body.participants.map((p: { memberId?: unknown; weight?: unknown; amount?: unknown }) => {
     const memberId = text(p?.memberId, 'participant', 64);
-    if (!memberIds.has(memberId)) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
+    if (!memberIds.has(memberId))
+      throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
     if (seen.has(memberId)) throw new ApiError(400, 'DUPLICATE_PARTICIPANT', 'duplicate participant');
     seen.add(memberId);
     return {
@@ -47,20 +48,26 @@ expenseRoutes.post('/:code/expenses', async (c) => {
       ? splitExact(total, participants)
       : splitAmount(total, participants, { roundTo: group.round_to, payerId });
   const id = crypto.randomUUID();
-  await c.env.DB.batch([
+  // The member check is repeated inside the batch (one transaction): a member removed since loadActiveMemberIds
+  // makes the expense INSERT write nothing, and the shares are only written next to an expense row.
+  const named = JSON.stringify([payerId, ...participants.map((p) => p.memberId)]);
+  const [inserted] = await c.env.DB.batch([
     c.env.DB.prepare(
       `INSERT INTO expenses (id, group_code, payer_id, amount, description, spent_on, split_mode, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(id, group.code, payerId, total, description, spentOn, splitMode, author, now()),
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9 WHERE ${noneRemovedSql(10)}`,
+    ).bind(id, group.code, payerId, total, description, spentOn, splitMode, author, now(), named),
     ...participants.map((p) =>
-      c.env.DB.prepare('INSERT INTO expense_shares (expense_id, member_id, weight, amount) VALUES (?, ?, ?, ?)').bind(
-        id,
-        p.memberId,
-        p.weight,
-        shares.get(p.memberId)!,
-      ),
+      c.env.DB.prepare(
+        `INSERT INTO expense_shares (expense_id, member_id, weight, amount)
+         SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM expenses WHERE id = ?1)`,
+      ).bind(id, p.memberId, p.weight, shares.get(p.memberId)!),
     ),
   ]);
+  if (inserted.meta.changes === 0) {
+    const active = await loadActiveMemberIds(c.env.DB, group.code);
+    if (!active.has(payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
+    throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
+  }
   await audit(c.env.DB, group.code, me, 'expense.add', id);
   return c.json({ id }, 201);
 });

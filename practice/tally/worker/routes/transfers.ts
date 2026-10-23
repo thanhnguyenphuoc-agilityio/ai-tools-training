@@ -1,7 +1,7 @@
 // Settling up: the payer says "I sent it", the receiver confirms it arrived.
 // Only confirmed transfers change balances (shared/settle.ts).
 import { Hono } from 'hono';
-import { audit, loadActiveMemberIds, loadGroup } from '../groupData';
+import { audit, loadActiveMemberIds, loadGroup, noneRemovedSql } from '../groupData';
 import { amount, ApiError, now, readJson, text, type AppEnv } from '../http';
 import { requireCanConfirmTransfer, requireCanRecordTransfer, requireMember } from '../policy';
 
@@ -16,15 +16,19 @@ transferRoutes.post('/:code/transfers', async (c) => {
   requireCanRecordTransfer(me, fromId);
 
   const memberIds = await loadActiveMemberIds(c.env.DB, group.code);
-  if (!memberIds.has(fromId) || !memberIds.has(toId)) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'member is not in this group');
+  if (!memberIds.has(fromId) || !memberIds.has(toId))
+    throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'member is not in this group');
   if (fromId === toId) throw new ApiError(400, 'SELF_TRANSFER', 'cannot transfer to yourself');
 
   const id = crypto.randomUUID();
-  await c.env.DB.prepare(
-    `INSERT INTO transfers (id, group_code, from_id, to_id, amount, status, created_at) VALUES (?, ?, ?, ?, ?, 'sent', ?)`,
+  // The member check is repeated in the INSERT, so a member removed since loadActiveMemberIds gets no transfer.
+  const result = await c.env.DB.prepare(
+    `INSERT INTO transfers (id, group_code, from_id, to_id, amount, status, created_at)
+     SELECT ?1, ?2, ?3, ?4, ?5, 'sent', ?6 WHERE ${noneRemovedSql(7)}`,
   )
-    .bind(id, group.code, fromId, toId, amount(body.amount), now())
+    .bind(id, group.code, fromId, toId, amount(body.amount), now(), JSON.stringify([fromId, toId]))
     .run();
+  if (result.meta.changes === 0) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'member is not in this group');
   await audit(c.env.DB, group.code, me, 'transfer.add', id);
   return c.json({ id }, 201);
 });
@@ -39,7 +43,9 @@ transferRoutes.post('/:code/transfers/:id/confirm', async (c) => {
   requireCanConfirmTransfer(me, transfer);
   if (transfer.status === 'confirmed') throw new ApiError(409, 'ALREADY_CONFIRMED', 'already confirmed');
 
-  await c.env.DB.prepare(`UPDATE transfers SET status = 'confirmed', confirmed_at = ? WHERE id = ?`).bind(now(), id).run();
+  await c.env.DB.prepare(`UPDATE transfers SET status = 'confirmed', confirmed_at = ? WHERE id = ?`)
+    .bind(now(), id)
+    .run();
   await audit(c.env.DB, group.code, me, 'transfer.confirm', id);
   return c.json({ ok: true });
 });

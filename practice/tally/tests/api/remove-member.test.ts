@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GroupDto } from '../../shared/types';
-import { Browser, createTestEnv } from './helpers';
+import { Browser, createTestEnv, interleave } from './helpers';
 
 let env: Awaited<ReturnType<typeof createTestEnv>>;
 let owner: Browser;
@@ -252,4 +252,50 @@ describe('removing a member', () => {
     const res = await owner.call('POST', `/groups/${code}/members`, { name: 'jamie' });
     expect(res.json.code).toBe('DUPLICATE_NAME');
   });
+});
+
+// D1 has no interactive transaction: each test lets another request commit between a route's checks and its write.
+describe('removing a member while other changes arrive', () => {
+  const markRemoved = (id: string) =>
+    env.env.DB.prepare('UPDATE members SET removed_at = ? WHERE id = ?').bind(new Date().toISOString(), id).run();
+  /** The owner's device, whose next write matching `match` runs after `before` has committed. */
+  const ownerRacing = (match: RegExp, before: () => Promise<unknown>) =>
+    owner.withEnv({ DB: interleave(env.env.DB, match, before) });
+
+  it('refuses an expense whose participant is removed after the check', async () => {
+    const raced = ownerRacing(/INSERT INTO expenses/, () => markRemoved(ids.jamie));
+    const res = await addExpense(raced, ids.alex, 10_000, [ids.alex, ids.jamie]);
+    expect(res.status).toBe(400);
+    expect(res.json.code).toBe('PARTICIPANT_NOT_IN_GROUP');
+    expect((await getGroup(owner)).expenses).toEqual([]);
+  });
+
+  it('refuses an expense whose payer is removed after the check', async () => {
+    const raced = ownerRacing(/INSERT INTO expenses/, () => markRemoved(ids.jamie));
+    const res = await addExpense(raced, ids.jamie, 10_000, [ids.alex]);
+    expect(res.status).toBe(400);
+    expect(res.json.code).toBe('PAYER_NOT_IN_GROUP');
+    expect((await getGroup(owner)).expenses).toEqual([]);
+  });
+
+  it('refuses a transfer to a member removed after the check', async () => {
+    const raced = ownerRacing(/INSERT INTO transfers/, () => markRemoved(ids.jamie));
+    const res = await raced.call('POST', `/groups/${code}/transfers`, { toId: ids.jamie, amount: 10_000 });
+    expect(res.status).toBe(400);
+    expect(res.json.code).toBe('PARTICIPANT_NOT_IN_GROUP');
+    expect((await getGroup(owner)).transfers).toEqual([]);
+  });
+
+  it('keeps a member whose expense arrives between the balance check and the removal', async () => {
+    const raced = ownerRacing(/UPDATE members SET removed_at/, () =>
+      addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]),
+    );
+    const res = await remove(raced, ids.jamie);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('MEMBER_HAS_BALANCE');
+    const group = await getGroup(owner);
+    expect(group.members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
+    expect(group.expenses).toHaveLength(1);
+  });
+
 });

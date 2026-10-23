@@ -68,6 +68,14 @@ export async function loadActiveMemberIds(db: D1Database, code: string): Promise
 }
 
 /**
+ * SQL condition, true while none of the members listed in the JSON array bound at `?<n>` has been removed.
+ * New expenses and transfers repeat it inside their INSERT, so a removal that commits after the route loaded the
+ * active members still cannot be followed by a write naming the removed member (D1 runs one write at a time).
+ */
+export const noneRemovedSql = (n: number) =>
+  `NOT EXISTS (SELECT 1 FROM members WHERE removed_at IS NOT NULL AND id IN (SELECT value FROM json_each(?${n})))`;
+
+/**
  * The expenses (deleted ones left out, newest first) and transfers of a group, as the API returns them.
  * Balances are always computed from this with computeBalances (shared/settle.ts), never with a second formula.
  */
