@@ -84,24 +84,27 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
   if (!expense) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
   requireCanDeleteExpense(me, expense);
   // A removed member had a zero balance; deleting an expense they paid or owe a share of would give them one
-  // that nobody could settle any more, so such an expense stays.
-  const involvesRemoved = await c.env.DB.prepare(
-    `SELECT EXISTS (
-       SELECT 1 FROM members m
-       WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
-         AND (m.id = (SELECT payer_id FROM expenses WHERE id = ?1)
-              OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
-     ) AS removed`,
+  // that nobody could settle any more, so such an expense stays. The check is part of the UPDATE itself, so a
+  // removal that commits in the meantime cannot slip between a check and the delete.
+  const result = await c.env.DB.prepare(
+    `UPDATE expenses SET deleted_at = ?3, deleted_by = ?4
+     WHERE id = ?1 AND group_code = ?2 AND deleted_at IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM members m
+         WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
+           AND (m.id = expenses.payer_id
+                OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
+       )`,
   )
-    .bind(id, group.code)
-    .first<{ removed: number }>();
-  if (involvesRemoved?.removed) {
+    .bind(id, group.code, now(), me.memberId ?? 'owner')
+    .run();
+  if (result.meta.changes === 0) {
+    const stillThere = await c.env.DB.prepare('SELECT 1 FROM expenses WHERE id = ? AND deleted_at IS NULL')
+      .bind(id)
+      .first();
+    if (!stillThere) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
     throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
   }
-
-  await c.env.DB.prepare('UPDATE expenses SET deleted_at = ?, deleted_by = ? WHERE id = ?')
-    .bind(now(), me.memberId ?? 'owner', id)
-    .run();
   await audit(c.env.DB, group.code, me, 'expense.delete', id);
   return c.json({ ok: true });
 });

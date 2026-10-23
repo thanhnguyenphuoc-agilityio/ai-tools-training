@@ -321,7 +321,8 @@ Built. Project conventions are checked automatically by `npm run lint`:
   so the API and the UI cannot disagree on a balance, and finds a pending transfer in the same ledger. Also
   `loadActiveMember()` (claim, edit, remove) and `loadActiveMemberIds()` (new expenses and transfers).
 - `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
-  been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero.
+  been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero. The check is a
+  `NOT EXISTS` inside the soft-delete UPDATE, so a removal cannot commit between the check and the delete.
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
 - UI: `MembersPanel` shows a remove action per member for the owner (the removal is confirmed in a dialog) and lists
   removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show

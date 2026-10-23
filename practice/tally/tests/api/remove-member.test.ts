@@ -298,4 +298,12 @@ describe('removing a member while other changes arrive', () => {
     expect(group.expenses).toHaveLength(1);
   });
 
+  it('keeps an expense whose participant is removed between the check and the delete', async () => {
+    const { json: expense } = await addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]);
+    const raced = ownerRacing(/UPDATE expenses SET deleted_at/, () => markRemoved(ids.jamie));
+    const res = await raced.call('DELETE', `/groups/${code}/expenses/${expense.id}`);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('EXPENSE_HAS_REMOVED_MEMBER');
+    expect((await getGroup(owner)).expenses.map((e) => e.id)).toEqual([expense.id]);
+  });
 });
