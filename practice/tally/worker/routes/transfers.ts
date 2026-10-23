@@ -1,7 +1,7 @@
 // Settling up: the payer says "I sent it", the receiver confirms it arrived.
 // Only confirmed transfers change balances (shared/settle.ts).
 import { Hono } from 'hono';
-import { audit, loadGroup, loadMembers } from '../groupData';
+import { audit, loadActiveMemberIds, loadGroup } from '../groupData';
 import { amount, ApiError, now, readJson, text, type AppEnv } from '../http';
 import { requireCanConfirmTransfer, requireCanRecordTransfer, requireMember } from '../policy';
 
@@ -15,7 +15,7 @@ transferRoutes.post('/:code/transfers', async (c) => {
   const toId = text(body.toId, 'toId', 64);
   requireCanRecordTransfer(me, fromId);
 
-  const memberIds = new Set((await loadMembers(c.env.DB, group.code)).map((m) => m.id));
+  const memberIds = await loadActiveMemberIds(c.env.DB, group.code);
   if (!memberIds.has(fromId) || !memberIds.has(toId)) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'member is not in this group');
   if (fromId === toId) throw new ApiError(400, 'SELF_TRANSFER', 'cannot transfer to yourself');
 

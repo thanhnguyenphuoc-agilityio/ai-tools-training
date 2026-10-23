@@ -23,6 +23,8 @@ export interface MemberRow {
   token_hash: string | null;
   is_owner: number;
   created_at: string;
+  removed_at: string | null;
+  removed_reason: string | null;
 }
 
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
@@ -37,7 +39,7 @@ export async function loadGroup(c: Ctx): Promise<{ group: GroupRow; me: Identity
 
 export async function loadMembers(db: D1Database, code: string): Promise<MemberRow[]> {
   const { results } = await db
-    .prepare('SELECT * FROM members WHERE group_code = ? ORDER BY created_at, id')
+    .prepare('SELECT * FROM members WHERE group_code = ? ORDER BY is_owner DESC, name COLLATE NOCASE, id')
     .bind(code)
     .all<MemberRow>();
   return results;
@@ -52,11 +54,56 @@ export async function loadMember(db: D1Database, code: string, id: string): Prom
   return member;
 }
 
+/** Like loadMember, but a removed member cannot be changed any more. */
+export async function loadActiveMember(db: D1Database, code: string, id: string): Promise<MemberRow> {
+  const member = await loadMember(db, code, id);
+  if (member.removed_at) throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+  return member;
+}
+
+/** Ids of the members who have not been removed: the only ones new expenses and transfers may name. */
+export async function loadActiveMemberIds(db: D1Database, code: string): Promise<Set<string>> {
+  return new Set((await loadMembers(db, code)).filter((m) => !m.removed_at).map((m) => m.id));
+}
+
+/**
+ * Balance of one member in minor units, as in shared/settle.ts: paid - owed,
+ * plus confirmed transfers sent, minus confirmed transfers received.
+ */
+export async function memberBalance(db: D1Database, code: string, memberId: string): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT
+         (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE group_code = ?1 AND payer_id = ?2)
+       - (SELECT COALESCE(SUM(s.amount), 0) FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
+          WHERE e.group_code = ?1 AND s.member_id = ?2 AND e.deleted_at IS NULL)
+       + (SELECT COALESCE(SUM(amount), 0) FROM transfers WHERE group_code = ?1 AND from_id = ?2 AND status = 'confirmed')
+       - (SELECT COALESCE(SUM(amount), 0) FROM transfers WHERE group_code = ?1 AND to_id = ?2 AND status = 'confirmed')
+       AS balance`,
+    )
+    .bind(code, memberId)
+    .first<{ balance: number }>();
+  return row?.balance ?? 0;
+}
+
+/** True while a transfer to or from the member is marked sent but not confirmed yet. */
+export async function hasPendingTransfer(db: D1Database, code: string, memberId: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT EXISTS (SELECT 1 FROM transfers WHERE group_code = ?1 AND status = 'sent' AND (from_id = ?2 OR to_id = ?2)) AS pending`,
+    )
+    .bind(code, memberId)
+    .first<{ pending: number }>();
+  return !!row?.pending;
+}
+
 export const toMemberDto = (m: MemberRow): MemberDto => ({
   id: m.id,
   name: m.name,
   isOwner: m.is_owner === 1,
   claimed: m.token_hash !== null,
+  removed: m.removed_at !== null,
+  removedReason: m.removed_reason,
   bankBin: m.bank_bin,
   accountNo: m.account_no,
   accountName: m.account_name,

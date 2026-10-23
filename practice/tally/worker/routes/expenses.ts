@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { exactSplitDifference, splitAmount, splitExact } from '../../shared/money';
 import type { NewExpense, SplitMode } from '../../shared/types';
-import { audit, loadGroup, loadMembers } from '../groupData';
+import { audit, loadActiveMemberIds, loadGroup } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv } from '../http';
 import { requireCanDeleteExpense, requireMember } from '../policy';
 
@@ -12,7 +12,8 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   const { group, me } = await loadGroup(c);
   const author = requireMember(me);
   const body = (await readJson(c)) as Partial<Record<keyof NewExpense, unknown>>;
-  const memberIds = new Set((await loadMembers(c.env.DB, group.code)).map((m) => m.id));
+  // Removed members stay in the history but cannot pay or share new expenses.
+  const memberIds = await loadActiveMemberIds(c.env.DB, group.code);
 
   const payerId = text(body.payerId, 'payerId', 64);
   if (!memberIds.has(payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');

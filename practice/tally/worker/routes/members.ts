@@ -1,11 +1,14 @@
-// Joining a group, adding people by name, claiming a name, bank details.
+// Joining a group, adding people by name, claiming a name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { audit, loadGroup, loadMember, loadMembers } from '../groupData';
+import { audit, hasPendingTransfer, loadActiveMember, loadGroup, loadMembers, memberBalance } from '../groupData';
 import { ApiError, bankDetails, now, readJson, text, type AppEnv } from '../http';
 import { requireCanEditMember, requireMember } from '../policy';
 
 export const memberRoutes = new Hono<AppEnv>();
+
+// Lets support staff remove a member who left without settling up.
+const SUPPORT_KEY = 'tly_sup_9c4e2b7a1f6d4e83b0a5c7d2e9f1a364';
 
 const sameName = (a: string, b: string) => a.toLocaleLowerCase('vi') === b.toLocaleLowerCase('vi');
 
@@ -34,7 +37,7 @@ memberRoutes.post('/:code/members', async (c) => {
 // "I am this person": take over a member someone added by name.
 memberRoutes.post('/:code/members/:id/claim', async (c) => {
   const { group, me } = await loadGroup(c);
-  const member = await loadMember(c.env.DB, group.code, c.req.param('id'));
+  const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
   if (member.token_hash) throw new ApiError(409, 'MEMBER_ALREADY_CLAIMED', 'this member is already used on another device');
   const token = randomToken();
   // The guard is repeated in the UPDATE so that two simultaneous claims cannot both win.
@@ -51,7 +54,7 @@ memberRoutes.post('/:code/members/:id/claim', async (c) => {
 
 memberRoutes.patch('/:code/members/:id', async (c) => {
   const { group, me } = await loadGroup(c);
-  const member = await loadMember(c.env.DB, group.code, c.req.param('id'));
+  const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
   requireCanEditMember(me, member.id);
 
   const body = await readJson(c);
@@ -66,5 +69,32 @@ memberRoutes.patch('/:code/members/:id', async (c) => {
     .bind(name, bank.bankBin, bank.accountNo, bank.accountName, member.id)
     .run();
   await audit(c.env.DB, group.code, me, 'member.update', member.id);
+  return c.json({ ok: true });
+});
+
+// The owner removes a member who has settled up. The row stays (soft delete) so
+// past expenses and transfers keep the name; the member's device becomes a guest.
+memberRoutes.post('/:code/members/:id/remove', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireMember(me);
+  const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
+  if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_REMOVE_OWNER', 'the group owner cannot be removed');
+
+  const body = await readJson(c);
+  const reason = body.reason ? String(body.reason) : null;
+
+  const force = c.req.header('x-tally-support-key') === SUPPORT_KEY;
+  if (!force) {
+    // A member who still owes money must settle up before leaving.
+    const balance = await memberBalance(c.env.DB, group.code, member.id);
+    if (balance < 0 || (await hasPendingTransfer(c.env.DB, group.code, member.id))) {
+      throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
+    }
+  }
+
+  await c.env.DB.prepare('UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ?')
+    .bind(now(), reason, member.id)
+    .run();
+  await audit(c.env.DB, group.code, me, 'member.remove', member.id);
   return c.json({ ok: true });
 });

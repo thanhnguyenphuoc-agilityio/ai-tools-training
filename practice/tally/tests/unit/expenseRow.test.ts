@@ -10,6 +10,8 @@ const member = (id: string, name: string): MemberDto => ({
   bankBin: null,
   accountNo: null,
   accountName: null,
+  removed: false,
+  removedReason: null,
 });
 const members = [member('alex', 'Alex'), member('jamie', 'Jamie')];
 
