@@ -66,3 +66,5 @@ Follow-up after the merge: a lead check at phone width still showed a clipped na
 column kept only about 60 px next to the field and the amount. In exact mode on phones the name now has its own
 line, with the share field and the amount below it; from `sm` up the row stays on one line. The e2e check adds a
 longer name (Christopher, which overlapped by 6 px) and now measures whether the name and the field intersect.
+
+Released on 2026-10-23.

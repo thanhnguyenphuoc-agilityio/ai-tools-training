@@ -72,3 +72,5 @@ Approved by the AI team lead after two rounds: typecheck, 134 unit and API tests
 comments addressed: a test pinned at exactly 16 KB, members seeded with one statement instead of 32 requests, the
 tests kept in the `expenses` block, the request size asserted above the old 2 KB limit, and the maximum group size
 recorded as an open question.
+
+Released on 2026-10-23.

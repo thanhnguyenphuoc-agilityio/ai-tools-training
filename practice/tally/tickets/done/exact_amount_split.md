@@ -105,3 +105,5 @@ Approved by the AI team lead after one round: typecheck, 220 unit and API tests 
 tests pass. Review comments addressed: API tests no longer depend on the row order of shares (one failed about five
 times in six), zero shares accepted in every form the amount field accepts, the mode named "Exact shares"
 consistently, a test with a payer who does not take part, and the status line naming an invalid share.
+
+Released on 2026-10-23.

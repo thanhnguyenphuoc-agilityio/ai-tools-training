@@ -61,3 +61,5 @@ Reviewed by Opus (AI team lead) with `review-checklist`.
   `npm test`, where `npm ci` has installed Prettier for the format hook test.
 - Failing-first check done locally: a broken assertion made the script exit 1 (1 failed, 27 passed).
 - No findings. After a rebase on `develop`: `npm run test:hooks` 28 passed; typecheck, lint and 231 tests pass.
+
+Released on 2026-10-23.

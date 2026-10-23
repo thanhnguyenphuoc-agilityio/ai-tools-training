@@ -62,3 +62,5 @@ Reviewed by Opus (AI team lead) with `review-checklist`.
 - The test now runs `node_modules/oxlint/bin/oxlint` (the `bin` entry of the locked `oxlint` package) with
   `process.execPath` and no shell, so it needs no network and tests the same oxlint version as `npm run lint`.
 - No findings. `npm run typecheck`, `npm run lint` and `npm test` (231 tests) pass; the 10 rule tests take about 2 s.
+
+Released on 2026-10-23.

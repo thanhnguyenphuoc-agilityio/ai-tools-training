@@ -58,3 +58,5 @@ unit test for weights 2.3 and 1.15.
 Approved by the AI team lead after one round: typecheck, 105 unit and API tests and 6 e2e tests pass. Review
 comments addressed: a check over every valid weight, and the commit list in the merge request description. A
 follow-up (stored weight versus the weight used for the split) is recorded as a separate ticket.
+
+Released on 2026-10-23.

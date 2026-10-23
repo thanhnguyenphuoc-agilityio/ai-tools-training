@@ -66,3 +66,5 @@ Reviewed by Opus (AI team lead) with `review-checklist`.
 - One gap in the tests: the logical expression case had no test. Added `{cond && 'Yes'}` (reported).
 - `npm run lint` reports nothing new in `src/`. After a rebase on `develop`: typecheck and lint pass, 239 tests pass
   (18 lint rule tests).
+
+Released on 2026-10-23.

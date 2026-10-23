@@ -60,3 +60,5 @@ The merge request is opened on GitLab from this branch; its link is added when i
 
 Approved by the AI team lead after one round: typecheck, 106 unit and API tests and 6 e2e tests pass. Review
 comments addressed: an e2e assertion on the row text (it fails with the old behaviour) and a narrower helper type.
+
+Released on 2026-10-23.

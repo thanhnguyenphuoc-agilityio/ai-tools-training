@@ -70,3 +70,5 @@ The merge request is opened on GitLab from this branch; its link is added when i
 Approved by the AI team lead after one round: typecheck, 107 unit and API tests and 6 e2e tests pass. Review
 comments addressed: the duplicate delete test merged into one block, and a case for an owner who holds only the
 owner key.
+
+Released on 2026-10-23.

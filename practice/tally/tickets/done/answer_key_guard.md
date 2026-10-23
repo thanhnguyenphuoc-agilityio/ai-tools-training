@@ -103,3 +103,5 @@ are not affected). Review comments addressed: every word of a shell segment is c
 `VAR=value` prefixes included), nested substitutions, quoted heredocs fed to a shell, glued option values, the
 PowerShell backtick escape, `-e` / `--regexp` patterns of a recursive search, `ls -ltr ..` no longer blocked, the
 branch named `feat/answer_key_guard`, and the README row and Description no longer overclaiming.
+
+Released on 2026-10-23.

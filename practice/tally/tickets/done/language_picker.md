@@ -102,3 +102,5 @@ The merge request is opened on GitLab from this branch; its link is added when i
 Approved by the AI team lead after one round: typecheck, 114 unit and API tests and 12 e2e tests pass. Review
 comments addressed: 16px text and a 44px tap height on phones, header controls grouped in `.app__controls`, and
 clearer tests.
+
+Released on 2026-10-23.

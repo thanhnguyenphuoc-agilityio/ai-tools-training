@@ -118,3 +118,11 @@ How it was tested:
 - `npx playwright test`: 22 passed across desktop and mobile.
 - `node --test ../../.claude/hooks/*.test.mjs`: 28 tests, 28 passed.
 
+
+## Review
+
+Reviewed by Opus (AI team lead) with `review-checklist`. The review found that symbol-only JSX text (such as an
+arrow) and raw color functions (`rgb()`, `hsl()`) passed the lint; both are now reported (`5b6658f`). On `develop`
+after the merge, typecheck, lint, 229 unit and API tests, 22 e2e tests and 28 hook tests pass.
+
+Released on 2026-10-23.

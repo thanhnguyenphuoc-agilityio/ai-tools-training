@@ -103,3 +103,5 @@ Approved by the AI team lead after one round: `node --test .claude/hooks/*.test.
 affected). Review comments addressed: Prettier rewrote CRLF files as LF on Windows, so `.prettierrc` sets
 `endOfLine: auto` and a test with CRLF input failed before the fix; the merge request notes were added, including
 the `engines` field that `npm install` synced into `package-lock.json`.
+
+Released on 2026-10-23.

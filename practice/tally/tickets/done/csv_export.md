@@ -144,3 +144,5 @@ Approved by the AI team lead after one round: typecheck, 221 unit and API tests 
 exact transfer date in the e2e test, the zero-share and file-name rules in `docs/business-rules.md`, and the
 heading style and wording in `docs/design.md`. The merge request link is still to be added when the branch is
 pushed.
+
+Released on 2026-10-23.

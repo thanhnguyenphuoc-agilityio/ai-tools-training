@@ -44,3 +44,5 @@ Approved by the AI team lead: typecheck, 179 unit and API tests and 20 e2e tests
 tests pass on Linux (WSL Ubuntu, Node 22, Playwright Chromium, `CI=1`), where the overlap assertion failed before
 the change. The change is limited to the name element of the participant row; weight and equal modes keep their
 layout.
+
+Released on 2026-10-23.
