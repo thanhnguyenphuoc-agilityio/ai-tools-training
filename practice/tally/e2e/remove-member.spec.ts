@@ -66,3 +66,32 @@ test('remove a member who has settled up', async ({ page }) => {
   await expect(page.getByRole('checkbox', { name: 'Jamie' })).toHaveCount(0);
   await expect(page.getByLabel(t('expenseForm.paidBy')).locator('option', { hasText: 'Jamie' })).toHaveCount(0);
 });
+
+// The member picked as payer is removed on another device while the expense form is open.
+test('the expense form moves off a payer who has been removed', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel(t('home.create.groupName')).fill('Shared house');
+  await page.getByLabel(t('home.create.yourName')).fill('Alex');
+  await page.getByRole('button', { name: t('home.create.submit') }).click();
+  await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  await page.getByRole('button', { name: t('ownerKey.done') }).click();
+  const api = `/api/groups/${page.url().split('/g/')[1]}`;
+  const sam = (await (await page.request.post(`${api}/members`, { data: { name: 'Sam' } })).json()) as { id: string };
+  await page.reload();
+
+  const paidBy = page.getByLabel(t('expenseForm.paidBy'));
+  await paidBy.selectOption({ label: 'Sam' });
+  await page.getByLabel(t('expenseForm.amount'), { exact: true }).fill('90k');
+  await page.getByLabel(t('expenseForm.description')).fill('Utilities');
+  expect((await page.request.post(`${api}/members/${sam.id}/remove`, { data: {} })).ok()).toBe(true);
+
+  // The first save tells the user why it failed and refreshes the group; Sam is no longer offered.
+  await page.getByRole('button', { name: t('expenseForm.submit') }).click();
+  await expect(page.getByText(t('errors.PAYER_NOT_IN_GROUP'))).toBeVisible();
+  await expect(paidBy.locator('option', { hasText: 'Sam' })).toHaveCount(0);
+  await expect(paidBy.locator('option:checked')).toHaveText('Alex');
+
+  await page.getByRole('button', { name: t('expenseForm.submit') }).click();
+  await expect(page.locator('.expense-list__item')).toHaveCount(1);
+  await expect(page.locator('.expense-list__item')).toContainText('Alex');
+});

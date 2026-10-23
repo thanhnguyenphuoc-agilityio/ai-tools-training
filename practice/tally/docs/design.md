@@ -328,7 +328,9 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
 - UI: `MembersPanel` shows a remove action per member for the owner (the removal is confirmed in a dialog) and lists
   removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
-  current members only; the suggested transfers (`src/settleView.ts`) are computed between current members only,
+  current members only. When a save fails with `PAYER_NOT_IN_GROUP` or `PARTICIPANT_NOT_IN_GROUP` (a member removed
+  on another device), `ExpenseForm` shows the error and reloads the group; a payer who is no longer listed falls back
+  to the user or the first current member. The suggested transfers (`src/settleView.ts`) are computed between current members only,
   and a removed member with a non-zero balance (which the rules prevent) is named in a note instead. The CSV export keeps a share column for every member, removed ones included, because
   their past shares are part of the history.
 
