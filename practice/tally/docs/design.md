@@ -318,7 +318,7 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
   been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero.
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
-- UI: `MembersPanel` shows a remove action per member for the owner (the reason is asked in a prompt) and lists
+- UI: `MembersPanel` shows a remove action per member for the owner (the removal is confirmed in a dialog) and lists
   removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
   current members only. The CSV export keeps a share column for every member, removed ones included, because
   their past shares are part of the history.

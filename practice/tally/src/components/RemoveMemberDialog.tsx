@@ -1,0 +1,91 @@
+import { useEffect, useRef, useState } from 'react';
+import type { GroupDto, MemberDto } from '../../shared/types';
+import { api } from '../api';
+import { useI18n } from '../i18n';
+
+export function RemoveMemberDialog({
+  group,
+  member,
+  onClose,
+  onChanged,
+}: {
+  group: GroupDto;
+  member: MemberDto;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { t, errorMessage } = useI18n();
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reasonInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    reasonInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !busy) {
+        onClose();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose, busy]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.removeMember(group.code, member.id, reason.trim());
+      onClose();
+      onChanged();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('members.removeTitle', { name: member.name })}
+      onClick={() => {
+        if (!busy) onClose();
+      }}
+    >
+      <div className="dialog__panel card stack" onClick={(e) => e.stopPropagation()}>
+        <h2 className="card__title">{t('members.removeTitle', { name: member.name })}</h2>
+        <p className="text text--muted text--small">{t('members.removeHint')}</p>
+        <form onSubmit={submit} className="stack">
+          <label className="field" htmlFor="remove-member-reason">
+            <span className="field__label">{t('members.removeReason')}</span>
+            <input
+              id="remove-member-reason"
+              ref={reasonInputRef}
+              className="field__control"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={200}
+              autoFocus
+            />
+          </label>
+          {error && <p className="text text--error">{error}</p>}
+          <div className="cluster">
+            <button className="button" type="submit" disabled={busy}>
+              {t('members.remove')}
+            </button>
+            <button className="button button--ghost" type="button" onClick={onClose} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

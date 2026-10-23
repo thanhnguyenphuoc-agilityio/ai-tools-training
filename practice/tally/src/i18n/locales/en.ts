@@ -16,6 +16,7 @@ export const en = {
     save: 'Save',
     saved: 'Saved.',
     close: 'Close',
+    cancel: 'Cancel',
     copy: 'Copy',
     remove: 'Remove',
     /** Joins short facts on one line. */
@@ -161,7 +162,9 @@ export const en = {
     roundCoarse: 'Round each share to {unit} (applies to new expenses)',
     remove: 'Remove',
     removeLabel: 'Remove {name} from the group',
-    removePrompt: 'Remove {name} from the group? Their expenses stay in the history. Reason (optional):',
+    removeTitle: 'Remove {name}',
+    removeHint: 'Their expenses stay in the history.',
+    removeReason: 'Reason (optional)',
     removed: 'removed',
   },
   theme: {

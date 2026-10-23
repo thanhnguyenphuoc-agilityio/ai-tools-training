@@ -13,6 +13,7 @@ export const vi: Messages = {
     save: 'Lưu',
     saved: 'Đã lưu.',
     close: 'Đóng',
+    cancel: 'Huỷ',
     copy: 'Sao chép',
     remove: 'Xoá',
     separator: ' · ',
@@ -154,7 +155,9 @@ export const vi: Messages = {
     roundCoarse: 'Làm tròn phần chia đến {unit} (áp dụng cho khoản chi mới)',
     remove: 'Xoá',
     removeLabel: 'Xoá {name} khỏi nhóm',
-    removePrompt: 'Xoá {name} khỏi nhóm? Các khoản chi của họ vẫn được giữ trong lịch sử. Lý do (không bắt buộc):',
+    removeTitle: 'Xoá {name}',
+    removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
+    removeReason: 'Lý do (không bắt buộc)',
     removed: 'đã bị xoá khỏi nhóm',
   },
   theme: {

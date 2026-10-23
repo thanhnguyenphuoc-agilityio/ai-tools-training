@@ -3,11 +3,13 @@ import { CURRENCIES, getCurrency } from '../../shared/currency';
 import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useI18n } from '../i18n';
+import { RemoveMemberDialog } from './RemoveMemberDialog';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, errorMessage } = useI18n();
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
   const active = group.members.filter((m) => !m.removed);
   const removed = group.members.filter((m) => m.removed);
@@ -19,12 +21,6 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
         onChanged();
       })
       .catch((err) => setError(errorMessage(err)));
-
-  function remove(member: MemberDto) {
-    const reason = window.prompt(t('members.removePrompt', { name: member.name }), '');
-    if (reason === null) return;
-    run(api.removeMember(group.code, member.id, reason.trim()));
-  }
 
   return (
     <div className="stack">
@@ -49,7 +45,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                   {group.me.isOwner && !m.isOwner && (
                     <button
                       className="button button--ghost button--small"
-                      onClick={() => remove(m)}
+                      onClick={() => setRemovingMember(m)}
                       aria-label={t('members.removeLabel', { name: m.name })}
                     >
                       {t('members.remove')}
@@ -91,6 +87,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       </section>
 
       {group.me.isOwner && <OwnerSettings group={group} onSaved={onChanged} />}
+
+      {removingMember && (
+        <RemoveMemberDialog
+          group={group}
+          member={removingMember}
+          onClose={() => setRemovingMember(null)}
+          onChanged={onChanged}
+        />
+      )}
     </div>
   );
 }
