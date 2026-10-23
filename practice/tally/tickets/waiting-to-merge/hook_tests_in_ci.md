@@ -31,3 +31,23 @@ can be merged with a green pipeline.
    CI use one command, and mention it in CLAUDE.md "Commands".
 3. Failing-first check: temporarily break one assertion in a hook test and confirm the CI step fails.
 4. Verify: the CI run on the merge request shows the new step with 28 passing tests.
+
+## Merge request
+
+Branch `feat/hook_tests_in_ci` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- `practice/tally/package.json`: added `"test:hooks": "node --test ../../.claude/hooks/*.test.mjs"` script.
+- `.github/workflows/ci.yml`: added `npm run test:hooks` step in the `test` job after `npm test`.
+- `CLAUDE.md`: documented `npm run test:hooks` in "Commands (run inside practice/tally)".
+- `README.md`: documented `npm run test:hooks` in root README hooks table row.
+
+How it was tested:
+
+- Failing-first check: broke assertion in `.claude/hooks/format-on-edit.test.mjs`, verified `npm run test:hooks` failed with exit code 1, then reverted.
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 16 test files, 231 passed.
+- `npm run test:hooks`: 28 tests, 28 passed.
