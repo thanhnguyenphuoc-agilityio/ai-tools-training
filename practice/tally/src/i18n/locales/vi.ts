@@ -227,6 +227,7 @@ export const vi: Messages = {
     MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
     MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
     CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể xoá được nữa.',
   },
 };
 

@@ -76,6 +76,21 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
     .first<{ created_by: string | null }>();
   if (!expense) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
   requireCanDeleteExpense(me, expense);
+  // A removed member had a zero balance; deleting an expense they paid or shared would give them one
+  // that nobody could settle any more, so such an expense stays.
+  const involvesRemoved = await c.env.DB.prepare(
+    `SELECT EXISTS (
+       SELECT 1 FROM members m
+       WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
+         AND (m.id = (SELECT payer_id FROM expenses WHERE id = ?1)
+              OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1))
+     ) AS removed`,
+  )
+    .bind(id, group.code)
+    .first<{ removed: number }>();
+  if (involvesRemoved?.removed) {
+    throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
+  }
 
   await c.env.DB.prepare('UPDATE expenses SET deleted_at = ?, deleted_by = ? WHERE id = ?')
     .bind(now(), me.memberId ?? 'owner', id)

@@ -48,6 +48,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Removal is soft: the member stays in the history of expenses and transfers with their name, and the name stays
     taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
     or named in a new transfer. Their device becomes a guest (view only).
+  - An expense that a removed member paid or shared can no longer be deleted (`EXPENSE_HAS_REMOVED_MEMBER`):
+    deleting it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 

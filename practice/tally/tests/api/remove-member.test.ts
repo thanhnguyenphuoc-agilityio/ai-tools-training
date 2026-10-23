@@ -170,6 +170,44 @@ describe('removing a member', () => {
     expect(claim.json.code).toBe('MEMBER_REMOVED');
   });
 
+  it('refuses to delete an expense shared by a removed member', async () => {
+    const { json: expense } = await addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]);
+    const { json: transfer } = await owner.call('POST', `/groups/${code}/transfers`, {
+      fromId: ids.jamie,
+      toId: ids.alex,
+      amount: 45_000,
+    });
+    await owner.call('POST', `/groups/${code}/transfers/${transfer.id}/confirm`);
+    expect((await remove(owner, ids.jamie)).status).toBe(200);
+
+    const res = await owner.call('DELETE', `/groups/${code}/expenses/${expense.id}`);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('EXPENSE_HAS_REMOVED_MEMBER');
+    expect((await getGroup(owner)).expenses.map((e) => e.id)).toEqual([expense.id]);
+  });
+
+  it('refuses to delete an expense paid by a removed member', async () => {
+    const { json: expense } = await addExpense(owner, ids.jamie, 90_000, [ids.alex, ids.jamie]);
+    const { json: transfer } = await owner.call('POST', `/groups/${code}/transfers`, {
+      fromId: ids.alex,
+      toId: ids.jamie,
+      amount: 45_000,
+    });
+    await owner.call('POST', `/groups/${code}/transfers/${transfer.id}/confirm`);
+    expect((await remove(owner, ids.jamie)).status).toBe(200);
+
+    const res = await owner.call('DELETE', `/groups/${code}/expenses/${expense.id}`);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('EXPENSE_HAS_REMOVED_MEMBER');
+    expect((await getGroup(owner)).expenses.map((e) => e.id)).toEqual([expense.id]);
+  });
+
+  it('still deletes an expense that only current members share', async () => {
+    const { json: expense } = await addExpense(owner, ids.alex, 20_000, [ids.alex, ids.sam]);
+    await remove(owner, ids.jamie);
+    expect((await owner.call('DELETE', `/groups/${code}/expenses/${expense.id}`)).status).toBe(200);
+  });
+
   it('keeps the name of a removed member taken', async () => {
     await remove(owner, ids.jamie);
     const res = await owner.call('POST', `/groups/${code}/members`, { name: 'jamie' });

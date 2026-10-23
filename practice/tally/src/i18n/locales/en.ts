@@ -239,6 +239,7 @@ export const en = {
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
   } satisfies Record<ErrorCode, string>,
 };
 
