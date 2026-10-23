@@ -61,6 +61,13 @@ describe('groups', () => {
 });
 
 describe('members', () => {
+  it('lists members in the order they joined', async () => {
+    for (const name of ['Sam', 'jamie', 'Casey']) {
+      expect((await owner.call('POST', `/groups/${code}/members`, { name })).status).toBe(201);
+    }
+    expect((await getGroup(owner)).members.map((m) => m.name)).toEqual(['Alex', 'Sam', 'jamie', 'Casey']);
+  });
+
   it('joins with claim=true and gets a device identity', async () => {
     const sam = new Browser(env.env);
     const { status, json } = await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });

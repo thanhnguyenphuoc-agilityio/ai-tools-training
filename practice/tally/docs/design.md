@@ -289,13 +289,50 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - UI: `MembersPanel` shows an edit action per member for the owner, reusing `BankForm`; `SettlePanel` shows the
   "Pay" action on every suggested transfer for the owner, and `api.recordTransfer` gains an optional `fromId`.
 
-### edit_expense, remove_member
+### edit_expense
 
-- Both depend on open questions in `docs/business-rules.md` (who may edit and whether history is kept; what happens
-  to a leaving member's balance). The BA exercise settles the rules first; the design is written into this section
-  in the same branch as the feature.
+- Depends on an open question in `docs/business-rules.md` (who may edit and whether history is kept). The BA
+  exercise settles the rules first; the design is written into this section in the same branch as the feature.
 - Constraints already known: shares are recomputed only through `splitAmount` (`splitExact` for exact splits);
-  edits and removals are written to `audit_log`; permission rules go into `policy.ts`.
+  edits are written to `audit_log`; permission rules go into `policy.ts`.
+
+### remove_member
+
+- Rules: `docs/business-rules.md`, "Removing a member". A member leaves only with a zero balance, so no stored
+  share or transfer is ever rewritten.
+- Data: migration `0002_member_removal.sql` adds `members.removed_at` and `members.removed_reason`. The row is
+  kept (soft delete) because expenses, shares and transfers reference it. `MemberDto` gains `removed` and
+  `removedReason`.
+- API: `POST /groups/:code/members/:id/remove` with `{ reason? }`. Owner only: `requireCanRemoveMember` in
+  `policy.ts`, checked before the member is loaded, so a plain member or a guest gets `403 OWNER_ONLY`. The owner
+  member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
+  `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
+  `member.remove`. The UPDATE repeats `removed_at IS NULL` and checks `meta.changes`, so of two simultaneous
+  removals one gets `MEMBER_REMOVED`.
+- Races (D1 has no interactive transaction, but runs one statement or batch at a time): new expenses and transfers
+  repeat the "no named member is removed" check inside their INSERT (`noneRemovedSql()` in `groupData.ts`, an
+  `INSERT ... SELECT ... WHERE NOT EXISTS`); when it writes nothing the route returns `PAYER_NOT_IN_GROUP` or
+  `PARTICIPANT_NOT_IN_GROUP`. An expense's shares are inserted in the same batch, only next to an expense row. The
+  removal checks the balance again after its UPDATE, when no new write can name the member any more, and undoes the
+  UPDATE with `MEMBER_HAS_BALANCE` if an expense or transfer committed in between. Tests simulate each interleaving
+  with `interleave()` in `tests/api/helpers.ts`.
+- `groupData.ts`: `loadLedger()` loads the expenses (deleted ones left out) and transfers for both
+  `GET /groups/:code` and the removal; `memberSettlement()` runs `computeBalances` from `shared/settle.ts` on it,
+  so the API and the UI cannot disagree on a balance, and finds a pending transfer in the same ledger. Also
+  `loadActiveMember()` (claim, edit, remove) and `loadActiveMemberIds()` (new expenses and transfers).
+- `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
+  been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero. The check is a
+  `NOT EXISTS` inside the soft-delete UPDATE, so a removal cannot commit between the check and the delete.
+  `ExpenseList` shows a note instead of the delete button on such an expense (`involvesRemovedMember()` in
+  `src/expenseRow.ts`).
+- `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
+- UI: `MembersPanel` shows a remove action per member for the owner (the removal is confirmed in a dialog) and lists
+  removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
+  current members only. When a save fails with `PAYER_NOT_IN_GROUP` or `PARTICIPANT_NOT_IN_GROUP` (a member removed
+  on another device), `ExpenseForm` shows the error and reloads the group; a payer who is no longer listed falls back
+  to the user or the first current member. The suggested transfers (`src/settleView.ts`) are computed between current members only,
+  and a removed member with a non-zero balance (which the rules prevent) is named in a note instead. The CSV export keeps a share column for every member, removed ones included, because
+  their past shares are part of the history.
 
 ### ui_redesign
 

@@ -52,7 +52,7 @@ export async function resolveIdentity(
   if (memberCookie) {
     const [id, token] = memberCookie.split('.');
     const row = await db
-      .prepare('SELECT id, token_hash FROM members WHERE id = ? AND group_code = ?')
+      .prepare('SELECT id, token_hash FROM members WHERE id = ? AND group_code = ? AND removed_at IS NULL')
       .bind(id, code)
       .first<{ id: string; token_hash: string | null }>();
     if (row?.token_hash && token && (await sha256Hex(token)) === row.token_hash) memberId = row.id;

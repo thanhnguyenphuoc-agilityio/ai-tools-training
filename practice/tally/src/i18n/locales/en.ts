@@ -16,6 +16,7 @@ export const en = {
     save: 'Save',
     saved: 'Saved.',
     close: 'Close',
+    cancel: 'Cancel',
     copy: 'Copy',
     remove: 'Remove',
     /** Joins short facts on one line. */
@@ -108,6 +109,7 @@ export const en = {
     exact: 'exact shares',
     delete: 'Delete',
     confirmDelete: 'Delete "{description}"?',
+    deleteLocked: 'Kept: involves a removed member',
   },
   settle: {
     balancesTitle: 'Balances',
@@ -123,6 +125,7 @@ export const en = {
     pendingItem: '{from} says they sent {amount} to {to}',
     confirm: 'Confirm received',
     doneTitle: 'Paid',
+    removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
   },
   qr: {
     title: 'Pay {name} {amount}',
@@ -159,6 +162,12 @@ export const en = {
     currency: 'Currency',
     currencyLocked: 'The currency is fixed once the group has expenses.',
     roundCoarse: 'Round each share to {unit} (applies to new expenses)',
+    remove: 'Remove',
+    removeLabel: 'Remove {name} from the group',
+    removeTitle: 'Remove {name}',
+    removeHint: 'Their expenses stay in the history.',
+    removeReason: 'Reason (optional)',
+    removed: 'removed',
   },
   theme: {
     /** Name of the light/dark control in the header, for screen readers. */
@@ -232,6 +241,10 @@ export const en = {
     DUPLICATE_PARTICIPANT: 'A person was picked twice.',
     SELF_TRANSFER: 'You cannot transfer money to yourself.',
     ALREADY_CONFIRMED: 'This transfer is already confirmed.',
+    MEMBER_REMOVED: 'This member has been removed from the group.',
+    MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
+    CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
   } satisfies Record<ErrorCode, string>,
 };
 

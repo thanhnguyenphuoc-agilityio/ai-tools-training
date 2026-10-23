@@ -13,6 +13,7 @@ export const vi: Messages = {
     save: 'Lưu',
     saved: 'Đã lưu.',
     close: 'Đóng',
+    cancel: 'Huỷ',
     copy: 'Sao chép',
     remove: 'Xoá',
     separator: ' · ',
@@ -102,6 +103,7 @@ export const vi: Messages = {
     exact: 'nhập phần từng người',
     delete: 'Xoá',
     confirmDelete: 'Xoá khoản "{description}"?',
+    deleteLocked: 'Không xoá được: có thành viên đã bị xoá',
   },
   settle: {
     balancesTitle: 'Số dư',
@@ -117,6 +119,7 @@ export const vi: Messages = {
     pendingItem: '{from} báo đã chuyển {amount} cho {to}',
     confirm: 'Xác nhận đã nhận',
     doneTitle: 'Đã thanh toán',
+    removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
   },
   qr: {
     title: 'Trả {name} {amount}',
@@ -152,6 +155,12 @@ export const vi: Messages = {
     currency: 'Tiền tệ',
     currencyLocked: 'Không đổi được tiền tệ khi nhóm đã có khoản chi.',
     roundCoarse: 'Làm tròn phần chia đến {unit} (áp dụng cho khoản chi mới)',
+    remove: 'Xoá',
+    removeLabel: 'Xoá {name} khỏi nhóm',
+    removeTitle: 'Xoá {name}',
+    removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
+    removeReason: 'Lý do (không bắt buộc)',
+    removed: 'đã bị xoá khỏi nhóm',
   },
   theme: {
     label: 'Giao diện',
@@ -220,6 +229,10 @@ export const vi: Messages = {
     DUPLICATE_PARTICIPANT: 'Một người bị chọn hai lần.',
     SELF_TRANSFER: 'Không thể tự chuyển tiền cho chính mình.',
     ALREADY_CONFIRMED: 'Giao dịch này đã được xác nhận.',
+    MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
+    MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
+    CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể xoá được nữa.',
   },
 };
 

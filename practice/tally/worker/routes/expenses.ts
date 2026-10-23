@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { exactSplitDifference, splitAmount, splitExact } from '../../shared/money';
 import type { NewExpense, SplitMode } from '../../shared/types';
-import { audit, loadGroup, loadMembers } from '../groupData';
+import { audit, loadActiveMemberIds, loadGroup, noneRemovedSql } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv } from '../http';
 import { requireCanDeleteExpense, requireMember } from '../policy';
 
@@ -12,7 +12,8 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   const { group, me } = await loadGroup(c);
   const author = requireMember(me);
   const body = (await readJson(c)) as Partial<Record<keyof NewExpense, unknown>>;
-  const memberIds = new Set((await loadMembers(c.env.DB, group.code)).map((m) => m.id));
+  // Removed members stay in the history but cannot pay or share new expenses.
+  const memberIds = await loadActiveMemberIds(c.env.DB, group.code);
 
   const payerId = text(body.payerId, 'payerId', 64);
   if (!memberIds.has(payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
@@ -27,7 +28,8 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   const seen = new Set<string>();
   const participants = body.participants.map((p: { memberId?: unknown; weight?: unknown; amount?: unknown }) => {
     const memberId = text(p?.memberId, 'participant', 64);
-    if (!memberIds.has(memberId)) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
+    if (!memberIds.has(memberId))
+      throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
     if (seen.has(memberId)) throw new ApiError(400, 'DUPLICATE_PARTICIPANT', 'duplicate participant');
     seen.add(memberId);
     return {
@@ -46,20 +48,26 @@ expenseRoutes.post('/:code/expenses', async (c) => {
       ? splitExact(total, participants)
       : splitAmount(total, participants, { roundTo: group.round_to, payerId });
   const id = crypto.randomUUID();
-  await c.env.DB.batch([
+  // The member check is repeated inside the batch (one transaction): a member removed since loadActiveMemberIds
+  // makes the expense INSERT write nothing, and the shares are only written next to an expense row.
+  const named = JSON.stringify([payerId, ...participants.map((p) => p.memberId)]);
+  const [inserted] = await c.env.DB.batch([
     c.env.DB.prepare(
       `INSERT INTO expenses (id, group_code, payer_id, amount, description, spent_on, split_mode, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(id, group.code, payerId, total, description, spentOn, splitMode, author, now()),
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9 WHERE ${noneRemovedSql(10)}`,
+    ).bind(id, group.code, payerId, total, description, spentOn, splitMode, author, now(), named),
     ...participants.map((p) =>
-      c.env.DB.prepare('INSERT INTO expense_shares (expense_id, member_id, weight, amount) VALUES (?, ?, ?, ?)').bind(
-        id,
-        p.memberId,
-        p.weight,
-        shares.get(p.memberId)!,
-      ),
+      c.env.DB.prepare(
+        `INSERT INTO expense_shares (expense_id, member_id, weight, amount)
+         SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM expenses WHERE id = ?1)`,
+      ).bind(id, p.memberId, p.weight, shares.get(p.memberId)!),
     ),
   ]);
+  if (inserted.meta.changes === 0) {
+    const active = await loadActiveMemberIds(c.env.DB, group.code);
+    if (!active.has(payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
+    throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
+  }
   await audit(c.env.DB, group.code, me, 'expense.add', id);
   return c.json({ id }, 201);
 });
@@ -75,10 +83,28 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
     .first<{ created_by: string | null }>();
   if (!expense) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
   requireCanDeleteExpense(me, expense);
-
-  await c.env.DB.prepare('UPDATE expenses SET deleted_at = ?, deleted_by = ? WHERE id = ?')
-    .bind(now(), me.memberId ?? 'owner', id)
+  // A removed member had a zero balance; deleting an expense they paid or owe a share of would give them one
+  // that nobody could settle any more, so such an expense stays. The check is part of the UPDATE itself, so a
+  // removal that commits in the meantime cannot slip between a check and the delete.
+  const result = await c.env.DB.prepare(
+    `UPDATE expenses SET deleted_at = ?3, deleted_by = ?4
+     WHERE id = ?1 AND group_code = ?2 AND deleted_at IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM members m
+         WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
+           AND (m.id = expenses.payer_id
+                OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
+       )`,
+  )
+    .bind(id, group.code, now(), me.memberId ?? 'owner')
     .run();
+  if (result.meta.changes === 0) {
+    const stillThere = await c.env.DB.prepare('SELECT 1 FROM expenses WHERE id = ? AND deleted_at IS NULL')
+      .bind(id)
+      .first();
+    if (!stillThere) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
+    throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
+  }
   await audit(c.env.DB, group.code, me, 'expense.delete', id);
   return c.json({ ok: true });
 });

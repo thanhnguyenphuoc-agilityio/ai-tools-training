@@ -3,12 +3,16 @@ import { CURRENCIES, getCurrency } from '../../shared/currency';
 import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useI18n } from '../i18n';
+import { RemoveMemberDialog } from './RemoveMemberDialog';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, errorMessage } = useI18n();
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
+  const active = group.members.filter((m) => !m.removed);
+  const removed = group.members.filter((m) => m.removed);
 
   const run = (action: Promise<unknown>) =>
     action
@@ -23,9 +27,9 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       {me && <BankForm key={me.id} code={group.code} member={me} onSaved={onChanged} />}
 
       <section className="card stack">
-        <h2 className="card__title">{t('members.listTitle', { count: group.members.length })}</h2>
+        <h2 className="card__title">{t('members.listTitle', { count: active.length })}</h2>
         <ul className="list list--divided">
-          {group.members.map((m) => {
+          {active.map((m) => {
             const bank = findBank(m.bankBin);
             return (
               <li key={m.id} className="list__item cluster cluster--between">
@@ -34,12 +38,30 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                   {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
                   {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
                 </span>
-                <span className="text text--muted text--small">
-                  {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                <span className="cluster">
+                  <span className="text text--muted text--small">
+                    {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                  </span>
+                  {group.me.isOwner && !m.isOwner && (
+                    <button
+                      className="button button--ghost button--small"
+                      onClick={() => setRemovingMember(m)}
+                      aria-label={t('members.removeLabel', { name: m.name })}
+                    >
+                      {t('members.remove')}
+                    </button>
+                  )}
                 </span>
               </li>
             );
           })}
+          {removed.map((m) => (
+            <li key={m.id} className="list__item cluster">
+              <span className="text text--muted">{m.name}</span>
+              <span className="badge">{t('members.removed')}</span>
+              {m.removedReason && <span className="text text--muted text--small">{m.removedReason}</span>}
+            </li>
+          ))}
         </ul>
         {group.me.memberId && (
           <form
@@ -65,6 +87,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       </section>
 
       {group.me.isOwner && <OwnerSettings group={group} onSaved={onChanged} />}
+
+      {removingMember && (
+        <RemoveMemberDialog
+          group={group}
+          member={removingMember}
+          onClose={() => setRemovingMember(null)}
+          onChanged={onChanged}
+        />
+      )}
     </div>
   );
 }

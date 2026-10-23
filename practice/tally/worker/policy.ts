@@ -18,6 +18,14 @@ export function requireCanEditMember(me: Identity, memberId: string): void {
   if (me.memberId !== memberId && !me.isOwner) throw new ApiError(403, 'EDIT_SELF_ONLY', 'you can only edit yourself');
 }
 
+/**
+ * Removing a member: the owner only (remove_member). A guest gets OWNER_ONLY too, since joining
+ * would not help. Whether the target can be removed (not the owner, zero balance) is checked by the route.
+ */
+export function requireCanRemoveMember(me: Identity): void {
+  requireOwner(me);
+}
+
 /** Expenses: the author or the owner. A guest (no member identity) is never the author. */
 export function requireCanDeleteExpense(me: Identity, expense: { created_by: string | null }): void {
   if (me.isOwner) return;

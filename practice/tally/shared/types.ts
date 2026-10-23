@@ -25,6 +25,9 @@ export interface MemberDto extends BankDetails {
   isOwner: boolean;
   /** Someone uses this member on a device. Unclaimed members were added by name. */
   claimed: boolean;
+  /** Removed by the owner (remove_member). Kept so that past expenses and transfers still show the name. */
+  removed: boolean;
+  removedReason: string | null;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */

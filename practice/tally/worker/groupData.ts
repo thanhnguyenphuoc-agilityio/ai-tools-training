@@ -1,6 +1,7 @@
 // Loading a group and its members, activity tracking and audit log.
 import { GROUP_CODE_RE } from '../shared/groupCode';
-import type { MemberDto } from '../shared/types';
+import { computeBalances } from '../shared/settle';
+import type { ExpenseDto, MemberDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
 
@@ -23,6 +24,8 @@ export interface MemberRow {
   token_hash: string | null;
   is_owner: number;
   created_at: string;
+  removed_at: string | null;
+  removed_reason: string | null;
 }
 
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
@@ -52,14 +55,110 @@ export async function loadMember(db: D1Database, code: string, id: string): Prom
   return member;
 }
 
+/** Like loadMember, but a removed member cannot be changed any more. */
+export async function loadActiveMember(db: D1Database, code: string, id: string): Promise<MemberRow> {
+  const member = await loadMember(db, code, id);
+  if (member.removed_at) throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+  return member;
+}
+
+/** Ids of the members who have not been removed: the only ones new expenses and transfers may name. */
+export async function loadActiveMemberIds(db: D1Database, code: string): Promise<Set<string>> {
+  return new Set((await loadMembers(db, code)).filter((m) => !m.removed_at).map((m) => m.id));
+}
+
+/**
+ * SQL condition, true while none of the members listed in the JSON array bound at `?<n>` has been removed.
+ * New expenses and transfers repeat it inside their INSERT, so a removal that commits after the route loaded the
+ * active members still cannot be followed by a write naming the removed member (D1 runs one write at a time).
+ */
+export const noneRemovedSql = (n: number) =>
+  `NOT EXISTS (SELECT 1 FROM members WHERE removed_at IS NOT NULL AND id IN (SELECT value FROM json_each(?${n})))`;
+
+/**
+ * The expenses (deleted ones left out, newest first) and transfers of a group, as the API returns them.
+ * Balances are always computed from this with computeBalances (shared/settle.ts), never with a second formula.
+ */
+export async function loadLedger(
+  db: D1Database,
+  code: string,
+): Promise<{ expenses: ExpenseDto[]; transfers: TransferDto[] }> {
+  const [expenseRows, shareRows, transferRows] = await Promise.all([
+    db
+      .prepare(
+        'SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC',
+      )
+      .bind(code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT s.* FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
+         WHERE e.group_code = ? AND e.deleted_at IS NULL`,
+      )
+      .bind(code)
+      .all<{ expense_id: string; member_id: string; weight: number; amount: number }>()
+      .then((r) => r.results),
+    db
+      .prepare('SELECT * FROM transfers WHERE group_code = ? ORDER BY created_at DESC')
+      .bind(code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+  ]);
+
+  const expenses: ExpenseDto[] = expenseRows.map((e) => ({
+    id: e.id as string,
+    payerId: e.payer_id as string,
+    amount: e.amount as number,
+    description: e.description as string,
+    spentOn: e.spent_on as string,
+    splitMode: e.split_mode as ExpenseDto['splitMode'],
+    shares: shareRows
+      .filter((s) => s.expense_id === e.id)
+      .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
+    createdBy: e.created_by as string | null,
+    createdAt: e.created_at as string,
+  }));
+  const transfers: TransferDto[] = transferRows.map((t) => ({
+    id: t.id as string,
+    fromId: t.from_id as string,
+    toId: t.to_id as string,
+    amount: t.amount as number,
+    status: t.status as TransferDto['status'],
+    createdAt: t.created_at as string,
+    confirmedAt: t.confirmed_at as string | null,
+  }));
+  return { expenses, transfers };
+}
+
+/**
+ * What stands between a member and their removal, from one read of the ledger: their balance in minor units
+ * (positive = the group owes them, from computeBalances) and whether a transfer to or from them is marked sent but
+ * not confirmed yet.
+ */
+export async function memberSettlement(
+  db: D1Database,
+  code: string,
+  memberId: string,
+): Promise<{ balance: number; pending: boolean }> {
+  const { expenses, transfers } = await loadLedger(db, code);
+  return {
+    balance: computeBalances([memberId], expenses, transfers).get(memberId) ?? 0,
+    pending: transfers.some((t) => t.status === 'sent' && (t.fromId === memberId || t.toId === memberId)),
+  };
+}
+
 export const toMemberDto = (m: MemberRow): MemberDto => ({
   id: m.id,
   name: m.name,
   isOwner: m.is_owner === 1,
   claimed: m.token_hash !== null,
-  bankBin: m.bank_bin,
-  accountNo: m.account_no,
-  accountName: m.account_name,
+  removed: m.removed_at !== null,
+  removedReason: m.removed_reason,
+  // A removed member cannot receive a transfer, so their bank details are no longer shown to the link holders.
+  bankBin: m.removed_at ? null : m.bank_bin,
+  accountNo: m.removed_at ? null : m.account_no,
+  accountName: m.removed_at ? null : m.account_name,
 });
 
 /** Member activity pushes back the (future) auto-delete date. */

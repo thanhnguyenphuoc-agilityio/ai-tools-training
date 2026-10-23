@@ -104,7 +104,9 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
         </div>
       </section>
 
-      {newOwnerKey && group.me.isOwner && <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />}
+      {newOwnerKey && group.me.isOwner && (
+        <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />
+      )}
       {error && <p className="text text--error">{error}</p>}
       {!group.me.memberId && <JoinPanel group={group} onDone={reload} />}
 
@@ -124,7 +126,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
 
       {tab === 'expenses' && (
         <div className="group-page__panels">
-          {group.me.memberId && <ExpenseForm group={group} onSaved={reload} />}
+          {group.me.memberId && <ExpenseForm group={group} onSaved={reload} onStale={reload} />}
           <ExpenseList group={group} onChanged={reload} />
         </div>
       )}

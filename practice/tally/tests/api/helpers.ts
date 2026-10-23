@@ -11,7 +11,10 @@ export async function createTestEnv(): Promise<{ env: Env; dispose: () => Promis
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
   for (const file of readdirSync(MIGRATIONS).sort()) {
     const sql = readFileSync(join(MIGRATIONS, file), 'utf8').replace(/--.*$/gm, '');
-    for (const statement of sql.split(';').map((s) => s.trim()).filter(Boolean)) {
+    for (const statement of sql
+      .split(';')
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       await db.prepare(statement).run();
     }
   }
@@ -25,8 +28,13 @@ export class Browser {
 
   constructor(private env: Env) {}
 
-  async call<T = any>(method: string, path: string, body?: unknown): Promise<{ status: number; json: T }> {
-    const headers: Record<string, string> = {};
+  async call<T = any>(
+    method: string,
+    path: string,
+    body?: unknown,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<{ status: number; json: T }> {
+    const headers: Record<string, string> = { ...extraHeaders };
     if (body !== undefined) headers['content-type'] = 'application/json';
     if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
 
@@ -43,7 +51,61 @@ export class Browser {
     return { status: res.status, json: (await res.json()) as T };
   }
 
+  /** The same device (same cookies) talking to another environment, e.g. a database wrapped by `interleave`. */
+  withEnv(env: Env): Browser {
+    const other = new Browser(env);
+    other.cookies = this.cookies;
+    return other;
+  }
+
   forgetCookies() {
     this.cookies.clear();
   }
+}
+
+/**
+ * A D1 database that runs `before` once, just before the first statement whose SQL matches `match` is executed
+ * (alone or in a batch). Simulates another request committing between a route's checks and its write.
+ * `before` must use the original database.
+ */
+export function interleave(db: D1Database, match: RegExp, before: () => Promise<unknown>): D1Database {
+  let fired = false;
+  const fire = async () => {
+    if (fired) return;
+    fired = true;
+    await before();
+  };
+  const originals = new WeakMap<object, { stmt: D1PreparedStatement; hit: boolean }>();
+  const wrap = (stmt: D1PreparedStatement, hit: boolean): D1PreparedStatement => {
+    const proxy = new Proxy(stmt, {
+      get(target, prop) {
+        if (prop === 'bind') return (...args: unknown[]) => wrap(target.bind(...args), hit);
+        const value = Reflect.get(target, prop, target);
+        if (typeof value !== 'function') return value;
+        if (hit && ['run', 'first', 'all', 'raw'].includes(prop as string)) {
+          return async (...args: unknown[]) => {
+            await fire();
+            return value.apply(target, args);
+          };
+        }
+        return value.bind(target);
+      },
+    });
+    originals.set(proxy, { stmt, hit });
+    return proxy;
+  };
+  return new Proxy(db, {
+    get(target, prop) {
+      if (prop === 'prepare') return (sql: string) => wrap(target.prepare(sql), match.test(sql));
+      if (prop === 'batch') {
+        return async (stmts: D1PreparedStatement[]) => {
+          const unwrapped = stmts.map((s) => originals.get(s) ?? { stmt: s, hit: false });
+          if (unwrapped.some((u) => u.hit)) await fire();
+          return target.batch(unwrapped.map((u) => u.stmt));
+        };
+      }
+      const value = Reflect.get(target, prop, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
 }
