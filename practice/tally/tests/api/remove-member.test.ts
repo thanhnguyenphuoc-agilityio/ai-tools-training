@@ -219,6 +219,23 @@ describe('removing a member', () => {
     expect((await getGroup(owner)).expenses.map((e) => e.id)).toEqual([expense.id]);
   });
 
+  it('still deletes an expense in which a removed member owes zero', async () => {
+    const { json: expense } = await owner.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.alex,
+      amount: 50_000,
+      description: 'Groceries',
+      spentOn: today,
+      splitMode: 'exact',
+      participants: [
+        { memberId: ids.alex, amount: 20_000 },
+        { memberId: ids.sam, amount: 30_000 },
+        { memberId: ids.jamie, amount: 0 },
+      ],
+    });
+    expect((await remove(owner, ids.jamie)).status).toBe(200);
+    expect((await owner.call('DELETE', `/groups/${code}/expenses/${expense.id}`)).status).toBe(200);
+  });
+
   it('still deletes an expense that only current members share', async () => {
     const { json: expense } = await addExpense(owner, ids.alex, 20_000, [ids.alex, ids.sam]);
     await remove(owner, ids.jamie);

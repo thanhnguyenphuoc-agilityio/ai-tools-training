@@ -315,8 +315,8 @@ Built. Project conventions are checked automatically by `npm run lint`:
   `GET /groups/:code` and the removal; `memberBalance()` runs `computeBalances` from `shared/settle.ts` on it, so
   the API and the UI cannot disagree on a balance. Also `hasPendingTransfer()`, `loadActiveMember()` (claim, edit,
   remove) and `loadActiveMemberIds()` (new expenses and transfers).
-- `DELETE /groups/:code/expenses/:id` refuses an expense whose payer or participant has been removed
-  (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero.
+- `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
+  been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero.
 - `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
 - UI: `MembersPanel` shows a remove action per member for the owner (the reason is asked in a prompt) and lists
   removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show

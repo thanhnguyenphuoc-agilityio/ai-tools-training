@@ -49,8 +49,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
     or named in a new transfer. Their device becomes a guest (view only). Their bank details are no longer
     returned by the API (the stored values are kept).
-  - An expense that a removed member paid or shared can no longer be deleted (`EXPENSE_HAS_REMOVED_MEMBER`):
-    deleting it would give them a balance that nobody could settle.
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted
+    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
