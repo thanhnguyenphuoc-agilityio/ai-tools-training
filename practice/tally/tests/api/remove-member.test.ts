@@ -82,6 +82,12 @@ describe('removing a member', () => {
     expect((await getGroup(owner)).members.find((m) => m.id === ids.jamie)!.removed).toBe(false);
   });
 
+  it('ignores deleted expenses when checking the balance', async () => {
+    const { json: expense } = await addExpense(owner, ids.jamie, 90_000, [ids.alex, ids.jamie]);
+    expect((await owner.call('DELETE', `/groups/${code}/expenses/${expense.id}`)).status).toBe(200);
+    expect((await remove(owner, ids.jamie)).status).toBe(200);
+  });
+
   it('has no header that skips the balance check', async () => {
     // An earlier draft let this support header write off the debt of the member being removed.
     await addExpense(owner, ids.alex, 90_000, [ids.alex, ids.jamie]);

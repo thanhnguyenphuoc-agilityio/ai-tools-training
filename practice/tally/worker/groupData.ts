@@ -1,6 +1,7 @@
 // Loading a group and its members, activity tracking and audit log.
 import { GROUP_CODE_RE } from '../shared/groupCode';
-import type { MemberDto } from '../shared/types';
+import { computeBalances } from '../shared/settle';
+import type { ExpenseDto, MemberDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
 
@@ -67,23 +68,63 @@ export async function loadActiveMemberIds(db: D1Database, code: string): Promise
 }
 
 /**
- * Balance of one member in minor units, as in shared/settle.ts: paid - owed,
- * plus confirmed transfers sent, minus confirmed transfers received.
+ * The expenses (deleted ones left out, newest first) and transfers of a group, as the API returns them.
+ * Balances are always computed from this with computeBalances (shared/settle.ts), never with a second formula.
  */
+export async function loadLedger(
+  db: D1Database,
+  code: string,
+): Promise<{ expenses: ExpenseDto[]; transfers: TransferDto[] }> {
+  const [expenseRows, shareRows, transferRows] = await Promise.all([
+    db
+      .prepare('SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC')
+      .bind(code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT s.* FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
+         WHERE e.group_code = ? AND e.deleted_at IS NULL`,
+      )
+      .bind(code)
+      .all<{ expense_id: string; member_id: string; weight: number; amount: number }>()
+      .then((r) => r.results),
+    db
+      .prepare('SELECT * FROM transfers WHERE group_code = ? ORDER BY created_at DESC')
+      .bind(code)
+      .all<Record<string, string | number | null>>()
+      .then((r) => r.results),
+  ]);
+
+  const expenses: ExpenseDto[] = expenseRows.map((e) => ({
+    id: e.id as string,
+    payerId: e.payer_id as string,
+    amount: e.amount as number,
+    description: e.description as string,
+    spentOn: e.spent_on as string,
+    splitMode: e.split_mode as ExpenseDto['splitMode'],
+    shares: shareRows
+      .filter((s) => s.expense_id === e.id)
+      .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
+    createdBy: e.created_by as string | null,
+    createdAt: e.created_at as string,
+  }));
+  const transfers: TransferDto[] = transferRows.map((t) => ({
+    id: t.id as string,
+    fromId: t.from_id as string,
+    toId: t.to_id as string,
+    amount: t.amount as number,
+    status: t.status as TransferDto['status'],
+    createdAt: t.created_at as string,
+    confirmedAt: t.confirmed_at as string | null,
+  }));
+  return { expenses, transfers };
+}
+
+/** Balance of one member in minor units (positive = the group owes them), from computeBalances. */
 export async function memberBalance(db: D1Database, code: string, memberId: string): Promise<number> {
-  const row = await db
-    .prepare(
-      `SELECT
-         (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE group_code = ?1 AND payer_id = ?2)
-       - (SELECT COALESCE(SUM(s.amount), 0) FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
-          WHERE e.group_code = ?1 AND s.member_id = ?2 AND e.deleted_at IS NULL)
-       + (SELECT COALESCE(SUM(amount), 0) FROM transfers WHERE group_code = ?1 AND from_id = ?2 AND status = 'confirmed')
-       - (SELECT COALESCE(SUM(amount), 0) FROM transfers WHERE group_code = ?1 AND to_id = ?2 AND status = 'confirmed')
-       AS balance`,
-    )
-    .bind(code, memberId)
-    .first<{ balance: number }>();
-  return row?.balance ?? 0;
+  const { expenses, transfers } = await loadLedger(db, code);
+  return computeBalances([memberId], expenses, transfers).get(memberId) ?? 0;
 }
 
 /** True while a transfer to or from the member is marked sent but not confirmed yet. */

@@ -2,9 +2,9 @@
 import { Hono } from 'hono';
 import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
-import type { CreateGroupResponse, ExpenseDto, GroupDto, TransferDto } from '../../shared/types';
+import type { CreateGroupResponse, GroupDto } from '../../shared/types';
 import { memberCookieName, ownerCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { audit, loadGroup, loadMembers, toMemberDto, touch } from '../groupData';
+import { audit, loadGroup, loadLedger, loadMembers, toMemberDto, touch } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
 import { requireOwner } from '../policy';
 
@@ -54,50 +54,7 @@ groupRoutes.get('/:code', async (c) => {
   const { group, me } = await loadGroup(c);
   const db = c.env.DB;
 
-  const [members, expenseRows, shareRows, transferRows] = await Promise.all([
-    loadMembers(db, group.code),
-    db
-      .prepare('SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC')
-      .bind(group.code)
-      .all<Record<string, string | number | null>>()
-      .then((r) => r.results),
-    db
-      .prepare(
-        `SELECT s.* FROM expense_shares s JOIN expenses e ON e.id = s.expense_id
-         WHERE e.group_code = ? AND e.deleted_at IS NULL`,
-      )
-      .bind(group.code)
-      .all<{ expense_id: string; member_id: string; weight: number; amount: number }>()
-      .then((r) => r.results),
-    db
-      .prepare('SELECT * FROM transfers WHERE group_code = ? ORDER BY created_at DESC')
-      .bind(group.code)
-      .all<Record<string, string | number | null>>()
-      .then((r) => r.results),
-  ]);
-
-  const expenses: ExpenseDto[] = expenseRows.map((e) => ({
-    id: e.id as string,
-    payerId: e.payer_id as string,
-    amount: e.amount as number,
-    description: e.description as string,
-    spentOn: e.spent_on as string,
-    splitMode: e.split_mode as ExpenseDto['splitMode'],
-    shares: shareRows
-      .filter((s) => s.expense_id === e.id)
-      .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
-    createdBy: e.created_by as string | null,
-    createdAt: e.created_at as string,
-  }));
-  const transfers: TransferDto[] = transferRows.map((t) => ({
-    id: t.id as string,
-    fromId: t.from_id as string,
-    toId: t.to_id as string,
-    amount: t.amount as number,
-    status: t.status as TransferDto['status'],
-    createdAt: t.created_at as string,
-    confirmedAt: t.confirmed_at as string | null,
-  }));
+  const [members, { expenses, transfers }] = await Promise.all([loadMembers(db, group.code), loadLedger(db, group.code)]);
 
   // A member opening the group counts as activity; an anonymous visitor does not.
   if (me.memberId) await touch(db, group.code);
