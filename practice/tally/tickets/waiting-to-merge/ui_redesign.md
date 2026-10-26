@@ -83,3 +83,8 @@ Tests:
 
 Docs: `docs/business-rules.md` (confirmation messages, the summary), `docs/design.md` (section 5 and the
 `ui_redesign` section), `README.md` if it lists the redesign as not in the MVP.
+
+## Merge request
+
+The merge request is opened on GitLab from this branch; its link is added when it exists. Screenshots before and
+after (3 widths x 2 themes x home and 3 tabs) are attached to it.
