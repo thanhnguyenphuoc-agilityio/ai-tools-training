@@ -14,7 +14,7 @@ test('the theme choice is applied, remembered and can follow the device again', 
   await expect(picker.getByRole('radio', { name: t('theme.options.system') })).toBeChecked();
   expect(await theme(page)).toBeNull();
 
-  await picker.getByText(t('theme.options.dark'), { exact: true }).click();
+  await picker.getByTitle(t('theme.options.dark')).click();
   await expect(picker.getByRole('radio', { name: t('theme.options.dark') })).toBeChecked();
   expect(await theme(page)).toBe('dark');
 
@@ -22,7 +22,7 @@ test('the theme choice is applied, remembered and can follow the device again', 
   await expect(picker.getByRole('radio', { name: t('theme.options.dark') })).toBeChecked();
   expect(await theme(page)).toBe('dark');
 
-  await picker.getByText(t('theme.options.system'), { exact: true }).click();
+  await picker.getByTitle(t('theme.options.system')).click();
   await expect(picker.getByRole('radio', { name: t('theme.options.system') })).toBeChecked();
   expect(await theme(page)).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('tally.theme'))).toBeNull();
@@ -53,4 +53,14 @@ test('a stored dark choice is applied before the app script runs', async ({ page
   await page.route('**/src/main.tsx*', (route) => route.abort());
   await page.goto('/');
   expect(await theme(page)).toBe('dark');
+});
+
+test('each theme option is an icon with a name for screen readers and a tooltip', async ({ page }) => {
+  await page.goto('/');
+  const picker = page.getByRole('group', { name: t('theme.label') });
+  for (const option of ['system', 'light', 'dark'] as const) {
+    const label = picker.getByTitle(t(`theme.options.${option}`));
+    await expect(label.locator('svg')).toBeVisible();
+    await expect(picker.getByRole('radio', { name: t(`theme.options.${option}`) })).toBeAttached();
+  }
 });
