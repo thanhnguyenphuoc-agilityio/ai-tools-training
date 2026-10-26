@@ -1,24 +1,105 @@
 @use '../styles/abstracts' as *;
 
-// Compact select in the app header. The label is for screen readers only;
-// the options name each language in itself.
+// Menu button in the app header: flag, current language name and a chevron.
+// On narrow phones the name is visually hidden (it stays in the accessible
+// name); the open menu always shows every name.
 .language-picker {
-  display: inline-flex;
-  align-items: center;
+  position: relative;
 
-  &__label {
-    @include visually-hidden;
-  }
-
-  // 16px text stops iOS Safari from zooming on focus; 44px keeps a comfortable
-  // tap target on phones.
-  &__control {
-    min-height: 44px;
-    padding: space(2) space(3);
+  // 46px matches the height of the theme picker next to it.
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    gap: space(2);
+    min-height: 46px;
+    padding: 0 space(3);
     border: 1px solid var(--color-border);
-    border-radius: $radius-md;
+    border-radius: $radius-pill;
     background: var(--color-surface);
     color: var(--color-text);
-    font-size: font-size(md);
+    cursor: pointer;
+    transition: border-color $transition-fast;
+
+    &:hover {
+      border-color: var(--color-muted);
+    }
+  }
+
+  &__flag {
+    flex: none;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+
+  &__current {
+    @include visually-hidden;
+
+    @include up(sm) {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--color-muted);
+  }
+
+  &__menu {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + #{space(1)});
+    z-index: 10;
+    min-width: 12rem;
+    margin: 0;
+    padding: space(1);
+    list-style: none;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    background: var(--color-surface);
+    box-shadow: 0 8px 24px var(--color-shadow);
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  // 44px rows keep each language a comfortable tap target.
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: space(3);
+    min-height: 44px;
+    padding: 0 space(3);
+    border-radius: $radius-md;
+    cursor: pointer;
+
+    &--active {
+      background: var(--color-bg);
+    }
+
+    &--selected {
+      font-weight: 600;
+    }
+  }
+
+  // The active option is the keyboard position; show it as a ring while the menu has focus.
+  &__menu:focus-visible &__option--active {
+    @include focus-ring;
+    outline-offset: -2px;
+  }
+
+  &__name {
+    flex: 1;
+  }
+
+  &__check {
+    flex: none;
+    color: var(--color-accent);
   }
 }

@@ -10,6 +10,8 @@ export const en = {
   languagePicker: {
     /** Accessible name of the language select in the header. */
     label: 'Language',
+    /** Accessible name of the header button, which shows the current language. */
+    current: 'Language: {language}',
   },
   common: {
     loading: 'Loading…',

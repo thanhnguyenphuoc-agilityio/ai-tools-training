@@ -7,6 +7,7 @@ export const vi: Messages = {
   },
   languagePicker: {
     label: 'Ngôn ngữ',
+    current: 'Ngôn ngữ: {language}',
   },
   common: {
     loading: 'Đang tải…',

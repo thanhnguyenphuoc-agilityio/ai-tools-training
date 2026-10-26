@@ -11,10 +11,9 @@
     max-width: map.get($content-width, wide);
   }
 
-  // Brand on the left, preference controls on the right, on every page.
+  // Brand on the left, preference controls on the right, on one row from 360px up.
   &__header {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: space(2);
     padding: space(4) 0;
@@ -25,10 +24,9 @@
     font-size: font-size(lg);
   }
 
-  // Preference controls (language, theme) stay together at the end of the row and wrap as one group.
+  // Preference controls (language, theme) stay together at the end of the row.
   &__controls {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: space(2);
     margin-inline-start: auto;

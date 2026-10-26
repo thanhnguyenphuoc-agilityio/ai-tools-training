@@ -19,6 +19,7 @@
   --color-warning-border: #f5c26b;
   --color-focus: #0f766e;
   --color-backdrop: rgb(0 0 0 / 0.45);
+  --color-shadow: rgb(16 24 40 / 0.12);
   // QR codes need a light background to scan, in every theme.
   --color-qr-bg: #ffffff;
 }
@@ -38,6 +39,7 @@
   --color-warning-border: #8a6d2f;
   --color-focus: #2dd4bf;
   --color-backdrop: rgb(0 0 0 / 0.6);
+  --color-shadow: rgb(0 0 0 / 0.5);
   --color-qr-bg: #ffffff;
 }
 
