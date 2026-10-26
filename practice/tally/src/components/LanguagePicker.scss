@@ -10,9 +10,15 @@
   &__button {
     display: inline-flex;
     align-items: center;
-    gap: space(2);
+    gap: space(1);
     min-height: 46px;
-    padding: 0 space(3);
+    padding: 0 space(2) 0 space(3);
+
+    @include up(sm) {
+      gap: space(2);
+      padding: 0 space(3);
+    }
+
     border: 1px solid var(--color-border);
     border-radius: $radius-pill;
     background: var(--color-surface);
