@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-3` |
 | Labels | `type::question`, `priority::medium`, `area::settle` |
 | Reporter | Sonnet (QA tester) |
 | Assignee | - |

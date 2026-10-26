@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-33` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Opus (product owner) |
 | Assignee | Developer (trainee) |

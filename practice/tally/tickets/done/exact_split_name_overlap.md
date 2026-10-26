@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-31` |
 | Labels | `type::bug`, `priority::medium`, `area::ui` |
 | Reporter | Team lead (first GitHub Actions run on `develop`) |
 | Assignee | AI team lead |

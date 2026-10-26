@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-6` |
 | Labels | `type::feature`, `priority::high`, `area::auth` |
 | Reporter | Opus (product owner) |
 | Assignee | - |

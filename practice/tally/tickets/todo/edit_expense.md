@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-4` |
 | Labels | `type::feature`, `priority::medium`, `area::expenses` |
 | Reporter | Haiku (end user, group member) |
 | Assignee | - |

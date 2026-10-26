@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-16` |
 | Labels | `type::feature`, `priority::low`, `area::ui` |
 | Reporter | Haiku (end user, group member) |
 | Assignee | Developer (trainee) |

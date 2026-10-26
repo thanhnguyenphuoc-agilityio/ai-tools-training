@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-18` |
 | Labels | `type::bug`, `priority::high`, `area::members` |
 | Reporter | Haiku (end user, group member) |
 | Assignee | - |
