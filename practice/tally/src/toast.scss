@@ -36,6 +36,16 @@
     box-shadow: 0 8px 24px var(--color-shadow);
     pointer-events: auto;
     animation: toast-in 160ms ease-out;
+
+    // Phones show only the two newest toasts so the stack stays low on the screen; the older ones are still
+    // announced by the live region and expire as usual.
+    &:nth-last-child(n + 3) {
+      display: none;
+
+      @include up(md) {
+        display: flex;
+      }
+    }
   }
 
   &__icon {
