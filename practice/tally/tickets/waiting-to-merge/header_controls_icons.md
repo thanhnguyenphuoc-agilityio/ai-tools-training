@@ -80,3 +80,7 @@ Tests:
 
 Docs: `docs/business-rules.md` (interface language and preferences), `docs/design.md` (section 5 and the
 `language_picker, theme_picker` section).
+
+## Merge request
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
