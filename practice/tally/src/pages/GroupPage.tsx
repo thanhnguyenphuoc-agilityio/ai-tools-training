@@ -132,7 +132,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
             className={`tabs__tab${tab === id ? ' tabs__tab--active' : ''}`}
             onClick={() => {
               setTab(id);
-              scrollTo(0, 0);
+              window.scrollTo(0, 0);
             }}
           >
             <Icon name={icon} className="tabs__icon" />

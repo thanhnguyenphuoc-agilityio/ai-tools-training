@@ -20,6 +20,11 @@
     width: 360px;
   }
 
+  // Screen reader copy of the messages (see Toasts in toast.tsx).
+  &__live {
+    @include visually-hidden;
+  }
+
   &__item {
     display: flex;
     align-items: center;

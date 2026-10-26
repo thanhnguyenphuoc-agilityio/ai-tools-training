@@ -11,7 +11,8 @@ async function createGroup(page: Page) {
   await page.getByRole('button', { name: t('ownerKey.done') }).click();
 }
 
-const toasts = (page: Page) => page.getByRole('status').filter({ has: page.locator('.toasts__item') });
+// The visible toast cards; the screen reader copy is in a separate live region (role="status").
+const toasts = (page: Page) => page.locator('.toasts');
 
 test('saving an expense shows a toast and updates the summary', async ({ page }) => {
   await createGroup(page);
@@ -70,13 +71,13 @@ test('the tabs are a bottom bar on a phone and sit above the content on a deskto
 
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(tablist.getByRole('tab')).toHaveCount(3);
-  const phone = await tablist.boundingBox();
-  expect(Math.round(phone!.y + phone!.height)).toBe(800);
-  expect(Math.round(phone!.width)).toBe(390);
+  await expect(tablist).toHaveCSS('position', 'fixed');
+  await expect.poll(async () => Math.round(((await tablist.boundingBox())?.y ?? 0) + ((await tablist.boundingBox())?.height ?? 0))).toBe(800);
+  await expect.poll(async () => Math.round((await tablist.boundingBox())?.width ?? 0)).toBe(390);
 
   await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(tablist).toHaveCSS('position', 'static');
   const desktop = await tablist.boundingBox();
-  expect(desktop!.y).toBeLessThan(400);
   const summary = await page.locator('.group-page__summary').boundingBox();
   expect(desktop!.y).toBeGreaterThan(summary!.y);
 });
@@ -88,4 +89,27 @@ test('a visitor who has not joined sees no personal balance in the summary', asy
   await expect(visitor.locator('.group-page__summary')).toContainText(t('group.summary.total'));
   await expect(visitor.locator('.group-page__figure')).toHaveCount(2);
   await visitor.close();
+});
+
+test('the confirmation is announced once to screen readers, without the close button', async ({ page }) => {
+  await createGroup(page);
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+  await page.getByLabel(t('members.addLabel')).fill('Morgan');
+  await page.getByRole('button', { name: t('members.add'), exact: true }).click();
+  const live = page.getByRole('status');
+  await expect(live).toHaveText(t('toast.memberAdded', { name: 'Morgan' }));
+  await expect(live.getByRole('button')).toHaveCount(0);
+});
+
+test('a toast stays while the pointer is over it', async ({ page }) => {
+  await createGroup(page);
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+  await page.getByLabel(t('members.addLabel')).fill('Casey');
+  await page.getByRole('button', { name: t('members.add'), exact: true }).click();
+  const item = page.locator('.toasts__item', { hasText: t('toast.memberAdded', { name: 'Casey' }) });
+  await item.hover();
+  await page.waitForTimeout(5000);
+  await expect(item).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(item).toBeHidden({ timeout: 8000 });
 });

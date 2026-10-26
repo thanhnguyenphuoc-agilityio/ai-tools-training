@@ -72,7 +72,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
             onSubmit={(e) => {
               e.preventDefault();
               const name = newName.trim();
-              run(api.addMember(group.code, newName), () => {
+              run(api.addMember(group.code, name), () => {
                 setNewName('');
                 notify('toast.memberAdded', { name });
               });

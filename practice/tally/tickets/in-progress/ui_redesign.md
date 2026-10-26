@@ -57,9 +57,12 @@ How the agreed answers are met:
 
 1. Colors and brand: same accent; a logo mark (inline SVG, `currentColor`) next to the app name; section titles
    in small caps style; softer card borders. Colors only through `base/_themes.scss`.
-2. Confirmation messages: a toast area (`role="status"`, polite) rendered once in `App`, fed by `useToast()`.
+2. Confirmation messages: a toast area rendered once by `ToastProvider` (around `App` in `main.tsx`), fed by
+   `useToast()`. A visually hidden `role="status"` region carries the texts; the visible cards with their close
+   buttons are outside it.
    A toast stores a message key and its variables, not translated text, so it follows a language change while it
-   is visible. It disappears after a few seconds and can be dismissed. Errors keep their place on the forms.
+   is visible. It disappears after a few seconds (the timer pauses while hovered or focused) and can be
+   dismissed. Errors keep their place on the forms.
 3. Thumb reach: below `md`, the group tabs become a bottom bar fixed to the screen edge with an icon and a label
    per tab (still `role="tab"`); the page gets bottom padding so nothing hides behind it. From `md` up they stay
    above the content.

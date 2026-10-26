@@ -8,7 +8,7 @@
 
   // Room for the bottom tab bar on phones (only the group page has one; the extra space elsewhere is harmless).
   @include down(md) {
-    padding-bottom: calc(#{$tab-bar-height} + #{space(6)});
+    padding-bottom: calc(#{$tab-bar-height} + #{space(6)} + env(safe-area-inset-bottom));
   }
 
   // Wider canvas on desktop for two-column pages.
