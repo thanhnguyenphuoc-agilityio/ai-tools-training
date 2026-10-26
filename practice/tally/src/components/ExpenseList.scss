@@ -10,12 +10,20 @@
   &__row {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: space(2);
   }
 
+  &__end {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: space(1);
+  }
+
   &__amount {
-    font-weight: 600;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 }

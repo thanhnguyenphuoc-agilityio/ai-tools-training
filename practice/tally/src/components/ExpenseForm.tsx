@@ -5,6 +5,7 @@ import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
 export function ExpenseForm({
@@ -19,6 +20,7 @@ export function ExpenseForm({
 }) {
   const { t, errorMessage } = useI18n();
   const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
+  const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
   const members = group.members.filter((m) => !m.removed);
   const [chosenPayerId, setPayerId] = useState(group.me.memberId ?? members[0].id);
@@ -93,6 +95,7 @@ export function ExpenseForm({
       setAmountText('');
       setDescription('');
       setShareTexts({});
+      notify('toast.expenseAdded');
       onSaved();
     } catch (err) {
       setError(errorMessage(err));

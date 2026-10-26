@@ -2,15 +2,23 @@ import { useState } from 'react';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useI18n } from '../i18n';
+import { useToast } from '../toast';
 
 /** For visitors who are not a member on this device yet. */
 export function JoinPanel({ group, onDone }: { group: GroupDto; onDone: () => void }) {
   const { t, errorMessage } = useI18n();
+  const notify = useToast();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const unclaimed = group.members.filter((m) => !m.claimed && !m.removed);
 
-  const run = (action: Promise<unknown>) => action.then(onDone).catch((err) => setError(errorMessage(err)));
+  const run = (action: Promise<unknown>) =>
+    action
+      .then(() => {
+        notify('toast.joined');
+        onDone();
+      })
+      .catch((err) => setError(errorMessage(err)));
 
   return (
     <section className="card stack">

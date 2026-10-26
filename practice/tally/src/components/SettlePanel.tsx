@@ -5,11 +5,13 @@ import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
 import { settleView } from '../settleView';
+import { useToast } from '../toast';
 import { QrDialog } from './QrDialog';
 
 export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, dateTime, errorMessage } = useI18n();
   const { money } = useGroupMoney(group);
+  const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
@@ -22,6 +24,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   async function confirmTransfer(id: string) {
     try {
       await api.confirmTransfer(group.code, id);
+      setError(null);
+      notify('toast.transferConfirmed');
       onChanged();
     } catch (err) {
       setError(errorMessage(err));
@@ -119,6 +123,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           settlement={paying}
           onClose={() => setPaying(null)}
           onRecorded={() => {
+            notify('toast.transferRecorded', { name: nameOf(paying.toId) });
             setPaying(null);
             onChanged();
           }}

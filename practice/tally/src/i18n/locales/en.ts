@@ -16,7 +16,6 @@ export const en = {
   common: {
     loading: 'Loading…',
     save: 'Save',
-    saved: 'Saved.',
     close: 'Close',
     cancel: 'Cancel',
     copy: 'Copy',
@@ -56,6 +55,15 @@ export const en = {
     notFound: 'Group not found.',
     badRecoveryLink: 'This recovery link is not valid: {message}',
     copyInvite: 'Copy invite link',
+    /** Figures above the tabs. */
+    summary: {
+      label: 'Group summary',
+      total: 'Total spent',
+      members: 'Members',
+      owed: 'You are owed',
+      owe: 'You owe',
+      settled: 'You are settled',
+    },
     tabs: {
       expenses: 'Expenses',
       settle: 'Settle up',
@@ -110,6 +118,7 @@ export const en = {
     byWeight: 'by weight',
     exact: 'exact shares',
     delete: 'Delete',
+    deleteLabel: 'Delete "{description}"',
     confirmDelete: 'Delete "{description}"?',
     deleteLocked: 'Kept: involves a removed member',
   },
@@ -180,6 +189,20 @@ export const en = {
       light: 'Light',
       dark: 'Dark',
     },
+  },
+  /** Confirmation messages that disappear by themselves after a save. */
+  toast: {
+    expenseAdded: 'Expense added.',
+    expenseDeleted: 'Expense deleted.',
+    memberAdded: '{name} was added to the group.',
+    memberRemoved: '{name} was removed from the group.',
+    bankSaved: 'Your bank details were saved.',
+    settingsSaved: 'Group settings were saved.',
+    transferRecorded: 'Transfer recorded. It counts once {name} confirms it.',
+    transferConfirmed: 'Transfer confirmed.',
+    inviteCopied: 'Invite link copied.',
+    recoveryCopied: 'Recovery link copied.',
+    joined: 'You joined the group.',
   },
   csvExport: {
     download: 'Download CSV',

@@ -137,7 +137,16 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 - Icons are inline SVGs in `src/components/Icon.tsx`, drawn with `currentColor` and `aria-hidden`; the control
   around an icon provides the accessible name.
   - A new theme means one palette mixin and one `[data-theme='...']` selector.
-- The full visual redesign is `ui_redesign`.
+- Built in `ui_redesign`:
+  - Group page: `GroupSummaryBar` (figures from the pure `src/groupSummary.ts`) above the tabs. The tab list has
+    the `tabs--bottom-mobile` modifier: below `md` it is fixed to the bottom edge (`$tab-bar-height`, safe-area
+    inset), and `.app` adds the same bottom padding so no content hides behind it.
+  - Confirmation toasts: `ToastProvider` in `src/main.tsx`, `useToast()` in components, styles in `src/toast.scss`.
+    A toast stores a message key and its variables and is translated when rendered, so it follows a language
+    change. Errors are not toasts; they stay on their form as `text--error`.
+  - Stacking order tokens in `abstracts/_tokens.scss`: tab bar, menu, toast, dialog.
+  - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
+    (`button--icon`) always has an `aria-label`.
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
@@ -347,12 +356,10 @@ Built. Project conventions are checked automatically by `npm run lint`:
 
 ### ui_redesign
 
-- Keep the BEM and token conventions. The palette may change; inline SVG icons, skeleton loading and toast
-  messages may be added.
-- Check all 3 breakpoints and both themes. Add before/after screenshots to the merge request.
-- Avoid the generic "AI-generated" look (purple gradients, identical rounded cards, emoji as icons, default system
-  fonts). Settle on a clear visual direction before coding. The `frontend-design` skill (official Anthropic
-  plugin) is recommended for this ticket.
+- Built; see section 5, Interface. Direction: keep the green accent and system fonts (no font download), quieter
+  section titles in spaced capitals, figures in tabular numerals, icons only where they carry meaning.
+- Not done in this ticket: skeleton loading, and the remaining in-form status texts (`stale_language_messages`).
+- Screenshots: 3 widths x 2 themes x (home + 3 tabs), before and after, in the merge request.
 
 ### currency_conversion
 
