@@ -349,6 +349,50 @@ Open before the next day:
 - [x] Security plugins walkthrough (security-guidance, Claude Security scan)
 - [x] Install the `frontend-design` plugin before Day 11 (`ui_redesign`)
 
+## Day 11: 2026-10-26
+
+Goal: role day (web) and Developer Checkpoint 3: verify the running app, not only the code; ship
+`header_controls_icons` and `ui_redesign`.
+Left over from the previous day: none.
+Shipped (merge requests, artifacts, screenshots):
+- `docs/ticket-ids` merged: every ticket has an `ID` field (`TAL-1` to `TAL-37`, in the order the tickets were
+  added); `tickets/README.md` says how the next ID is chosen.
+- `feat/header_controls_icons` (`TAL-27`) merged after one review round: the language picker is a menu button
+  with a flag and the language name, the theme picker shows a monitor, a sun and a moon, and the header fits on one
+  row from 360px up.
+- `feat/ui_redesign` (`TAL-17`) merged after one review round: a summary above the group tabs (total spent,
+  members, the viewer's balance), a bottom tab bar on phones, confirmation toasts after saves, icon actions and a
+  quieter visual style.
+- Both features were first built on a draft branch and reapplied on the current `develop`. Four components
+  conflicted with the remove-member work from Day 10; each keeps the `develop` behaviour with the redesign added on
+  top, as described in the tickets.
+- Typecheck, lint, 287 unit and API tests, 28 hook tests and 50 e2e tests pass on `develop`.
+Checkpoint 3 (Developer track):
+- [x] One skill + one hook merged (`release-checklist` on Day 07, `guard-answer-keys` on Day 09)
+- [x] One MCP tool used end to end (Playwright: the merged `develop` driven in a real browser)
+- [x] One review report acted on (the review of each merge request, fixed before the merge)
+- [x] Role-day exercise done (web: create a group, add members and expenses, remove a member, switch language and
+  theme, at 360px and 1280px)
+Observations (positive / negative):
+- The browser check on `develop` confirmed the conflict resolutions in use: removing a member who still owes money
+  shows the error in the dialog and no toast; removing a settled member shows the toast and the reason.
+- The theme options are labels over hidden radio inputs; a browser tool has to click the label, as a person does.
+  The control works, but a click aimed at the input times out.
+- A full-page screenshot draws a fixed bottom bar in the middle of the page. A viewport screenshot is the right
+  check for fixed elements.
+- The new logo pushed the theme control to a second row at 360px; only the e2e test that measures the header
+  caught it. A layout rule written as a test survives later changes that a screenshot review would miss.
+- A native `<select>` cannot show flags, so the language picker became a custom listbox. The review found the
+  usual custom-widget gaps (Tab dropping focus to the page, touch scroll moving the highlight).
+For the retro:
+- Custom widgets cost keyboard and screen reader work that the estimate should include.
+- Reapplying work built on an older base needs a note on how each conflict was resolved; without it the reviewer
+  cannot see where the risk is.
+Open before the next day:
+- [ ] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
+- [ ] Claude in Chrome: console logs and form fill on the training app
+- [ ] Course: start the AI-native SDLC playbook
+
 ## For the retro
 
 -
