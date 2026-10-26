@@ -11,9 +11,11 @@
     {
       "binding": "DB",
       "database_name": "tally",
-      // Placeholder. Local dev does not need a real id. Before `npm run deploy`,
-      // run `npx wrangler d1 create tally` and paste the id it prints.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // The D1 database of the deployed app. Local dev does not need a real id and uses its own local copy.
+      // For a first deploy to another Cloudflare account, set this to the placeholder
+      // "00000000-0000-0000-0000-000000000000", run `npx wrangler d1 create tally` and paste the id it prints
+      // (see docs/design.md, section 8).
+      "database_id": "6e542aac-803c-4037-b851-8d3e9e7c8961",
       "migrations_dir": "migrations"
     }
   ]
