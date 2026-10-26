@@ -20,6 +20,7 @@ moving to another folder (`git mv`).
 
 | Field | Value |
 |---|---|
+| ID | `TAL-<n>` |
 | Labels | `type::feature`, `priority::medium`, `area::ui` |
 | Reporter | Opus (product owner) |
 | Assignee | - |
@@ -31,6 +32,10 @@ moving to another folder (`git mv`).
 ## Notes from the reporter (optional)
 ```
 
+- **ID** is `TAL-<n>`: the next number after the highest ID on the board, assigned when the ticket is created and
+  never reused or changed. Commit messages, merge requests and other tickets may cite the ID next to the file name
+  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-38` (or `TAL-27`
+  for `header_controls_icons` branching from Day 10).
 - **Labels** follow GitLab scoped labels:
   - `type::` feature, bug, question or improvement. One `type::` label per ticket; a vague request stays
     `type::question` until it is clarified.

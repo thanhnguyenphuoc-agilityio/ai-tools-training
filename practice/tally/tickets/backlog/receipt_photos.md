@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-13` |
 | Labels | `type::feature`, `priority::medium`, `area::expenses` |
 | Reporter | Gemini (end user, group treasurer) |
 | Assignee | - |

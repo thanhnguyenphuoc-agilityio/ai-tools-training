@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-26` |
 | Labels | `type::bug`, `priority::low`, `area::expenses` |
 | Reporter | Team lead (code review of `weighted_split_share_off`) |
 | Assignee | - |

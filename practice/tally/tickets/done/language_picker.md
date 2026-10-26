@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-9` |
 | Labels | `type::feature`, `priority::low`, `area::ui` |
 | Reporter | Gemini (end user, group treasurer) |
 | Assignee | Developer (trainee) |

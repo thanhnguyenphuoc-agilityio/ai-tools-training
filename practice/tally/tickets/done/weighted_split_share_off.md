@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-23` |
 | Labels | `type::bug`, `priority::medium`, `area::expenses`, `source::seeded` |
 | Reporter | Gemini (end user, group treasurer) |
 | Assignee | Developer (trainee) |

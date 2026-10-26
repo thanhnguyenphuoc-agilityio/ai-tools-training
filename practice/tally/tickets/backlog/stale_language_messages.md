@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-24` |
 | Labels | `type::bug`, `priority::low`, `area::ui` |
 | Reporter | Team lead (code review of `language_picker`) |
 | Assignee | - |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-35` |
 | Labels | `type::improvement`, `priority::low`, `area::security` |
 | Reporter | Opus (AI team lead) |
 | Assignee | Haiku (developer) |

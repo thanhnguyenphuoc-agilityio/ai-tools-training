@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-8` |
 | Labels | `type::feature`, `priority::medium`, `area::auth` |
 | Reporter | Haiku (end user, group member) |
 | Assignee | - |
