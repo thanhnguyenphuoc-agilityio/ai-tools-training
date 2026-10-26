@@ -84,3 +84,15 @@ Docs: `docs/business-rules.md` (interface language and preferences), `docs/desig
 ## Merge request
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+The branch was first built on an earlier draft of `develop` and then reapplied on the current `develop`, which
+already has the remove-member dialog and its guards. The header files did not conflict. Two blank lines in
+`LanguagePicker.scss` were added to satisfy the stylelint rules on `develop`.
+
+## Review
+
+Reviewed by the AI team lead with the `review-checklist` skill and an independent review pass. Round 1 found one
+defect and eight risks; fixed in one commit: Tab from the open menu dropped focus to the page, a touch scroll moved
+the highlight, the focus ring relied on `:focus-visible` after a scripted focus, the header no longer wrapped below
+360px, and the menu shared the dialog's z-index. Doc and e2e helper corrections in the same commit. Typecheck, 278
+unit and API tests, 28 hook tests and 36 e2e tests pass. Waiting for the human to test on `develop`.
