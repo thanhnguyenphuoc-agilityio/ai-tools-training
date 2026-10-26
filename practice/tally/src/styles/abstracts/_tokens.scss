@@ -39,3 +39,7 @@ $content-width: (
 );
 
 $transition-fast: 120ms ease-out;
+
+// Stacking order: header menus stay below modal dialogs.
+$z-menu: 10;
+$z-dialog: 20;

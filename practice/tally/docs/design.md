@@ -80,11 +80,16 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `amountInput`: how users type amounts (decimal separator, `k`/`tr`/`m` suffixes, currency marks).
   - `defaultCurrency`: the suggested currency for new groups.
 - Locale detection order: the stored choice (`localStorage` `tally.locale`), then `navigator.languages`, then `vi`.
-- Language picker (`language_picker`): `src/components/LanguagePicker.tsx` (+ `.scss`, block `language-picker`) is
-  rendered in `.app__controls` inside `.app__header` in `src/App.tsx`, so it is on every page. It is a `<select>`
-  built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself) and calls `setLocale()`,
-  which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API. A new locale
-  appears in the picker without changes to the component.
+- Language picker (`language_picker`, restyled in `header_controls_icons`): `src/components/LanguagePicker.tsx`
+  (+ `.scss`, block `language-picker`) is rendered in `.app__controls` inside `.app__header` in `src/App.tsx`, so it
+  is on every page. It is a menu button (`aria-haspopup="listbox"`) that shows the flag and the name of the current
+  language, and a `listbox` built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself)
+  with a flag per option. A native `<select>` cannot show images in its options, hence the custom menu; its keyboard
+  rules follow a native select: arrows and Home/End move the highlight (`src/components/listboxKeys.ts`, unit
+  tested), Enter or Space chooses, Escape closes and returns focus to the button, Tab closes and moves on. Choosing calls
+  `setLocale()`, which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API.
+  Flags are inline SVGs in `src/components/Flag.tsx`, typed `Record<Locale, ...>`: a new locale needs a flag
+  there before it type-checks, then appears in the menu without other changes.
 - Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
   selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
   and only a newly opened form takes the default of the current language.
@@ -126,7 +131,11 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - The choice is applied before first paint by an inline script in `index.html` (same key, checked by a unit
     test), then again in `main.tsx`.
   - The picker is `src/components/ThemePicker.tsx` (BEM block `theme-picker`) in `.app__header`: a `fieldset`
-    of native radios styled as a segmented control (built in `theme_picker`).
+    of native radios styled as a segmented control (built in `theme_picker`). Each option shows an icon (monitor,
+    sun, moon) from `src/components/Icon.tsx`; its name is visually hidden text (the accessible name) and the
+    `title` tooltip (`header_controls_icons`).
+- Icons are inline SVGs in `src/components/Icon.tsx`, drawn with `currentColor` and `aria-hidden`; the control
+  around an icon provides the accessible name.
   - A new theme means one palette mixin and one `[data-theme='...']` selector.
 - The full visual redesign is `ui_redesign`.
 
@@ -269,9 +278,11 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 
 ### language_picker, theme_picker
 
-- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a wrapping flex row
-  with the app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on
-  the right and wraps them as one group. Further header controls go inside it.
+- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a flex row with the
+  app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on the right.
+  Since `header_controls_icons` the row does not wrap: both controls are compact (the language name is hidden
+  below `sm`) and the header fits on one row from 360px up, checked by an e2e test. A further header control has
+  to keep that width budget.
 - `language_picker` is built: `src/components/LanguagePicker.tsx` (see section 5, Language).
 - `theme_picker` is built: `src/components/ThemePicker.tsx` and `ThemePicker.scss`, messages under `theme.*`
   in the locales, tests in `tests/unit/theme.test.ts` and `e2e/theme.spec.ts`.
