@@ -11,9 +11,11 @@
     max-width: map.get($content-width, wide);
   }
 
-  // Brand on the left, preference controls on the right, on one row from 360px up.
+  // Brand on the left, preference controls on the right, on one row from 360px up. Below that (or with very
+  // large text) the controls wrap under the brand instead of overflowing the page.
   &__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: space(2);
     padding: space(4) 0;

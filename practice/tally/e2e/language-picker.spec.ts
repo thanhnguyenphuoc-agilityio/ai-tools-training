@@ -15,9 +15,9 @@ const NAMES = {
 };
 const languageButton = (page: Page, current: 'vi' | 'en') => page.getByRole('button', { name: NAMES[current] });
 
-// Open the menu, then pick a language by its own name.
+// Open the menu (whatever the current language), then pick a language by its own name.
 async function chooseLanguage(page: Page, value: 'vi' | 'en') {
-  await page.getByRole('button', { name: NAMES[value === 'vi' ? 'en' : 'vi'] }).click();
+  await page.locator('.app__controls [aria-haspopup="listbox"]').click();
   await page.getByRole('option', { name: LABELS[value] }).click();
 }
 
@@ -82,7 +82,9 @@ test('the language menu shows each language with its flag and works from the key
   await expect(button).toBeFocused();
 
   await page.keyboard.press('ArrowDown');
+  await expect(menu).toBeFocused();
   await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('option', { name: LABELS.en })).toHaveClass(/language-picker__option--active/);
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: en.home.create.title })).toBeVisible();
   await expect(languageButton(page, 'en')).toBeFocused();
@@ -109,4 +111,13 @@ test('the brand and both header controls fit on one row on a narrow phone', asyn
   }
   expect(theme!.x + theme!.width).toBeLessThanOrEqual(360);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});
+
+test('Tab closes the language menu and moves on to the theme control', async ({ page }) => {
+  await page.goto('/');
+  await languageButton(page, 'vi').click();
+  await expect(page.getByRole('listbox')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('listbox')).toBeHidden();
+  await expect(page.getByRole('radio', { name: t('theme.options.system') })).toBeFocused();
 });

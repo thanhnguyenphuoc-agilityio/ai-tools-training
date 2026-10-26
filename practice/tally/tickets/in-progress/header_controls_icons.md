@@ -67,7 +67,8 @@ Files:
 - `src/components/listboxKeys.ts` (new): the pure keyboard logic of the menu (which option is active after a key),
   so it can be unit tested in Node.
 - `src/App.scss`: the header no longer wraps; the controls stay on the right.
-- Locales: `languagePicker.label` stays the accessible name of the button. No new user-facing text.
+- Locales: `languagePicker.label` names the menu; a new `languagePicker.current` ("Language: {language}") names
+  the button, so a screen reader hears the current language. No new visible text.
 
 Tests:
 

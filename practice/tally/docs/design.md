@@ -85,7 +85,8 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   is on every page. It is a menu button (`aria-haspopup="listbox"`) that shows the flag and the name of the current
   language, and a `listbox` built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself)
   with a flag per option. A native `<select>` cannot show images in its options, hence the custom menu; its keyboard
-  rules (arrows, Home/End, Enter/Space, Escape, Tab) are in `src/components/listboxKeys.ts`. Choosing calls
+  rules follow a native select: arrows and Home/End move the highlight (`src/components/listboxKeys.ts`, unit
+  tested), Enter or Space chooses, Escape closes and returns focus to the button, Tab closes and moves on. Choosing calls
   `setLocale()`, which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API.
   Flags are inline SVGs in `src/components/Flag.tsx`, typed `Record<Locale, ...>`: a new locale needs a flag
   there before it type-checks, then appears in the menu without other changes.

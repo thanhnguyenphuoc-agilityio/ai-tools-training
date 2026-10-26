@@ -54,7 +54,7 @@
     position: absolute;
     inset-inline-end: 0;
     top: calc(100% + #{space(1)});
-    z-index: 10;
+    z-index: $z-menu;
     min-width: 12rem;
     margin: 0;
     padding: space(1);
@@ -64,7 +64,7 @@
     background: var(--color-surface);
     box-shadow: 0 8px 24px var(--color-shadow);
 
-    &:focus-visible {
+    &:focus {
       outline: none;
     }
   }
@@ -88,9 +88,11 @@
     }
   }
 
-  // The active option is the keyboard position; show it as a ring while the menu has focus.
-  &__menu:focus-visible &__option--active {
+  // The active option is the keyboard position; show it as a ring while the menu has focus. :focus, not
+  // :focus-visible: the menu is focused from script, which some browsers do not mark as focus-visible.
+  &__menu:focus &__option--active {
     @include focus-ring;
+
     outline-offset: -2px;
   }
 

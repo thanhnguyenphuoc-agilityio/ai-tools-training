@@ -58,7 +58,9 @@ export function LanguagePicker() {
       e.preventDefault();
       close(true);
     } else if (e.key === 'Tab') {
-      close(false);
+      // Hand focus back to the button without preventing the default, so Tab and Shift+Tab move on from there.
+      button.current?.focus();
+      setOpen(false);
     }
   }
 
@@ -112,7 +114,10 @@ export function LanguagePicker() {
               ]
                 .filter(Boolean)
                 .join(' ')}
-              onPointerEnter={() => setActive(index)}
+              onPointerEnter={(e) => {
+                // A mouse hover moves the highlight; a touch that scrolls the page must not.
+                if (e.pointerType === 'mouse') setActive(index);
+              }}
               onClick={() => choose(o.value)}
             >
               <Flag locale={o.value} className="language-picker__flag" />
