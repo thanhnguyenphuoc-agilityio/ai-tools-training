@@ -109,3 +109,4 @@ indicator, because the page padding left out the safe-area inset) and seven risk
 close buttons inside the live region, no pause on hover or focus, an untrimmed member name, a layout read right
 after a resize in a test, missing tests for the pause and the announcement). All fixed in one commit. Typecheck,
 287 unit and API tests, 28 hook tests and 50 e2e tests pass. Waiting for the human to test on `develop`.
+Released in release/2026-10-26.

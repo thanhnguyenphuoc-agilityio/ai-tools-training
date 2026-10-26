@@ -96,3 +96,4 @@ defect and eight risks; fixed in one commit: Tab from the open menu dropped focu
 the highlight, the focus ring relied on `:focus-visible` after a scripted focus, the header no longer wrapped below
 360px, and the menu shared the dialog's z-index. Doc and e2e helper corrections in the same commit. Typecheck, 278
 unit and API tests, 28 hook tests and 36 e2e tests pass. Waiting for the human to test on `develop`.
+Released in release/2026-10-26.

@@ -373,6 +373,9 @@ Shipped (merge requests, artifacts, screenshots):
 - `feat/toast_timing` (`TAL-38`) from two of the suggestions: toasts stay six seconds instead of four, and a phone
   shows only the two newest toasts. The third (the header language button shows only the flag below `sm`) is kept,
   as agreed in `header_controls_icons`.
+- `release/2026-10-26`: the human confirmed `remove_member` (`TAL-14`), `header_controls_icons` (`TAL-27`),
+  `ui_redesign` (`TAL-17`) and `toast_timing` (`TAL-38`) on `develop`; the four tickets moved to `done/`, release
+  notes written for the group's users, and `develop` merged into `main` on the human's confirmation.
 Checkpoint 3 (Developer track):
 - [x] One skill + one hook merged (`release-checklist` on Day 07, `guard-answer-keys` on Day 09)
 - [x] One MCP tool used end to end (Playwright: the merged `develop` driven in a real browser)
@@ -405,7 +408,7 @@ For the retro:
 - Reapplying work built on an older base needs a note on how each conflict was resolved; without it the reviewer
   cannot see where the risk is.
 Open before the next day:
-- [ ] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
+- [x] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
 - [x] Claude in Chrome: console logs and form fill on the training app
 - [ ] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
 - [ ] Course: start the AI-native SDLC playbook

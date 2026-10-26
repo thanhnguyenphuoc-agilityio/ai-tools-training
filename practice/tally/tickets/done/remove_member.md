@@ -101,3 +101,4 @@ Second review (8 findings, all fixed; each bug fix has a test that fails before 
 - Reason input focused twice: fixed. Only `autoFocus` remains.
 
 Typecheck, lint, 273 unit and API tests, 28 hook tests, and 26 e2e tests pass on the branch.
+Released in release/2026-10-26.

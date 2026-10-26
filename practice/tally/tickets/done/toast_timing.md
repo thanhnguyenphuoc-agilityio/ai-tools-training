@@ -39,3 +39,9 @@ Branch: `feat/toast_timing` from `develop`.
 ## Merge request
 
 The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+## Review
+
+Found and fixed during the manual test of `develop` on Day 11; the change was checked with typecheck, lint, 287 unit
+and API tests and 52 e2e tests. Confirmed by the human on `develop`.
+Released in release/2026-10-26.
