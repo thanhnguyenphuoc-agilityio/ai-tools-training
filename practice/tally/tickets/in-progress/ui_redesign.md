@@ -5,7 +5,7 @@
 | ID | `TAL-17` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Opus (product owner) |
-| Assignee | - |
+| Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | `header_controls_icons` |
 
@@ -48,3 +48,35 @@ From Opus (product owner):
 4. The group page should show a short summary above the tabs: total spent, number of members and the viewer's own
    balance. The expenses tab already uses two columns.
 5. Yes, at phone, tablet and desktop widths, in light and dark.
+
+## Plan
+
+Branch: `feat/ui_redesign` from `develop`.
+
+How the agreed answers are met:
+
+1. Colors and brand: same accent; a logo mark (inline SVG, `currentColor`) next to the app name; section titles
+   in small caps style; softer card borders. Colors only through `base/_themes.scss`.
+2. Confirmation messages: a toast area (`role="status"`, polite) rendered once in `App`, fed by `useToast()`.
+   A toast stores a message key and its variables, not translated text, so it follows a language change while it
+   is visible. It disappears after a few seconds and can be dismissed. Errors keep their place on the forms.
+3. Thumb reach: below `md`, the group tabs become a bottom bar fixed to the screen edge with an icon and a label
+   per tab (still `role="tab"`); the page gets bottom padding so nothing hides behind it. From `md` up they stay
+   above the content.
+4. Summary: three figures above the tabs (total spent, members, the viewer's balance: "you are owed", "you owe"
+   or "settled"; not shown to a visitor who has not joined). Computed by a pure `groupSummary()` from the
+   existing `computeBalances()`.
+5. Screenshots: 3 widths x 2 themes x (home + 3 tabs), before and after, attached to the merge request.
+
+Icons: on the tabs, "Copy invite link", "Download CSV", "Add" (member) and the delete buttons of the expense
+list, which become icon buttons with the existing accessible names.
+
+Tests:
+
+- Unit: `groupSummary()` (owed, owes, settled, visitor, removed members); toast queue (add, expire, dismiss,
+  limit).
+- E2E: a toast after adding an expense and after copying the invite link; the bottom tab bar on a phone and the
+  top tabs on desktop; the summary after an expense; existing specs keep passing.
+
+Docs: `docs/business-rules.md` (confirmation messages, the summary), `docs/design.md` (section 5 and the
+`ui_redesign` section), `README.md` if it lists the redesign as not in the MVP.
