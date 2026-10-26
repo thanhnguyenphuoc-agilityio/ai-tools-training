@@ -88,3 +88,24 @@ Docs: `docs/business-rules.md` (confirmation messages, the summary), `docs/desig
 
 The merge request is opened on GitLab from this branch; its link is added when it exists. Screenshots before and
 after (3 widths x 2 themes x home and 3 tabs) are attached to it.
+
+The branch was first built on an earlier draft of `develop` and then reapplied on the current `develop`. Four
+components conflicted with the remove-member work there, and each keeps the `develop` behaviour with the redesign
+added on top:
+
+- `MembersPanel.tsx`: removal still goes through `RemoveMemberDialog` (no `window.prompt`); the
+  `toast.memberRemoved` message is shown only after the dialog reports success.
+- `ExpenseList.tsx`: an expense that involves a removed member still shows `expenseList.deleteLocked` instead of
+  a delete button; the other rows get the new icon button and the `toast.expenseDeleted` message.
+- `SettlePanel.tsx`: suggestions still come from `settleView` (current members only, removed members with a
+  balance listed); the transfer toasts are added on the success paths.
+- `GroupPage.tsx`: the summary bar is added above the owner key banner; `ExpenseForm` still receives `onStale`.
+
+## Review
+
+Reviewed by the AI team lead with the `review-checklist` skill and an independent review pass, against the
+screenshots. Round 1: one defect (the bottom tab bar could cover the end of the page on phones with a home
+indicator, because the page padding left out the safe-area inset) and seven risks (toast ids in a state updater,
+close buttons inside the live region, no pause on hover or focus, an untrimmed member name, a layout read right
+after a resize in a test, missing tests for the pause and the announcement). All fixed in one commit. Typecheck,
+287 unit and API tests, 28 hook tests and 50 e2e tests pass. Waiting for the human to test on `develop`.
