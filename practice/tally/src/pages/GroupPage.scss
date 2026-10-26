@@ -5,8 +5,65 @@
   flex-direction: column;
   gap: space(3);
 
+  &__head {
+    padding: space(2) 0 0;
+  }
+
   &__title {
     font-size: font-size(xl);
+    line-height: 1.2;
+
+    @include up(md) {
+      font-size: 1.75rem;
+    }
+  }
+
+  // Three figures in a row; on narrow phones the balance takes the second row.
+  &__summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    background: var(--color-border);
+    overflow: hidden;
+
+    @include up(sm) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  &__figure {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: space(3) space(4);
+    background: var(--color-surface);
+
+    // An odd last figure spans the row on phones.
+    &:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+
+      @include up(sm) {
+        grid-column: auto;
+      }
+    }
+  }
+
+  &__figure-label {
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__figure-value {
+    margin: 0;
+    font-size: font-size(lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 
   // Expenses tab: form beside the list on desktop.

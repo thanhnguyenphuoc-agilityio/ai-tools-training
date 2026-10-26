@@ -1,0 +1,78 @@
+@use './styles/abstracts' as *;
+
+// Toast stack. Phones: above the bottom tab bar, full width. From `md` up:
+// bottom right corner. The container ignores pointer events so it never blocks
+// the page; each toast takes them back for its close button.
+.toasts {
+  position: fixed;
+  inset-inline: space(3);
+  bottom: calc(#{$tab-bar-height} + #{space(3)} + env(safe-area-inset-bottom));
+  z-index: $z-toast;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: space(2);
+  pointer-events: none;
+
+  @include up(md) {
+    inset-inline: auto space(5);
+    bottom: space(5);
+    width: 360px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+    padding: space(2) space(2) space(2) space(3);
+    border-radius: $radius-md;
+    background: var(--color-toast-bg);
+    color: var(--color-toast-text);
+    box-shadow: 0 8px 24px var(--color-shadow);
+    pointer-events: auto;
+    animation: toast-in 160ms ease-out;
+  }
+
+  &__icon {
+    flex: none;
+    color: var(--color-toast-icon);
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toasts__item {
+    animation: none;
+  }
+}

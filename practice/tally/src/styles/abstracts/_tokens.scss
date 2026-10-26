@@ -41,5 +41,10 @@ $content-width: (
 $transition-fast: 120ms ease-out;
 
 // Stacking order: header menus stay below modal dialogs.
+$z-tab-bar: 5;
 $z-menu: 10;
+$z-toast: 15;
 $z-dialog: 20;
+
+// Height of the bottom tab bar on phones (ui_redesign); the page and the toasts keep clear of it.
+$tab-bar-height: 60px;

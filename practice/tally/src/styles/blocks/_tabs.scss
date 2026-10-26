@@ -7,6 +7,9 @@
   overflow-x: auto;
 
   &__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: space(2);
     padding: space(2) space(3);
     border: none;
     border-bottom: 2px solid transparent;
@@ -14,10 +17,57 @@
     color: var(--color-muted);
     cursor: pointer;
     white-space: nowrap;
+    font-weight: 500;
 
-    &--active {
+    &:hover {
+      color: var(--color-text);
+    }
+
+    &--active,
+    &--active:hover {
       color: var(--color-accent);
       border-bottom-color: var(--color-accent);
+    }
+  }
+
+  &__icon {
+    flex: none;
+  }
+
+  // Phones: a bar fixed to the bottom edge, one equal column per tab, icon above
+  // the label. From `md` up: the usual tabs above the content.
+  &--bottom-mobile {
+    @include down(md) {
+      position: fixed;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: $z-tab-bar;
+      gap: 0;
+      height: calc(#{$tab-bar-height} + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      border-top: 1px solid var(--color-border);
+      border-bottom: none;
+      background: var(--color-surface);
+      overflow: visible;
+    }
+  }
+
+  &--bottom-mobile &__tab {
+    @include down(md) {
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      padding: space(1);
+      border-bottom: none;
+      border-top: 2px solid transparent;
+      font-size: 0.75rem;
+    }
+  }
+
+  &--bottom-mobile &__tab--active {
+    @include down(md) {
+      border-top-color: var(--color-accent);
     }
   }
 }

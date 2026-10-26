@@ -43,6 +43,11 @@ textarea {
   color: inherit;
 }
 
+// Checkboxes and radios in the theme accent.
+input {
+  accent-color: var(--color-accent);
+}
+
 :focus-visible {
   @include focus-ring;
 }
