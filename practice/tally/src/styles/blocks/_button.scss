@@ -10,6 +10,7 @@
   border-radius: $radius-md;
   background: var(--color-accent);
   color: var(--color-on-accent);
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity $transition-fast, background-color $transition-fast;
@@ -31,6 +32,22 @@
   &--small {
     padding: space(1) space(2);
     font-size: font-size(sm);
+  }
+
+  // Square button that shows only an icon; the accessible name comes from aria-label.
+  &--icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-muted);
+
+    &:hover:not(:disabled) {
+      opacity: 1;
+      background: var(--color-bg);
+      color: var(--color-negative);
+    }
   }
 
   // Full width on phones, natural width from `sm` up.

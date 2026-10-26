@@ -6,12 +6,18 @@
   margin: 0 auto;
   padding: 0 space(4) space(7);
 
+  // Room for the bottom tab bar on phones (only the group page has one; the extra space elsewhere is harmless).
+  @include down(md) {
+    padding-bottom: calc(#{$tab-bar-height} + #{space(6)} + env(safe-area-inset-bottom));
+  }
+
   // Wider canvas on desktop for two-column pages.
   @include up(lg) {
     max-width: map.get($content-width, wide);
   }
 
-  // Brand on the left, preference controls on the right, on every page.
+  // Brand on the left, preference controls on the right, on one row from 360px up. Below that (or with very
+  // large text) the controls wrap under the brand instead of overflowing the page.
   &__header {
     display: flex;
     flex-wrap: wrap;
@@ -21,14 +27,33 @@
   }
 
   &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: space(2);
+    color: var(--color-text);
     font-weight: 700;
     font-size: font-size(lg);
+
+    &:hover {
+      text-decoration: none;
+    }
   }
 
-  // Preference controls (language, theme) stay together at the end of the row and wrap as one group.
+  // Logo mark: the tally strokes on an accent tile, as in the favicon.
+  &__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-md;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  // Preference controls (language, theme) stay together at the end of the row.
   &__controls {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: space(2);
     margin-inline-start: auto;

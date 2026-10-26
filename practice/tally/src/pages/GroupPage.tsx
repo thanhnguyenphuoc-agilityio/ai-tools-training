@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { GroupDto } from '../../shared/types';
 import { api, ApiError } from '../api';
+import { copyText } from '../clipboard';
 import type { Navigate } from '../App';
 import { ExpenseForm } from '../components/ExpenseForm';
 import { ExpenseList } from '../components/ExpenseList';
+import { GroupSummaryBar } from '../components/GroupSummaryBar';
+import { Icon, type IconName } from '../components/Icon';
 import { JoinPanel } from '../components/JoinPanel';
 import { MembersPanel } from '../components/MembersPanel';
 import { OwnerKeyBanner } from '../components/OwnerKeyBanner';
@@ -14,13 +17,14 @@ import { buildGroupCsv, csvFileName } from '../groupCsv';
 import { rememberGroup } from '../history';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/types';
+import { useToast } from '../toast';
 import './GroupPage.scss';
 
 type Tab = 'expenses' | 'settle' | 'members';
-const TABS: [Tab, MessageKey][] = [
-  ['expenses', 'group.tabs.expenses'],
-  ['settle', 'group.tabs.settle'],
-  ['members', 'group.tabs.members'],
+const TABS: [Tab, MessageKey, IconName][] = [
+  ['expenses', 'group.tabs.expenses', 'receipt'],
+  ['settle', 'group.tabs.settle', 'swap'],
+  ['members', 'group.tabs.members', 'users'],
 ];
 
 /** "#owner=KEY" in a recovery link. Read once, then removed from the URL. */
@@ -36,6 +40,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('expenses');
+  const notify = useToast();
   const [newOwnerKey, setNewOwnerKey] = useState<string | null>(() => history.state?.ownerKey ?? null);
 
   const reload = useCallback(async () => {
@@ -85,38 +90,52 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
     );
   return (
     <div className="group-page">
-      <section className="card stack stack--tight">
-        <div className="cluster cluster--between">
+      <section className="group-page__head stack stack--tight">
+        <div className="cluster">
           <h1 className="group-page__title">{group.name}</h1>
           {group.me.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
         </div>
         <div className="cluster">
-          <span className="text text--mono">{group.code}</span>
-          <button className="button button--ghost button--small" onClick={() => navigator.clipboard?.writeText(link)}>
+          <span className="text text--mono text--muted">{group.code}</span>
+          <button
+            className="button button--ghost button--small"
+            onClick={() => copyText(link).then((ok) => ok && notify('toast.inviteCopied'))}
+          >
+            <Icon name="link" />
             {t('group.copyInvite')}
           </button>
           {/* Joined members only. An interface rule, not a security boundary: anyone with the link sees the same data. */}
           {group.me.memberId && (
             <button className="button button--ghost button--small" onClick={exportCsv}>
+              <Icon name="download" />
               {t('csvExport.download')}
             </button>
           )}
         </div>
       </section>
 
-      {newOwnerKey && group.me.isOwner && <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />}
+      <GroupSummaryBar group={group} />
+
+      {newOwnerKey && group.me.isOwner && (
+        <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />
+      )}
       {error && <p className="text text--error">{error}</p>}
       {!group.me.memberId && <JoinPanel group={group} onDone={reload} />}
 
-      <nav className="tabs" role="tablist">
-        {TABS.map(([id, label]) => (
+      {/* Below md the tab list is a bottom bar within thumb reach (ui_redesign); from md up it sits above the content. */}
+      <nav className="tabs tabs--bottom-mobile" role="tablist">
+        {TABS.map(([id, label, icon]) => (
           <button
             key={id}
             role="tab"
             aria-selected={tab === id}
             className={`tabs__tab${tab === id ? ' tabs__tab--active' : ''}`}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              window.scrollTo(0, 0);
+            }}
           >
+            <Icon name={icon} className="tabs__icon" />
             {t(label)}
           </button>
         ))}
@@ -124,7 +143,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
 
       {tab === 'expenses' && (
         <div className="group-page__panels">
-          {group.me.memberId && <ExpenseForm group={group} onSaved={reload} />}
+          {group.me.memberId && <ExpenseForm group={group} onSaved={reload} onStale={reload} />}
           <ExpenseList group={group} onChanged={reload} />
         </div>
       )}

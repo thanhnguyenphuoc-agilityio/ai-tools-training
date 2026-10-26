@@ -1,26 +1,31 @@
 import { useState } from 'react';
-import { computeBalances, simplifyDebts, type Settlement } from '../../shared/settle';
+import type { Settlement } from '../../shared/settle';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { settleView } from '../settleView';
+import { useToast } from '../toast';
 import { QrDialog } from './QrDialog';
 
 export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, dateTime, errorMessage } = useI18n();
   const { money } = useGroupMoney(group);
+  const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
 
-  const balances = computeBalances(group.members.map((m) => m.id), group.expenses, group.transfers);
-  const plan = simplifyDebts(balances);
+  // A removed member has settled up (remove_member), so only current members are listed and suggested.
+  const { balances, activeMembers, plan, removedWithBalance } = settleView(group);
   const pending = group.transfers.filter((t) => t.status === 'sent');
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
 
   async function confirmTransfer(id: string) {
     try {
       await api.confirmTransfer(group.code, id);
+      setError(null);
+      notify('toast.transferConfirmed');
       onChanged();
     } catch (err) {
       setError(errorMessage(err));
@@ -32,7 +37,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
       <section className="card">
         <h2 className="card__title">{t('settle.balancesTitle')}</h2>
         <ul className="list">
-          {group.members.map((m) => {
+          {activeMembers.map((m) => {
             const b = balances.get(m.id) ?? 0;
             return (
               <li key={m.id} className="list__item cluster cluster--between">
@@ -64,6 +69,11 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           ))}
         </ul>
         {pending.length > 0 && <p className="text text--muted text--small">{t('settle.pendingNote')}</p>}
+        {removedWithBalance.map((m) => (
+          <p key={m.id} className="text text--muted text--small">
+            {t('settle.removedWithBalance', { name: m.name, amount: money(Math.abs(balances.get(m.id) ?? 0)) })}
+          </p>
+        ))}
       </section>
 
       {error && <p className="text text--error">{error}</p>}
@@ -113,6 +123,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           settlement={paying}
           onClose={() => setPaying(null)}
           onRecorded={() => {
+            notify('toast.transferRecorded', { name: nameOf(paying.toId) });
             setPaying(null);
             onChanged();
           }}

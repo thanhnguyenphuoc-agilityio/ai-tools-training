@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
-import { memberName, payerName } from '../expenseRow';
+import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { useToast } from '../toast';
+import { Icon } from './Icon';
 import './ExpenseList.scss';
 
 export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, tp, day, errorMessage } = useI18n();
   const { money } = useGroupMoney(group);
+  const notify = useToast();
   const [error, setError] = useState<string | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -17,6 +20,8 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
     if (!confirm(t('expenseList.confirmDelete', { description }))) return;
     try {
       await api.deleteExpense(group.code, id);
+      setError(null);
+      notify('toast.expenseDeleted');
       onChanged();
     } catch (err) {
       setError(errorMessage(err));
@@ -35,6 +40,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
         {group.expenses.map((e) => {
           const isAuthor = !!group.me.memberId && e.createdBy === group.me.memberId;
           const canDelete = group.me.isOwner || isAuthor;
+          const locked = involvesRemovedMember(e, group.members);
           const meta = [
             t('expenseList.meta', {
               payer: payerName(e, group.members, t('common.unknownMember')),
@@ -48,16 +54,24 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
             <li key={e.id} className="list__item expense-list__item">
               <div className="expense-list__row">
                 <span className="text text--strong">{e.description}</span>
-                <span className="expense-list__amount">{money(e.amount)}</span>
+                <span className="expense-list__end">
+                  <span className="expense-list__amount">{money(e.amount)}</span>
+                  {canDelete && !locked && (
+                    <button
+                      className="button button--icon"
+                      onClick={() => remove(e.id, e.description)}
+                      aria-label={t('expenseList.deleteLabel', { description: e.description })}
+                      title={t('expenseList.delete')}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  )}
+                  {canDelete && locked && (
+                    <span className="text text--muted text--small">{t('expenseList.deleteLocked')}</span>
+                  )}
+                </span>
               </div>
-              <div className="expense-list__row text text--muted text--small">
-                <span>{meta}</span>
-                {canDelete && (
-                  <button className="button button--ghost button--small" onClick={() => remove(e.id, e.description)}>
-                    {t('expenseList.delete')}
-                  </button>
-                )}
-              </div>
+              <div className="text text--muted text--small">{meta}</div>
               <div className="text text--muted text--small">
                 {e.shares.map((s) => `${nameOf(s.memberId)} ${money(s.amount)}`).join(t('common.separator'))}
               </div>

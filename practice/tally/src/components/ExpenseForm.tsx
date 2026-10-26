@@ -1,21 +1,37 @@
 import { useMemo, useState } from 'react';
 import { exactSplitDifference, splitAmount } from '../../shared/money';
 import type { GroupDto, SplitMode } from '../../shared/types';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
-export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
+export function ExpenseForm({
+  group,
+  onSaved,
+  onStale,
+}: {
+  group: GroupDto;
+  onSaved: () => void;
+  /** Reloads the group when the API says a chosen member is no longer in it (removed on another device). */
+  onStale: () => void;
+}) {
   const { t, errorMessage } = useI18n();
   const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
-  const [payerId, setPayerId] = useState(group.me.memberId ?? group.members[0].id);
+  const notify = useToast();
+  // Removed members stay in the history but cannot pay or share new expenses.
+  const members = group.members.filter((m) => !m.removed);
+  const [chosenPayerId, setPayerId] = useState(group.me.memberId ?? members[0].id);
+  // A payer removed since the form opened falls back to the user, or to the first current member.
+  const fallbackPayerId = members.some((m) => m.id === group.me.memberId) ? group.me.memberId! : members[0].id;
+  const payerId = members.some((m) => m.id === chosenPayerId) ? chosenPayerId : fallbackPayerId;
   const [amountText, setAmountText] = useState('');
   const [description, setDescription] = useState('');
   const [spentOn, setSpentOn] = useState(todayLocal);
   const [mode, setMode] = useState<SplitMode>('equal');
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(group.members.map((m) => m.id)));
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(members.map((m) => m.id)));
   const [weights, setWeights] = useState<Record<string, string>>({});
   // Exact mode: the text typed per member. An empty field means the member owes nothing.
   const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
@@ -23,7 +39,7 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
   const [busy, setBusy] = useState(false);
 
   const amount = parseMoney(amountText);
-  const chosen = group.members.filter((m) => selected.has(m.id));
+  const chosen = members.filter((m) => selected.has(m.id));
   const participants = chosen.map((m) => ({
     memberId: m.id,
     weight: mode === 'weight' ? Number((weights[m.id] ?? '1').replace(',', '.')) : 1,
@@ -79,9 +95,13 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
       setAmountText('');
       setDescription('');
       setShareTexts({});
+      notify('toast.expenseAdded');
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
+      if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
+        onStale();
+      }
     } finally {
       setBusy(false);
     }
@@ -97,8 +117,10 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
     if (invalidShare) {
       return { text: t('expenseForm.invalidShare', { name: invalidShare.name }), modifier: 'text--negative' };
     }
-    if (difference > 0) return { text: t('expenseForm.exactLeft', { amount: money(difference) }), modifier: 'text--negative' };
-    if (difference < 0) return { text: t('expenseForm.exactOver', { amount: money(-difference) }), modifier: 'text--negative' };
+    if (difference > 0)
+      return { text: t('expenseForm.exactLeft', { amount: money(difference) }), modifier: 'text--negative' };
+    if (difference < 0)
+      return { text: t('expenseForm.exactOver', { amount: money(-difference) }), modifier: 'text--negative' };
     return { text: t('expenseForm.exactMatches'), modifier: 'text--positive' };
   }
   const status = exactStatus();
@@ -123,7 +145,7 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
           <label className="field">
             <span className="field__label">{t('expenseForm.paidBy')}</span>
             <select className="field__control" value={payerId} onChange={(e) => setPayerId(e.target.value)}>
-              {group.members.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
@@ -145,7 +167,13 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
           </label>
           <label className="field">
             <span className="field__label">{t('expenseForm.date')}</span>
-            <input className="field__control" type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} required />
+            <input
+              className="field__control"
+              type="date"
+              value={spentOn}
+              onChange={(e) => setSpentOn(e.target.value)}
+              required
+            />
           </label>
         </div>
 
@@ -153,17 +181,20 @@ export function ExpenseForm({ group, onSaved }: { group: GroupDto; onSaved: () =
           <legend className="fieldset__legend">{t('expenseForm.splitBetween')}</legend>
           <div className="cluster">
             <label className="field field--inline">
-              <input type="radio" checked={mode === 'equal'} onChange={() => setMode('equal')} /> {t('expenseForm.equal')}
+              <input type="radio" checked={mode === 'equal'} onChange={() => setMode('equal')} />{' '}
+              {t('expenseForm.equal')}
             </label>
             <label className="field field--inline">
-              <input type="radio" checked={mode === 'weight'} onChange={() => setMode('weight')} /> {t('expenseForm.byWeight')}
+              <input type="radio" checked={mode === 'weight'} onChange={() => setMode('weight')} />{' '}
+              {t('expenseForm.byWeight')}
             </label>
             <label className="field field--inline">
-              <input type="radio" checked={mode === 'exact'} onChange={() => setMode('exact')} /> {t('expenseForm.exact')}
+              <input type="radio" checked={mode === 'exact'} onChange={() => setMode('exact')} />{' '}
+              {t('expenseForm.exact')}
             </label>
           </div>
           <ul className="list">
-            {group.members.map((m) => (
+            {members.map((m) => (
               <li
                 key={m.id}
                 className={`list__item expense-form__participant${mode === 'exact' ? ' expense-form__participant--exact' : ''}`}

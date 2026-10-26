@@ -80,11 +80,16 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `amountInput`: how users type amounts (decimal separator, `k`/`tr`/`m` suffixes, currency marks).
   - `defaultCurrency`: the suggested currency for new groups.
 - Locale detection order: the stored choice (`localStorage` `tally.locale`), then `navigator.languages`, then `vi`.
-- Language picker (`language_picker`): `src/components/LanguagePicker.tsx` (+ `.scss`, block `language-picker`) is
-  rendered in `.app__controls` inside `.app__header` in `src/App.tsx`, so it is on every page. It is a `<select>`
-  built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself) and calls `setLocale()`,
-  which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API. A new locale
-  appears in the picker without changes to the component.
+- Language picker (`language_picker`, restyled in `header_controls_icons`): `src/components/LanguagePicker.tsx`
+  (+ `.scss`, block `language-picker`) is rendered in `.app__controls` inside `.app__header` in `src/App.tsx`, so it
+  is on every page. It is a menu button (`aria-haspopup="listbox"`) that shows the flag and the name of the current
+  language, and a `listbox` built from `localeOptions()` (each `LOCALES[x].label`, the language named in itself)
+  with a flag per option. A native `<select>` cannot show images in its options, hence the custom menu; its keyboard
+  rules follow a native select: arrows and Home/End move the highlight (`src/components/listboxKeys.ts`, unit
+  tested), Enter or Space chooses, Escape closes and returns focus to the button, Tab closes and moves on. Choosing calls
+  `setLocale()`, which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API.
+  Flags are inline SVGs in `src/components/Flag.tsx`, typed `Record<Locale, ...>`: a new locale needs a flag
+  there before it type-checks, then appears in the menu without other changes.
 - Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
   selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
   and only a newly opened form takes the default of the current language.
@@ -126,9 +131,24 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - The choice is applied before first paint by an inline script in `index.html` (same key, checked by a unit
     test), then again in `main.tsx`.
   - The picker is `src/components/ThemePicker.tsx` (BEM block `theme-picker`) in `.app__header`: a `fieldset`
-    of native radios styled as a segmented control (built in `theme_picker`).
+    of native radios styled as a segmented control (built in `theme_picker`). Each option shows an icon (monitor,
+    sun, moon) from `src/components/Icon.tsx`; its name is visually hidden text (the accessible name) and the
+    `title` tooltip (`header_controls_icons`).
+- Icons are inline SVGs in `src/components/Icon.tsx`, drawn with `currentColor` and `aria-hidden`; the control
+  around an icon provides the accessible name.
   - A new theme means one palette mixin and one `[data-theme='...']` selector.
-- The full visual redesign is `ui_redesign`.
+- Built in `ui_redesign`:
+  - Group page: `GroupSummaryBar` (figures from the pure `src/groupSummary.ts`) above the tabs. The tab list has
+    the `tabs--bottom-mobile` modifier: below `md` it is fixed to the bottom edge (`$tab-bar-height`, safe-area
+    inset), and `.app` adds the same bottom padding so no content hides behind it.
+  - Confirmation toasts: `ToastProvider` in `src/main.tsx`, `useToast()` in components, styles in `src/toast.scss`.
+    A toast stores a message key and its variables and is translated when rendered, so it follows a language
+    change. Errors are not toasts; they stay on their form as `text--error`. `TOAST_DURATION` (6 s) and
+    `TOAST_LIMIT` (3) live in `src/toast.tsx`; below `md` the stylesheet hides all but the two newest cards, while
+    the live region still announces every toast.
+  - Stacking order tokens in `abstracts/_tokens.scss`: tab bar, menu, toast, dialog.
+  - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
+    (`button--icon`) always has an `aria-label`.
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
@@ -269,9 +289,11 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 
 ### language_picker, theme_picker
 
-- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a wrapping flex row
-  with the app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on
-  the right and wraps them as one group. Further header controls go inside it.
+- Each picker is its own component inside `.app__controls` in `.app__header`: the header is a flex row with the
+  app name on the left, and `.app__controls` (`margin-inline-start: auto`) keeps the controls together on the right.
+  Since `header_controls_icons` the row does not wrap: both controls are compact (the language name is hidden
+  below `sm`) and the header fits on one row from 360px up, checked by an e2e test. A further header control has
+  to keep that width budget.
 - `language_picker` is built: `src/components/LanguagePicker.tsx` (see section 5, Language).
 - `theme_picker` is built: `src/components/ThemePicker.tsx` and `ThemePicker.scss`, messages under `theme.*`
   in the locales, tests in `tests/unit/theme.test.ts` and `e2e/theme.spec.ts`.
@@ -289,22 +311,57 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - UI: `MembersPanel` shows an edit action per member for the owner, reusing `BankForm`; `SettlePanel` shows the
   "Pay" action on every suggested transfer for the owner, and `api.recordTransfer` gains an optional `fromId`.
 
-### edit_expense, remove_member
+### edit_expense
 
-- Both depend on open questions in `docs/business-rules.md` (who may edit and whether history is kept; what happens
-  to a leaving member's balance). The BA exercise settles the rules first; the design is written into this section
-  in the same branch as the feature.
+- Depends on an open question in `docs/business-rules.md` (who may edit and whether history is kept). The BA
+  exercise settles the rules first; the design is written into this section in the same branch as the feature.
 - Constraints already known: shares are recomputed only through `splitAmount` (`splitExact` for exact splits);
-  edits and removals are written to `audit_log`; permission rules go into `policy.ts`.
+  edits are written to `audit_log`; permission rules go into `policy.ts`.
+
+### remove_member
+
+- Rules: `docs/business-rules.md`, "Removing a member". A member leaves only with a zero balance, so no stored
+  share or transfer is ever rewritten.
+- Data: migration `0002_member_removal.sql` adds `members.removed_at` and `members.removed_reason`. The row is
+  kept (soft delete) because expenses, shares and transfers reference it. `MemberDto` gains `removed` and
+  `removedReason`.
+- API: `POST /groups/:code/members/:id/remove` with `{ reason? }`. Owner only: `requireCanRemoveMember` in
+  `policy.ts`, checked before the member is loaded, so a plain member or a guest gets `403 OWNER_ONLY`. The owner
+  member is refused with `CANNOT_REMOVE_OWNER`, a member with a balance or a pending transfer with
+  `MEMBER_HAS_BALANCE`, an already removed member with `MEMBER_REMOVED`. Written to `audit_log` as
+  `member.remove`. The UPDATE repeats `removed_at IS NULL` and checks `meta.changes`, so of two simultaneous
+  removals one gets `MEMBER_REMOVED`.
+- Races (D1 has no interactive transaction, but runs one statement or batch at a time): new expenses and transfers
+  repeat the "no named member is removed" check inside their INSERT (`noneRemovedSql()` in `groupData.ts`, an
+  `INSERT ... SELECT ... WHERE NOT EXISTS`); when it writes nothing the route returns `PAYER_NOT_IN_GROUP` or
+  `PARTICIPANT_NOT_IN_GROUP`. An expense's shares are inserted in the same batch, only next to an expense row. The
+  removal checks the balance again after its UPDATE, when no new write can name the member any more, and undoes the
+  UPDATE with `MEMBER_HAS_BALANCE` if an expense or transfer committed in between. Tests simulate each interleaving
+  with `interleave()` in `tests/api/helpers.ts`.
+- `groupData.ts`: `loadLedger()` loads the expenses (deleted ones left out) and transfers for both
+  `GET /groups/:code` and the removal; `memberSettlement()` runs `computeBalances` from `shared/settle.ts` on it,
+  so the API and the UI cannot disagree on a balance, and finds a pending transfer in the same ledger. Also
+  `loadActiveMember()` (claim, edit, remove) and `loadActiveMemberIds()` (new expenses and transfers).
+- `DELETE /groups/:code/expenses/:id` refuses an expense whose payer, or a participant with a non-zero share, has
+  been removed (`409 EXPENSE_HAS_REMOVED_MEMBER`), so a removed member's balance stays zero. The check is a
+  `NOT EXISTS` inside the soft-delete UPDATE, so a removal cannot commit between the check and the delete.
+  `ExpenseList` shows a note instead of the delete button on such an expense (`involvesRemovedMember()` in
+  `src/expenseRow.ts`).
+- `auth.ts`: a device token of a removed member no longer resolves to a member, so the device is a guest.
+- UI: `MembersPanel` shows a remove action per member for the owner (the removal is confirmed in a dialog) and lists
+  removed members after the current ones. `ExpenseForm`, `JoinPanel` and the balances in `SettlePanel` show
+  current members only. When a save fails with `PAYER_NOT_IN_GROUP` or `PARTICIPANT_NOT_IN_GROUP` (a member removed
+  on another device), `ExpenseForm` shows the error and reloads the group; a payer who is no longer listed falls back
+  to the user or the first current member. The suggested transfers (`src/settleView.ts`) are computed between current members only,
+  and a removed member with a non-zero balance (which the rules prevent) is named in a note instead. The CSV export keeps a share column for every member, removed ones included, because
+  their past shares are part of the history.
 
 ### ui_redesign
 
-- Keep the BEM and token conventions. The palette may change; inline SVG icons, skeleton loading and toast
-  messages may be added.
-- Check all 3 breakpoints and both themes. Add before/after screenshots to the merge request.
-- Avoid the generic "AI-generated" look (purple gradients, identical rounded cards, emoji as icons, default system
-  fonts). Settle on a clear visual direction before coding. The `frontend-design` skill (official Anthropic
-  plugin) is recommended for this ticket.
+- Built; see section 5, Interface. Direction: keep the green accent and system fonts (no font download), quieter
+  section titles in spaced capitals, figures in tabular numerals, icons only where they carry meaning.
+- Not done in this ticket: skeleton loading, and the remaining in-form status texts (`stale_language_messages`).
+- Screenshots: 3 widths x 2 themes x (home + 3 tabs), before and after, in the merge request.
 
 ### currency_conversion
 

@@ -39,7 +39,19 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
   `owner_member_tools`). Clearing the account
   number clears all three fields.
-- OPEN QUESTION: what happens when a member leaves while they still owe or are owed money? (`remove_member`)
+- **Removing a member** (`remove_member`):
+  - Only the **owner** can remove a member. The owner cannot be removed.
+  - A member can be removed only when their balance is **zero** and no transfer to or from them is waiting for
+    confirmation. A member who still owes **or is owed** money must settle up first (`MEMBER_HAS_BALANCE`). The app
+    never writes off a debt or moves it to someone else.
+  - The owner may give a reason (optional, at most 200 characters). It is shown next to the removed member.
+  - Removal is soft: the member stays in the history of expenses and transfers with their name, and the name stays
+    taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
+    or named in a new transfer. Their device becomes a guest (view only). Their bank details are no longer
+    returned by the API (the stored values are kept).
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted
+    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting it would give them a balance that nobody could settle.
+  - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
 ## Expenses
@@ -142,8 +154,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 - The interface is available in Vietnamese and English.
 - Until a language is chosen, the interface follows the browser languages, then defaults to Vietnamese.
-- The language can be chosen in the app from a control in the header, available on every page. The change applies
-  at once, without leaving the current page.
+- The language can be chosen in the app from a menu in the header, available on every page. The menu shows each
+  language with its flag and its name in that language (Vietnamese and English). The change applies at once,
+  without leaving the current page.
 - The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
   keeps its own choice.
 - Changing the language does not change any group data, including the currency of an existing group.
@@ -160,10 +173,21 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 ## Interface preferences
 
-- **Theme:** the header offers three choices: same as the device (the default), light and dark. The choice applies
+- **Theme:** the header offers three choices, shown as icons with their names as tooltips: same as the device (the
+  default, a monitor), light (a sun) and dark (a moon). The choice applies
   at once and is remembered on this device (in the browser, not in the group), so it is kept after closing the
   browser and does not affect other members. A stored light or dark choice is applied before the page is drawn,
   so the page does not flash in the other theme on load. Choosing "same as the device" forgets the stored choice.
+
+- **Confirmation messages:** a save that does not visibly change the page (an expense added or deleted, a member
+  added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
+  the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
+  shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
+  that caused them and stay until the next attempt.
+- **Group summary:** above the tabs, the group page shows the total spent, the number of current members and, for
+  a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
+  count, as in the balances. A visitor who has not joined sees no personal balance.
+- **Phones:** below 768px wide, the group tabs are a bar at the bottom of the screen.
 
 ## Planned (in the backlog)
 

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| ID | `TAL-34` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Sonnet (QA tester) |
 | Assignee | Developer (trainee) |

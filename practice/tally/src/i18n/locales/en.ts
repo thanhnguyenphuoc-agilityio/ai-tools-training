@@ -10,12 +10,14 @@ export const en = {
   languagePicker: {
     /** Accessible name of the language select in the header. */
     label: 'Language',
+    /** Accessible name of the header button, which shows the current language. */
+    current: 'Language: {language}',
   },
   common: {
     loading: 'Loading…',
     save: 'Save',
-    saved: 'Saved.',
     close: 'Close',
+    cancel: 'Cancel',
     copy: 'Copy',
     remove: 'Remove',
     /** Joins short facts on one line. */
@@ -53,6 +55,15 @@ export const en = {
     notFound: 'Group not found.',
     badRecoveryLink: 'This recovery link is not valid: {message}',
     copyInvite: 'Copy invite link',
+    /** Figures above the tabs. */
+    summary: {
+      label: 'Group summary',
+      total: 'Total spent',
+      members: 'Members',
+      owed: 'You are owed',
+      owe: 'You owe',
+      settled: 'You are settled',
+    },
     tabs: {
       expenses: 'Expenses',
       settle: 'Settle up',
@@ -107,7 +118,9 @@ export const en = {
     byWeight: 'by weight',
     exact: 'exact shares',
     delete: 'Delete',
+    deleteLabel: 'Delete "{description}"',
     confirmDelete: 'Delete "{description}"?',
+    deleteLocked: 'Kept: involves a removed member',
   },
   settle: {
     balancesTitle: 'Balances',
@@ -123,6 +136,7 @@ export const en = {
     pendingItem: '{from} says they sent {amount} to {to}',
     confirm: 'Confirm received',
     doneTitle: 'Paid',
+    removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
   },
   qr: {
     title: 'Pay {name} {amount}',
@@ -159,6 +173,12 @@ export const en = {
     currency: 'Currency',
     currencyLocked: 'The currency is fixed once the group has expenses.',
     roundCoarse: 'Round each share to {unit} (applies to new expenses)',
+    remove: 'Remove',
+    removeLabel: 'Remove {name} from the group',
+    removeTitle: 'Remove {name}',
+    removeHint: 'Their expenses stay in the history.',
+    removeReason: 'Reason (optional)',
+    removed: 'removed',
   },
   theme: {
     /** Name of the light/dark control in the header, for screen readers. */
@@ -169,6 +189,20 @@ export const en = {
       light: 'Light',
       dark: 'Dark',
     },
+  },
+  /** Confirmation messages that disappear by themselves after a save. */
+  toast: {
+    expenseAdded: 'Expense added.',
+    expenseDeleted: 'Expense deleted.',
+    memberAdded: '{name} was added to the group.',
+    memberRemoved: '{name} was removed from the group.',
+    bankSaved: 'Your bank details were saved.',
+    settingsSaved: 'Group settings were saved.',
+    transferRecorded: 'Transfer recorded. It counts once {name} confirms it.',
+    transferConfirmed: 'Transfer confirmed.',
+    inviteCopied: 'Invite link copied.',
+    recoveryCopied: 'Recovery link copied.',
+    joined: 'You joined the group.',
   },
   csvExport: {
     download: 'Download CSV',
@@ -232,6 +266,10 @@ export const en = {
     DUPLICATE_PARTICIPANT: 'A person was picked twice.',
     SELF_TRANSFER: 'You cannot transfer money to yourself.',
     ALREADY_CONFIRMED: 'This transfer is already confirmed.',
+    MEMBER_REMOVED: 'This member has been removed from the group.',
+    MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
+    CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
   } satisfies Record<ErrorCode, string>,
 };
 

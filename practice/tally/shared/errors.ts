@@ -39,6 +39,10 @@ export const ERROR_CODES = [
   'DUPLICATE_PARTICIPANT',
   'SELF_TRANSFER',
   'ALREADY_CONFIRMED',
+  'MEMBER_REMOVED',
+  'MEMBER_HAS_BALANCE',
+  'CANNOT_REMOVE_OWNER',
+  'EXPENSE_HAS_REMOVED_MEMBER',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

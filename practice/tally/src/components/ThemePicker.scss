@@ -1,7 +1,8 @@
 @use '../styles/abstracts' as *;
 
-// Segmented control: one pill per theme preference. Native radios stay in the
-// DOM (visually hidden) for keyboard use and screen readers.
+// Segmented control: one icon pill per theme preference. Native radios stay in
+// the DOM (visually hidden) for keyboard use and screen readers; the option
+// name is visually hidden too and shown as a tooltip.
 .theme-picker {
   display: inline-flex;
   margin: 0;
@@ -9,7 +10,6 @@
   border: 1px solid var(--color-border);
   border-radius: $radius-pill;
   background: var(--color-surface);
-  font-size: font-size(sm);
 
   &__legend {
     @include visually-hidden;
@@ -19,17 +19,31 @@
     @include visually-hidden;
   }
 
+  &__name {
+    @include visually-hidden;
+  }
+
+  // 40px pills inside the 2px padding and border keep the control at 46px, a comfortable tap target. On
+  // phones the pills are 36px wide (still 40px tall) so the header fits on one row at 360px.
   &__option {
     position: relative;
-    padding: space(1) space(2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 40px;
+
+    @include up(sm) {
+      width: 40px;
+    }
+
     border-radius: $radius-pill;
     color: var(--color-muted);
     cursor: pointer;
-    white-space: nowrap;
     transition: background-color $transition-fast, color $transition-fast;
 
-    @include up(sm) {
-      padding: space(1) space(3);
+    &:hover {
+      color: var(--color-text);
     }
   }
 
@@ -38,7 +52,8 @@
     @include focus-ring;
   }
 
-  &__option--active {
+  &__option--active,
+  &__option--active:hover {
     background: var(--color-accent);
     color: var(--color-on-accent);
   }

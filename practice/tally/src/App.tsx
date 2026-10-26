@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import './App.scss';
 import { LanguagePicker } from './components/LanguagePicker';
+import { Icon } from './components/Icon';
 import { ThemePicker } from './components/ThemePicker';
 import { useI18n } from './i18n';
 import { GroupPage } from './pages/GroupPage';
@@ -37,6 +38,9 @@ export function App() {
             navigate('/');
           }}
         >
+          <span className="app__logo">
+            <Icon name="logo" />
+          </span>
           {t('app.title')}
         </a>
         <div className="app__controls">

@@ -19,6 +19,11 @@
   --color-warning-border: #f5c26b;
   --color-focus: #0f766e;
   --color-backdrop: rgb(0 0 0 / 0.45);
+  --color-shadow: rgb(16 24 40 / 0.12);
+  --color-accent-soft: #e6f4f1;
+  --color-toast-bg: #1c2330;
+  --color-toast-text: #ffffff;
+  --color-toast-icon: #5eead4;
   // QR codes need a light background to scan, in every theme.
   --color-qr-bg: #ffffff;
 }
@@ -38,6 +43,11 @@
   --color-warning-border: #8a6d2f;
   --color-focus: #2dd4bf;
   --color-backdrop: rgb(0 0 0 / 0.6);
+  --color-shadow: rgb(0 0 0 / 0.5);
+  --color-accent-soft: #123a36;
+  --color-toast-bg: #e7eaf0;
+  --color-toast-text: #11151c;
+  --color-toast-icon: #0f766e;
   --color-qr-bg: #ffffff;
 }
 

@@ -29,10 +29,11 @@ Observations (positive / negative):
 For the retro:
 - Writing conventions down in `CLAUDE.md` early avoids repeating the same corrections.
 Open before the next day:
-- [ ] Sign in to claude.ai, Claude Desktop and the Claude mobile app
-- [ ] Push `develop` to GitLab, set it as the default branch, enable a CI runner and confirm the pipeline passes
-- [ ] Run Prompt A (`practice/tally/PRACTICE.md`) in a separate session to create the seeded bug tickets
-- [ ] Select the Day 11 role: web (Windows)
+- [x] Sign in to claude.ai, Claude Desktop and the Claude mobile app
+- [x] Push `develop` to GitLab, set it as the default branch, enable a CI runner and confirm the pipeline passes
+  (the GitLab pipeline was later removed; CI runs on GitHub Actions since Day 08)
+- [x] Run Prompt A (`practice/tally/PRACTICE.md`) in a separate session to create the seeded bug tickets
+- [x] Select the Day 11 role: web (Windows)
 
 ## Day 01: 2026-10-14
 
@@ -52,10 +53,10 @@ Observations (positive / negative):
 For the retro:
 - "Works on my machine" includes the folder path; a clean-clone check belongs in onboarding.
 Open before the next day:
-- [ ] Day 01 exercise in Claude chat: three real work questions (a bug summary, an explanation, a draft) and the
+- [x] Day 01 exercise in Claude chat: three real work questions (a bug summary, an explanation, a draft) and the
   prompt changes that improved each answer
-- [ ] Git block on GitLab: clone, branch, commit, push
-- [ ] Push `develop` with the seeded commits so that feature branches start from them
+- [x] Git block on GitLab: clone, branch, commit, push
+- [x] Push `develop` with the seeded commits so that feature branches start from them
 
 ## Day 02: 2026-10-14
 
@@ -81,7 +82,7 @@ For the retro:
   were the useful part of the exercise.
 Open before the next day:
 - [ ] Role-play reporter and developer with a person, and compare the analysis with a partner's
-- [ ] Finish Claude 101
+- [x] Finish Claude 101
 
 ## Day 03: 2026-10-14
 
@@ -113,8 +114,7 @@ For the retro:
   a factual slip in it (the commit count).
 Open before the next day:
 - [ ] Peer swap with a person: could they review or implement from the merge request description alone?
-- [ ] Push the branches and open the merge requests on GitLab, so CI runs on them
-- [ ] Course (BA/QA path, optional): Real-World AI for Everyone
+- [x] Push the branches and open the merge requests on GitLab, so CI runs on them
 
 ## Day 04: 2026-10-14
 
@@ -137,11 +137,11 @@ Observations (positive / negative):
 For the retro:
 - Running a new test against the unfixed code is a cheap step that catches tests that do not test anything.
 Open before the next day:
-- [ ] Permission modes tour (default, acceptEdits, plan, auto) on a throwaway change
-- [ ] "Explain how feature X works" in a fresh session, then verify two of its claims by reading the code
-- [ ] Repeat the full loop on a ticket in the Code tab without help, steering once with a hunk comment in the diff
+- [x] Permission modes tour (default, acceptEdits, plan, auto) on a throwaway change
+- [x] "Explain how feature X works" in a fresh session, then verify two of its claims by reading the code
+- [x] Repeat the full loop on a ticket in the Code tab without help, steering once with a hunk comment in the diff
   pane
-- [ ] Course: Claude Code in action
+- [x] Course: Claude Code in action
 
 ## Day 05: 2026-10-14
 
@@ -169,10 +169,10 @@ Observations (positive / negative):
 For the retro:
 - Write progress down as it happens; a summary written at the end of a long session misses steps.
 Open before the next day:
-- [ ] Prove that context matters: the same task in a fresh session and in one that has read the codebase; compare
+- [x] Prove that context matters: the same task in a fresh session and in one that has read the codebase; compare
   quality and token use
-- [ ] Make a bad edit on purpose and undo it with `/rewind`
-- [ ] Review `CLAUDE.md` as a team: does it still fit on one screen?
+- [x] Make a bad edit on purpose and undo it with `/rewind`
+- [x] Review `CLAUDE.md` as a team: does it still fit on one screen?
 
 ## Day 06: 2026-10-14
 
@@ -192,10 +192,10 @@ Shipped (merge requests, artifacts, screenshots):
   waits to merge, report stalled tickets; never push or merge).
 Checkpoint 2 (Developer track):
 - [x] Two parallel sessions, both merged
-- [ ] One plan-mode change steered through diff comments
-- [x] One artifact (published; sharing it with a peer is still open)
-- [ ] One Remote Control steer
-- [ ] One `/loop` run
+- [x] One plan-mode change steered through diff comments
+- [x] One artifact (published and shared with a peer)
+- [x] One Remote Control steer (2026-10-21)
+- [x] One `/loop` run (2026-10-19)
 Observations (positive / negative):
 - Worktrees kept the two agents apart: no shared working copy, so neither could overwrite the other's files. The
   conflict appeared only at merge time, in the one place both tickets had to touch, and the merge request had
@@ -207,13 +207,14 @@ For the retro:
 - Parallel agents save time on independent tickets, but the shared files (header, locales, README tables) need a
   merge order decided up front.
 Open before the next day:
-- [ ] Share the walkthrough artifact with a peer
-- [ ] Steer a plan-mode change through diff comments
-- [ ] `/rc` at the desk, connect from the phone through claude.ai/code and send one steer
-- [ ] `/loop 15m` on an open merge request, then a custom `/loop 5m` check; try the repository `loop.md`
-- [ ] `ultrathink` and `/effort` levels on the same hard bug; compare
-- [ ] A cloud session for a long task, checked from claude.ai/code with the laptop closed
-- [ ] Course: Introduction to subagents
+- [x] Share the walkthrough artifact with a peer
+- [x] Steer a plan-mode change through diff comments
+- [x] `/rc` at the desk, connect from the phone through claude.ai/code and send one steer
+- [x] `/loop 15m` on an open merge request, then a custom `/loop 5m` check; try the repository `loop.md`
+- [x] `ultrathink` and `/effort` levels on the same hard bug; compare (in Claude Code 2.1.306, `ultrathink` and
+  `ultracode` only add a message to the prompt)
+- [x] A cloud session for a long task, checked from claude.ai/code with the laptop closed
+- [x] Course: Introduction to subagents
 
 ## Day 07: 2026-10-14
 
@@ -235,9 +236,9 @@ Observations (positive / negative):
 For the retro:
 - Encoding a process as a skill exposes the gaps in the written process itself.
 Open before the next day:
-- [ ] Browse a plugin marketplace, install one plugin (for example code intelligence) and evaluate it
+- [x] Browse a plugin marketplace, install one plugin (for example code intelligence) and evaluate it
 - [ ] Try `/start-ticket` and the `release-checklist` skill in a real session
-- [ ] Course: Introduction to agent skills
+- [x] Course: Introduction to agent skills
 
 ## Day 08: 2026-10-14
 
@@ -267,11 +268,12 @@ Observations (positive / negative):
 For the retro:
 - Look at the screen before merging UI work, at phone width too; tests check what they are told to check.
 Open before the next day:
-- [ ] Add the GitHub connector with a personal access token and query a pull request or a workflow run on the
+- [x] Add the GitHub connector with a personal access token and query a pull request or a workflow run on the
   GitHub mirror from a session
-- [ ] Push to the GitHub mirror and check the first GitHub Actions run
-- [ ] Drive the app through the Playwright MCP server in a session (approve the project server first)
-- [ ] Course: Introduction to model context protocol
+- [x] Push to the GitHub mirror and check the first GitHub Actions run (the e2e failure on Linux fonts became
+  `fix/exact_split_name_overlap` on Day 10)
+- [x] Drive the app through the Playwright MCP server in a session (approve the project server first)
+- [x] Course: Introduction to model context protocol
 
 ## Day 09: 2026-10-14
 
@@ -303,9 +305,113 @@ Observations (positive / negative):
 For the retro:
 - Check which server an e2e run talks to before reading its failures.
 Open before the next day:
-- [ ] Automation ladder: `/goal` on a bounded task, a Desktop scheduled task (morning briefing), the Routines
-  overview, and `@claude` in GitHub Actions on the GitHub mirror
-- [ ] Evaluate the comments of an automated review on the next pull request
+- [x] Automation ladder: `/goal` on a bounded task, a Desktop scheduled task (morning briefing), the Routines
+  overview, and `@claude` in GitHub Actions on the GitHub mirror (the Desktop scheduled task produced
+  `chore/daily-review-2026-10-22`)
+- [x] Evaluate the comments of an automated review on the next pull request
+
+## Day 10: 2026-10-23
+
+Goal: review and quality: review a branch with seeded defects, compare the signal of two reviews, fix what they
+found.
+Left over from the previous day: the automation ladder and an automated review on a merge request.
+Shipped (merge requests, artifacts, screenshots):
+- `seeded/review` created with Prompt B by a separate session: `remove_member` with seeded defects. The answer key
+  was written outside the repository and was not opened by the reviewing sessions; the branch is kept unchanged for
+  the human review against the key.
+- Two independent reviews of `seeded/review`: one with the `review-checklist` skill, one with `/code-review` (high
+  effort) and a security pass. Both found the same 8 core defects; the second added an exposure of bank details and
+  a translation error (12 findings in total, including process).
+- `feat/remove_member` merged after three review rounds: the Prompt B commits rebased onto `develop`, then one commit
+  per finding, each with a test that fails before the fix, an accessible in-app `RemoveMemberDialog` replacing the
+  native prompt, and `e2e/remove-member.spec.ts`. A third round with `/code-review ultra` added 8 findings (two
+  races between a removal and a concurrent write, settle-up suggestions naming a removed member, and UX and cleanup
+  items), all fixed on the same branch. Typecheck, 273 unit and API tests, 28 hook tests, and 26 e2e tests pass.
+Observations (positive / negative):
+- The seeded branch passed its own 141 tests and typecheck; none of the defects was caught by the suite.
+- Running throwaway tests to confirm each finding separated real defects from plausible ones; the security pass
+  also listed what it checked and rejected, which shows its coverage.
+- One test written after a fix passed on the seeded code because an earlier defect hid it; it fails on the commit
+  just before its own fix, which is the commit that matters.
+- Round 2 found two minor defects introduced by the fixes (an expense with a zero exact share could not be deleted;
+  a reason of only spaces was refused).
+- The ultra review found check-then-write races that no single-request test could show; an API test helper that
+  commits a competing write just before the route's write made them reproducible.
+- Replacing `window.prompt` with an in-app `RemoveMemberDialog` makes the confirmation dialog accessible, styleable,
+  and consistent across browsers and devices.
+For the retro:
+- A seeded review branch is the clearest way to measure a review: the defects are known, so missed and false
+  findings can be counted.
+Open before the next day:
+- [x] Compare the 12 findings with the answer key (`tally-review-answers.md`, human only) and note missed and false
+  findings
+- [x] Run `/code-review ultra` on `seeded/review` and compare its signal with the two local reviews
+- [x] Security plugins walkthrough (security-guidance, Claude Security scan)
+- [x] Install the `frontend-design` plugin before Day 11 (`ui_redesign`)
+
+## Day 11: 2026-10-26
+
+Goal: role day (web) and Developer Checkpoint 3: verify the running app, not only the code; ship
+`header_controls_icons` and `ui_redesign`.
+Left over from the previous day: none.
+Shipped (merge requests, artifacts, screenshots):
+- `docs/ticket-ids` merged: every ticket has an `ID` field (`TAL-1` to `TAL-37`, in the order the tickets were
+  added); `tickets/README.md` says how the next ID is chosen.
+- `feat/header_controls_icons` (`TAL-27`) merged after one review round: the language picker is a menu button
+  with a flag and the language name, the theme picker shows a monitor, a sun and a moon, and the header fits on one
+  row from 360px up.
+- `feat/ui_redesign` (`TAL-17`) merged after one review round: a summary above the group tabs (total spent,
+  members, the viewer's balance), a bottom tab bar on phones, confirmation toasts after saves, icon actions and a
+  quieter visual style.
+- Both features were first built on a draft branch and reapplied on the current `develop`. Four components
+  conflicted with the remove-member work from Day 10; each keeps the `develop` behaviour with the redesign added on
+  top, as described in the tickets.
+- Typecheck, lint, 287 unit and API tests, 28 hook tests and 50 e2e tests pass on `develop`.
+- Afternoon: a manual test of `develop` with Claude in Chrome by two subagents in separate tabs. Haiku (end-user
+  view) ran 15 cases in two rounds; Sonnet (QA view, risk based) ran 18 cases in three rounds, the last one in
+  Vietnamese and the dark theme. No defect; three UX suggestions.
+- `feat/toast_timing` (`TAL-38`) from two of the suggestions: toasts stay six seconds instead of four, and a phone
+  shows only the two newest toasts. The third (the header language button shows only the flag below `sm`) is kept,
+  as agreed in `header_controls_icons`.
+- `release/2026-10-26`: the human confirmed `remove_member` (`TAL-14`), `header_controls_icons` (`TAL-27`),
+  `ui_redesign` (`TAL-17`) and `toast_timing` (`TAL-38`) on `develop`; the four tickets moved to `done/`, release
+  notes written for the group's users, and `develop` merged into `main` on the human's confirmation.
+Checkpoint 3 (Developer track):
+- [x] One skill + one hook merged (`release-checklist` on Day 07, `guard-answer-keys` on Day 09)
+- [x] One MCP tool used end to end (Playwright: the merged `develop` driven in a real browser)
+- [x] One review report acted on (the review of each merge request, fixed before the merge)
+- [x] Role-day exercise done (web: create a group, add members and expenses, remove a member, switch language and
+  theme, at 360px and 1280px)
+Observations (positive / negative):
+- The browser check on `develop` confirmed the conflict resolutions in use: removing a member who still owes money
+  shows the error in the dialog and no toast; removing a settled member shows the toast and the reason.
+- The theme options are labels over hidden radio inputs; a browser tool has to click the label, as a person does.
+  The control works, but a click aimed at the input times out.
+- A full-page screenshot draws a fixed bottom bar in the middle of the page. A viewport screenshot is the right
+  check for fixed elements.
+- The new logo pushed the theme control to a second row at 360px; only the e2e test that measures the header
+  caught it. A layout rule written as a test survives later changes that a screenshot review would miss.
+- A native `<select>` cannot show flags, so the language picker became a custom listbox. The review found the
+  usual custom-widget gaps (Tab dropping focus to the page, touch scroll moving the highlight).
+- Claude in Chrome drives the user's own browser, so cookies, console and network requests are those of a real
+  session. Two agents could share the browser by each opening its own tab and leaving window size to one of them.
+- `resize_window` reported success but the viewport stayed at the full screen width. Phone and tablet widths were
+  checked inside a same-origin iframe of 360px and 800px instead, which applies the media queries but is not a real
+  device. Hover was checked with dispatched pointer events. Phone layout still needs a check in device mode.
+- Two suspected defects turned out to be test artifacts: a `fetch failed` from the dev server that passed on retry,
+  and a toast sampled too late after the click. Both were cleared by repeating the step with better observation
+  before anything was reported.
+- Manual testing by agents found no defect after the automated suites passed; its value was in UX observations
+  that no assertion covers.
+For the retro:
+- Custom widgets cost keyboard and screen reader work that the estimate should include.
+- Reapplying work built on an older base needs a note on how each conflict was resolved; without it the reviewer
+  cannot see where the risk is.
+Open before the next day:
+- [x] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
+- [x] Claude in Chrome: console logs and form fill on the training app
+- [ ] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
+- [ ] Course: start the AI-native SDLC playbook
 
 ## For the retro
 

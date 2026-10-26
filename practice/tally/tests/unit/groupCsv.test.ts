@@ -20,6 +20,8 @@ const member = (id: string, name: string): MemberDto => ({
   name,
   isOwner: id === 'alex',
   claimed: true,
+  removed: false,
+  removedReason: null,
   bankBin: null,
   accountNo: null,
   accountName: null,
