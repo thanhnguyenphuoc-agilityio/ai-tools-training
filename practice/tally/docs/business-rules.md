@@ -181,8 +181,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 - **Confirmation messages:** a save that does not visibly change the page (an expense added or deleted, a member
   added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
-  the group) shows a short message that disappears after a few seconds and can be closed. Errors are shown next
-  to the form that caused them and stay until the next attempt.
+  the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
+  shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
+  that caused them and stay until the next attempt.
 - **Group summary:** above the tabs, the group page shows the total spent, the number of current members and, for
   a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
   count, as in the balances. A visitor who has not joined sees no personal balance.

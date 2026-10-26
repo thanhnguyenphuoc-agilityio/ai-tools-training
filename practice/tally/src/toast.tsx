@@ -14,8 +14,8 @@ export interface Toast {
   vars?: Vars;
 }
 
-/** How long a toast stays on screen, in milliseconds. */
-export const TOAST_DURATION = 4000;
+/** How long a toast stays on screen, in milliseconds. Long enough to read when the only other change is small. */
+export const TOAST_DURATION = 6000;
 /** At most this many toasts are visible; a new one pushes out the oldest. */
 export const TOAST_LIMIT = 3;
 
@@ -104,7 +104,12 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
     >
       <Icon name="check" className="toasts__icon" />
       <span className="toasts__text">{t(toast.key, toast.vars)}</span>
-      <button type="button" className="toasts__close" onClick={() => onDismiss(toast.id)} aria-label={t('common.close')}>
+      <button
+        type="button"
+        className="toasts__close"
+        onClick={() => onDismiss(toast.id)}
+        aria-label={t('common.close')}
+      >
         <Icon name="close" />
       </button>
     </div>

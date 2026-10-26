@@ -16,7 +16,10 @@ const toasts = (page: Page) => page.locator('.toasts');
 
 test('saving an expense shows a toast and updates the summary', async ({ page }) => {
   await createGroup(page);
-  const summary = page.getByRole('definition').filter({ hasText: vnd(0) }).first();
+  const summary = page
+    .getByRole('definition')
+    .filter({ hasText: vnd(0) })
+    .first();
   await expect(summary).toBeVisible();
 
   await page.getByRole('tab', { name: t('group.tabs.members') }).click();
@@ -53,7 +56,26 @@ test('a toast can be dismissed and disappears by itself', async ({ page }) => {
   await page.getByRole('button', { name: t('members.add'), exact: true }).click();
   const second = page.locator('.toasts__item', { hasText: t('toast.memberAdded', { name: 'Riley' }) });
   await expect(second).toBeVisible();
-  await expect(second).toBeHidden({ timeout: 8000 });
+  await expect(second).toBeHidden({ timeout: 10000 });
+});
+
+test('a phone shows only the two newest toasts', async ({ page }) => {
+  await createGroup(page);
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+  for (const name of ['Sam', 'Jamie', 'Taylor']) {
+    await page.getByLabel(t('members.addLabel')).fill(name);
+    await page.getByRole('button', { name: t('members.add'), exact: true }).click();
+    await expect(toasts(page)).toContainText(t('toast.memberAdded', { name }));
+  }
+  const items = page.locator('.toasts__item');
+  await expect(items).toHaveCount(3);
+  await expect(items.first()).toBeHidden();
+  await expect(items.nth(2)).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(t('toast.memberAdded', { name: 'Sam' }));
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(items.first()).toBeVisible();
 });
 
 test('copying the invite link confirms with a toast', async ({ page, context, browserName }) => {
@@ -72,7 +94,11 @@ test('the tabs are a bottom bar on a phone and sit above the content on a deskto
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(tablist.getByRole('tab')).toHaveCount(3);
   await expect(tablist).toHaveCSS('position', 'fixed');
-  await expect.poll(async () => Math.round(((await tablist.boundingBox())?.y ?? 0) + ((await tablist.boundingBox())?.height ?? 0))).toBe(800);
+  await expect
+    .poll(async () =>
+      Math.round(((await tablist.boundingBox())?.y ?? 0) + ((await tablist.boundingBox())?.height ?? 0)),
+    )
+    .toBe(800);
   await expect.poll(async () => Math.round((await tablist.boundingBox())?.width ?? 0)).toBe(390);
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -111,5 +137,5 @@ test('a toast stays while the pointer is over it', async ({ page }) => {
   await page.waitForTimeout(5000);
   await expect(item).toBeVisible();
   await page.mouse.move(0, 0);
-  await expect(item).toBeHidden({ timeout: 8000 });
+  await expect(item).toBeHidden({ timeout: 10000 });
 });

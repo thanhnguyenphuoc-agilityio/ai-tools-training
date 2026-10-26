@@ -367,6 +367,12 @@ Shipped (merge requests, artifacts, screenshots):
   conflicted with the remove-member work from Day 10; each keeps the `develop` behaviour with the redesign added on
   top, as described in the tickets.
 - Typecheck, lint, 287 unit and API tests, 28 hook tests and 50 e2e tests pass on `develop`.
+- Afternoon: a manual test of `develop` with Claude in Chrome by two subagents in separate tabs. Haiku (end-user
+  view) ran 15 cases in two rounds; Sonnet (QA view, risk based) ran 18 cases in three rounds, the last one in
+  Vietnamese and the dark theme. No defect; three UX suggestions.
+- `feat/toast_timing` (`TAL-38`) from two of the suggestions: toasts stay six seconds instead of four, and a phone
+  shows only the two newest toasts. The third (the header language button shows only the flag below `sm`) is kept,
+  as agreed in `header_controls_icons`.
 Checkpoint 3 (Developer track):
 - [x] One skill + one hook merged (`release-checklist` on Day 07, `guard-answer-keys` on Day 09)
 - [x] One MCP tool used end to end (Playwright: the merged `develop` driven in a real browser)
@@ -384,13 +390,24 @@ Observations (positive / negative):
   caught it. A layout rule written as a test survives later changes that a screenshot review would miss.
 - A native `<select>` cannot show flags, so the language picker became a custom listbox. The review found the
   usual custom-widget gaps (Tab dropping focus to the page, touch scroll moving the highlight).
+- Claude in Chrome drives the user's own browser, so cookies, console and network requests are those of a real
+  session. Two agents could share the browser by each opening its own tab and leaving window size to one of them.
+- `resize_window` reported success but the viewport stayed at the full screen width. Phone and tablet widths were
+  checked inside a same-origin iframe of 360px and 800px instead, which applies the media queries but is not a real
+  device. Hover was checked with dispatched pointer events. Phone layout still needs a check in device mode.
+- Two suspected defects turned out to be test artifacts: a `fetch failed` from the dev server that passed on retry,
+  and a toast sampled too late after the click. Both were cleared by repeating the step with better observation
+  before anything was reported.
+- Manual testing by agents found no defect after the automated suites passed; its value was in UX observations
+  that no assertion covers.
 For the retro:
 - Custom widgets cost keyboard and screen reader work that the estimate should include.
 - Reapplying work built on an older base needs a note on how each conflict was resolved; without it the reviewer
   cannot see where the risk is.
 Open before the next day:
 - [ ] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
-- [ ] Claude in Chrome: console logs and form fill on the training app
+- [x] Claude in Chrome: console logs and form fill on the training app
+- [ ] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
 - [ ] Course: start the AI-native SDLC playbook
 
 ## For the retro

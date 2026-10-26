@@ -143,7 +143,9 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
     inset), and `.app` adds the same bottom padding so no content hides behind it.
   - Confirmation toasts: `ToastProvider` in `src/main.tsx`, `useToast()` in components, styles in `src/toast.scss`.
     A toast stores a message key and its variables and is translated when rendered, so it follows a language
-    change. Errors are not toasts; they stay on their form as `text--error`.
+    change. Errors are not toasts; they stay on their form as `text--error`. `TOAST_DURATION` (6 s) and
+    `TOAST_LIMIT` (3) live in `src/toast.tsx`; below `md` the stylesheet hides all but the two newest cards, while
+    the live region still announces every toast.
   - Stacking order tokens in `abstracts/_tokens.scss`: tab bar, menu, toast, dialog.
   - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
     (`button--icon`) always has an `aria-label`.
