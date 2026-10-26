@@ -154,8 +154,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 - The interface is available in Vietnamese and English.
 - Until a language is chosen, the interface follows the browser languages, then defaults to Vietnamese.
-- The language can be chosen in the app from a control in the header, available on every page. The change applies
-  at once, without leaving the current page.
+- The language can be chosen in the app from a menu in the header, available on every page. The menu shows each
+  language with its flag and its name in that language (Vietnamese and English). The change applies at once,
+  without leaving the current page.
 - The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
   keeps its own choice.
 - Changing the language does not change any group data, including the currency of an existing group.
@@ -172,7 +173,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 ## Interface preferences
 
-- **Theme:** the header offers three choices: same as the device (the default), light and dark. The choice applies
+- **Theme:** the header offers three choices, shown as icons with their names as tooltips: same as the device (the
+  default, a monitor), light (a sun) and dark (a moon). The choice applies
   at once and is remembered on this device (in the browser, not in the group), so it is kept after closing the
   browser and does not affect other members. A stored light or dark choice is applied before the page is drawn,
   so the page does not flash in the other theme on load. Choosing "same as the device" forgets the stored choice.
