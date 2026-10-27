@@ -53,7 +53,8 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
 `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
-A future rule such as "a closed group is read-only" only needs `requireWritable(group)`, called from the write routes.
+A future rule such as "a closed group is read-only" (not planned; `lock_groups` does not do this) only needs
+`requireWritable(group)`, called from the write routes.
 
 ## 4. Data
 
@@ -154,7 +155,7 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### google_sign_in, joined_groups_list, saved_bank_details
 
-- **Migration `0002_accounts.sql`:**
+- **Migration `0004_accounts.sql`:**
   - Table `users(id, google_sub UNIQUE, email, name, bank_bin, account_no, account_name, created_at)`.
   - Table `sessions(token_hash PK, user_id, created_at, expires_at)`. Expired sessions are deleted by the daily
     cleanup job (`purgeInactiveGroups` from `purge_inactive_groups`, or a job of its own if that ticket is not done yet).
@@ -179,7 +180,9 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `memberId` comes from `members.user_id` when there is no device cookie.
 - **Account linking:**
   - Creating, joining or claiming while signed in sets `user_id` automatically.
-  - `POST /groups/:code/link` attaches a group used through cookies to the account.
+  - `POST /groups/:code/link` attaches a group used through cookies to the account: for the owner, the group and
+    the owner's member (`group.link`); for another member, that member only (`member.link`); otherwise
+    `401 JOIN_FIRST`.
 - **`joined_groups_list`:** `GET /api/me` returns `{ user, groups[] }`: existing groups where `owner_user_id = me` or a member has
   `user_id = me`. The home page merges this list with the localStorage history.
 - **`saved_bank_details`:**
@@ -203,13 +206,15 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - `worker/index.ts` also exports `scheduled()`.
   - `wrangler.jsonc` gains `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time).
   - Tests call `purgeInactiveGroups` directly with a fake `now`.
-- **UI:** shows the deletion date (`GroupDto.expiresAt`).
-- Open question for the product owner (see `docs/business-rules.md`): whether a member viewing the group counts as
-  activity. It currently **does**.
+- **Migration:** `0003_activity_reset.sql` sets `last_activity_at` of every existing group to the migration time,
+  so that no group is deleted by the first run (decided in the ticket).
+- **Activity:** only changes move `last_activity_at` (list in the ticket); viewing no longer does. Planned
+  migrations are numbered in build order: `0003` this ticket, `0004` accounts, `0005` lock, `0006` attachments.
+- **UI:** shows the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours.
 
 ### lock_groups
 
-- **Migration:** `0003_group_lock.sql` adds `groups.locked_at`.
+- **Migration:** `0005_group_lock.sql` adds `groups.locked_at`.
 - **Purge:** `purgeInactiveGroups` gains `AND locked_at IS NULL`.
 - **Endpoints:** `POST` and `DELETE /groups/:code/lock`.
   - Require both `isOwner` and `userId`, because the limit is counted per person.
@@ -217,11 +222,13 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
   - Count `locked_at IS NOT NULL AND owner_user_id = ?`. When the count is >= `MAX_LOCKED_GROUPS`, 409.
   - Unlocking calls `touch`, so the expiry restarts from the moment of unlocking.
 - **Permissions:** `requireOwnerAccount(me)` in `policy.ts`.
+- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep
+  this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
 
 ### receipt_photos
 
 - **Storage:** R2 binding `RECEIPTS`.
-- **Migration:** `0004_attachments.sql` creates
+- **Migration:** `0006_attachments.sql` creates
   `expense_attachments(id, expense_id, r2_key, content_type, size, created_by, created_at)`.
 - **Client side:** resize to at most 1600px and encode as WebP through `<canvas>`. Re-encoding **removes EXIF/GPS**.
   The compressed size must be at most 1 MB.
