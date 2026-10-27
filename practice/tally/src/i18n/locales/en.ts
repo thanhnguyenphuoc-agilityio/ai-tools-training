@@ -142,6 +142,8 @@ export const en = {
     title: 'Pay {name} {amount}',
     dialogLabel: 'Transfer to {name}',
     codeLabel: 'VietQR code',
+    bankLogo: '{bank} logo',
+    vietqrLogo: 'VietQR logo',
     bank: 'Bank',
     accountNo: 'Account number',
     accountName: 'Account holder',

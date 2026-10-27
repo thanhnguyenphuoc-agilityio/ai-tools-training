@@ -4,6 +4,7 @@ import { VIETQR_CURRENCY } from '../../shared/currency';
 import type { Settlement } from '../../shared/settle';
 import { findBank, type GroupDto } from '../../shared/types';
 import { buildVietQrPayload, sanitizeTransferMessage } from '../../shared/vietqr';
+import { QR_OPTIONS, VIETQR_MARK, VIETQR_WORDMARK, bankLogo } from '../qrCard';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
@@ -34,11 +35,19 @@ export function QrDialog({
     t('qr.messageTemplate', { code: group.code.slice(0, 4), from: from.name, to: to.name }),
   );
 
+  const [logoFailed, setLogoFailed] = useState(false);
+  const showBankLogo = !!bank && !logoFailed;
+
   useEffect(() => {
     if (!qrSupported || !bank || !to.accountNo || !canvas.current) return;
     try {
-      const payload = buildVietQrPayload({ bin: bank.bin, accountNo: to.accountNo, amount: settlement.amount, message });
-      QRCode.toCanvas(canvas.current, payload, { width: 260, margin: 2 }).catch(() => setError(t('qr.renderError')));
+      const payload = buildVietQrPayload({
+        bin: bank.bin,
+        accountNo: to.accountNo,
+        amount: settlement.amount,
+        message,
+      });
+      QRCode.toCanvas(canvas.current, payload, QR_OPTIONS).catch(() => setError(t('qr.renderError')));
     } catch {
       setError(t('qr.renderError'));
     }
@@ -54,22 +63,48 @@ export function QrDialog({
   }
 
   return (
-    <div className="dialog" role="dialog" aria-modal="true" aria-label={t('qr.dialogLabel', { name: to.name })} onClick={onClose}>
+    <div
+      className="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('qr.dialogLabel', { name: to.name })}
+      onClick={onClose}
+    >
       <div className="dialog__panel card stack qr-dialog" onClick={(e) => e.stopPropagation()}>
         <h2 className="card__title">{t('qr.title', { name: to.name, amount: money(settlement.amount) })}</h2>
         {!hasAccount && <p>{t('qr.noAccount', { name: to.name })}</p>}
         {hasAccount && (
           <>
             {qrSupported ? (
-              <canvas ref={canvas} className="qr-dialog__code" aria-label={t('qr.codeLabel')} />
+              <div className="qr-dialog__card">
+                <img src={VIETQR_WORDMARK} alt={t('qr.vietqrLogo')} className="qr-dialog__wordmark" />
+                <div className="qr-dialog__frame">
+                  <div className="qr-dialog__code">
+                    <canvas ref={canvas} className="qr-dialog__canvas" aria-label={t('qr.codeLabel')} />
+                    <img
+                      src={showBankLogo ? bankLogo(bank.bin) : VIETQR_MARK}
+                      alt={showBankLogo ? t('qr.bankLogo', { bank: bank.shortName }) : t('qr.vietqrLogo')}
+                      className="qr-dialog__mark"
+                      onError={() => setLogoFailed(true)}
+                    />
+                  </div>
+                  <p className="qr-dialog__bank">{bank.shortName}</p>
+                  <p className="qr-dialog__account text--mono">{to.accountNo}</p>
+                  <p className="qr-dialog__amount">{money(settlement.amount)}</p>
+                </div>
+              </div>
             ) : (
               <p>{t('qr.noQrForCurrency', { amount: money(settlement.amount) })}</p>
             )}
             <dl className="qr-dialog__details">
-              <dt className="qr-dialog__term">{t('qr.bank')}</dt>
-              <dd className="qr-dialog__value">{bank.shortName}</dd>
-              <dt className="qr-dialog__term">{t('qr.accountNo')}</dt>
-              <dd className="qr-dialog__value text--mono">{to.accountNo}</dd>
+              {!qrSupported && (
+                <>
+                  <dt className="qr-dialog__term">{t('qr.bank')}</dt>
+                  <dd className="qr-dialog__value">{bank.shortName}</dd>
+                  <dt className="qr-dialog__term">{t('qr.accountNo')}</dt>
+                  <dd className="qr-dialog__value text--mono">{to.accountNo}</dd>
+                </>
+              )}
               {to.accountName && (
                 <>
                   <dt className="qr-dialog__term">{t('qr.accountName')}</dt>

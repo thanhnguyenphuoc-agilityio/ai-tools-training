@@ -134,6 +134,8 @@ export const vi: Messages = {
     title: 'Trả {name} {amount}',
     dialogLabel: 'Chuyển khoản cho {name}',
     codeLabel: 'Mã VietQR',
+    bankLogo: 'Logo {bank}',
+    vietqrLogo: 'Logo VietQR',
     bank: 'Ngân hàng',
     accountNo: 'Số tài khoản',
     accountName: 'Chủ tài khoản',
