@@ -66,3 +66,9 @@ Branch: `fix/e2e_runner_deps_install` from `develop`. Plan step 1 and the unit-t
 
 Typecheck, lint and 289 unit and API tests pass. The container itself is checked by the first CI run after the
 push; the expected `e2e` job time is about 2 to 3 minutes.
+
+## Review
+
+Reviewed by the AI team lead; typecheck, 289 unit and API tests and 52 e2e tests pass on `develop`. Confirmed by the
+human on `develop`.
+Released in release/2026-10-27.
