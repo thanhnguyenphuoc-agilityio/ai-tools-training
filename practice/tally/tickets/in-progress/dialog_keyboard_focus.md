@@ -190,3 +190,46 @@ their own focus styles).
 
 In `practice/tally`: `npm run typecheck`, `npm run lint`, `npm test`, then `npm run e2e` (both projects). All must
 pass; record the counts under `## Result`.
+
+## Result
+
+### Changed files
+
+- `src/hooks/useDialog.ts`: created hook managing modal keyboard focus, autofocus with `data-autofocus`, Tab/Shift+Tab focus trap, Escape key handling with `canClose` guard, and focus restoration to opener element on unmount. Updated autofocus logic to `const target = el?.querySelector<HTMLElement>('[data-autofocus]') ?? el; target?.focus();` so `target?.focus()` return value (`undefined`) does not trigger fallback `.focus()` on the panel. Added `useEffect` for syncing latest props.
+- `src/components/QrDialog.tsx`: integrated `useDialog(onClose)`, added `ref={panel}` and `tabIndex={-1}` to panel element, added `data-autofocus` to Close button.
+- `src/components/RemoveMemberDialog.tsx`: replaced manual keydown listener with `useDialog(onClose, { canClose: !busy })`, added `ref={panel}` and `tabIndex={-1}` to panel element, replaced `autoFocus` on reason input with `data-autofocus`.
+- `src/styles/blocks/_dialog.scss`: added `&:focus { outline: none; }` inside `&__panel`.
+- `docs/design.md`: added bullet under Interface and new section `### dialog_keyboard_focus`.
+- `e2e/settle-up.spec.ts`: added test `the payment dialog keeps keyboard focus and closes with Escape`.
+- `e2e/remove-member.spec.ts`: added keyboard navigation (Tab/Shift+Tab trapping), Escape closing, focus restoration, and in-flight busy rule checks to `remove a member who has settled up`.
+
+### Failing-first evidence
+
+Ran `npx playwright test e2e/settle-up.spec.ts e2e/remove-member.spec.ts` prior to fixes; confirmed 4 tests failed on unfixed code (desktop and mobile):
+- `e2e/settle-up.spec.ts`: `expect(dialog.getByRole('button', { name: t('common.close') })).toBeFocused()` failed with `Received: inactive` (focus stayed on the page behind dialog); Tab moved focus out of the dialog; Escape did not close the payment dialog; focus did not return to the Pay button.
+- `e2e/remove-member.spec.ts`: Tab moved focus out of the dialog behind backdrop; focus did not return to the remove button on Escape.
+
+### Check counts
+
+- `npm run typecheck`: passed (0 errors)
+- `npm run lint`: passed (oxlint 0 errors 0 warnings, stylelint 0 errors)
+- `npm test`: passed (24 test files passed, 291 unit/API tests passed)
+- `npm run e2e`: passed (56 tests passed across desktop and mobile projects, 0 failed)
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- The hook follows the plan; the plan's `focus() ?? el.focus()` line was wrong (`focus()` returns `undefined`) and
+  the developer replaced it with one `focus()` call on the chosen target.
+- Simplified the e2e tests: one shared setup in `settle-up.spec.ts` and one loop for `Tab` and `Shift+Tab`.
+  Shortened the docs section.
+- Extra Playwright checks on desktop (light theme) and phone (dark theme) all passed:
+  - Initial focus, the `Tab` wrap, `Escape` and focus return work.
+  - `Enter` right after opening closes the payment dialog without recording a transfer.
+  - A click inside the card keeps the dialog open; a click on the backdrop closes it.
+  - After **I have sent it**, nothing fails even though the **Pay** button has gone.
+  - The panel shows no outline when focused.
+  - The only console error is the expected 409 `MEMBER_HAS_BALANCE` response.
+- Checks re-run after the review: typecheck and lint clean, 291 unit/API tests, 56 e2e tests.
+

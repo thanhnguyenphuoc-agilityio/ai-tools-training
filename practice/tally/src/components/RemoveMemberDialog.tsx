@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { GroupDto, MemberDto } from '../../shared/types';
 import { api } from '../api';
+import { useDialog } from '../hooks/useDialog';
 import { useI18n } from '../i18n';
 
 export function RemoveMemberDialog({
@@ -18,19 +19,10 @@ export function RemoveMemberDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const panel = useDialog(onClose, { canClose: !busy });
   // True when the current press started on the backdrop itself; a press that starts in the panel (e.g. selecting
   // the reason with the mouse) and ends on the backdrop must not close the dialog and lose the typed reason.
   const pressedOnBackdrop = useRef(false);
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !busy) {
-        onClose();
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, busy]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +54,7 @@ export function RemoveMemberDialog({
         if (onBackdrop && !busy) onClose();
       }}
     >
-      <div className="dialog__panel card stack">
+      <div ref={panel} tabIndex={-1} className="dialog__panel card stack">
         <h2 className="card__title">{t('members.removeTitle', { name: member.name })}</h2>
         <p className="text text--muted text--small">{t('members.removeHint')}</p>
         <form onSubmit={submit} className="stack">
@@ -74,7 +66,7 @@ export function RemoveMemberDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
-              autoFocus
+              data-autofocus
             />
           </label>
           {error && <p className="text text--error">{error}</p>}
