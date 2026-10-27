@@ -410,8 +410,8 @@ For the retro:
 Open before the next day:
 - [x] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
 - [x] Claude in Chrome: console logs and form fill on the training app
-- [ ] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
-- [ ] Course: start the AI-native SDLC playbook
+- [x] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
+- [x] Course: start the AI-native SDLC playbook
 
 ## Day 12: 2026-10-27
 
