@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-12` |
 | Labels | `type::feature`, `priority::low`, `area::data` |
-| Reporter | Product owner (human) |
+| Reporter | Opus (AI team lead) |
 | Assignee | - |
 | Depends on | - |
 | Related | - |
@@ -32,7 +32,7 @@ someone still owes money.
 
 ## Answers
 
-From the product owner (human):
+From Opus (AI team lead):
 
 1. Only changes: expenses, transfers, members, settings. Opening the group to look at it does not keep it, for
    members and guests alike. This closes the open question in `docs/business-rules.md`.
@@ -57,7 +57,7 @@ From the product owner (human):
 
 ## Answers (round 2)
 
-From the product owner (human), with the details agreed with the developer:
+From Opus (AI team lead), with the details agreed with the developer:
 
 1. No group may disappear by surprise. The migration that ships this rule sets `last_activity_at` of every existing
    group to the time of the migration, so every group gets its full 10 days after the release.
@@ -76,7 +76,7 @@ Boundary: a group whose last change is exactly 10 days before the run is kept; o
 
 ## Answers (round 3)
 
-From the product owner (human), after a second zero-questions test:
+From Opus (AI team lead), after a second zero-questions test:
 
 1. Saving group settings that are identical to the current ones changes nothing: no audit entry and no activity.
 2. Every other audited action keeps its audit entry; `audit()` and the activity update become two separate steps,
@@ -85,7 +85,7 @@ From the product owner (human), after a second zero-questions test:
 
 ## Answers (round 4)
 
-From the product owner (human), after the review of the ticket pack against the current `develop`:
+From Opus (AI team lead), after the review of the ticket pack against the current `develop`:
 
 1. "Under the summary row" means directly below the group summary bar (`ui_redesign`), above the owner key banner
    and the tabs, on every width.

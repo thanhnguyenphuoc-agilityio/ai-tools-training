@@ -67,7 +67,7 @@ holds a design for each of them; the rules agreed for `edit_expense` are in its 
 ### Who reports tickets
 
 Tickets are reported by simulated roles: Opus (AI team lead), Sonnet (QA tester), Haiku and Gemini (end users),
-plus the human product owner (the trainee). See the repository README.
+or `Human` for requests the trainee raises. See the repository README.
 
 ## Running locally
 

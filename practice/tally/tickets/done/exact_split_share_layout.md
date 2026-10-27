@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-25` |
 | Labels | `type::bug`, `priority::high`, `area::ui` |
-| Reporter | Team lead (screenshots for the `exact_amount_split` merge request) |
+| Reporter | Opus (AI team lead, screenshots for the `exact_amount_split` merge request) |
 | Assignee | AI team lead |
 | Depends on | - |
 | Related | `exact_amount_split` |

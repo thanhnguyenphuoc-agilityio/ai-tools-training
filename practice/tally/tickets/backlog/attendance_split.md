@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-1` |
 | Labels | `type::feature`, `priority::medium`, `area::expenses` |
-| Reporter | Product owner (human) |
+| Reporter | Opus (AI team lead) |
 | Assignee | - |
 | Depends on | - |
 | Related | - |

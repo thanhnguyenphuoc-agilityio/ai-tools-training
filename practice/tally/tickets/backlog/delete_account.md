@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-40` |
 | Labels | `type::feature`, `priority::low`, `area::auth` |
-| Reporter | Product owner (human) |
+| Reporter | Opus (AI team lead) |
 | Assignee | - |
 | Depends on | `google_sign_in`, `saved_bank_details` |
 | Related | `purge_inactive_groups` |

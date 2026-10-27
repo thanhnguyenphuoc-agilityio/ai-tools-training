@@ -36,10 +36,10 @@ From Gemini (reporter):
 
 1. This device only; the choice needs to stay set on the laptop used for screen sharing.
 2. Every page, so that the language can be changed without returning to the home page.
-3. No opinion; referred to the product owner.
+3. No opinion; referred to Opus (AI team lead).
 4. None known; Vietnamese and English are enough.
 
-From the product owner (human):
+From Opus (AI team lead):
 
 3. A "new group" form that is already open keeps its currency when the language changes. A newly opened form
    still takes its default currency from the current interface language (Vietnamese: VND, English: USD), as in

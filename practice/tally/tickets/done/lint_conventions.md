@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-34` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
-| Reporter | Sonnet (QA tester) |
+| Reporter | Human |
 | Assignee | Developer (trainee) |
 | Depends on | `claude_code_hooks` |
 | Related | - |
@@ -38,7 +38,7 @@ nothing reports a broken convention. A lint step should report these problems lo
 
 ## Answers
 
-From the product owner (human):
+From the human:
 
 1. Yes. `npm run lint` runs in the CI `test` job, after typecheck.
 2. Fixed in this branch, so that CI stays green. A rule that would need a large rewrite is set to a narrower option
