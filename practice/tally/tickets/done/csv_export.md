@@ -38,14 +38,14 @@ From Gemini (reporter):
 2. Date, description, payer, amount, currency and each person's share.
 3. Deleted expenses are left out. Transfers that are only sent are included and marked as sent.
 4. One month is the usual need; exporting the whole group and filtering in Excel is acceptable.
-5. Unknown; referred to Opus (AI team lead).
+5. Unknown; referred to the product owner.
 
-From Opus (AI team lead):
+From the product owner (human):
 
 5. The download button is shown only to members who have joined. This is an interface rule, not a security
    boundary: anyone with the link can already view the same data, so no server endpoint is needed.
 
-Scope of the first version (Opus, AI team lead): one file for the whole group, without a date range.
+Scope of the first version (product owner): one file for the whole group, without a date range.
 
 ## Plan
 

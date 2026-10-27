@@ -34,10 +34,10 @@ From Haiku (reporter):
 
 1. The total is typed first (it is printed on the bill), then each person's amount.
 2. Saving is blocked, with a message, until the parts add up to the total. The app does not guess.
-3. Unknown; referred to Opus (AI team lead).
+3. Unknown; referred to the product owner.
 4. Yes. A participant can owe zero and still be listed in the expense.
 
-From Opus (AI team lead):
+From the product owner (human):
 
 3. No. Typed amounts are stored exactly as entered; the rounding setting does not apply. Saving is blocked unless
    the parts add up exactly to the total.

@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-6` |
 | Labels | `type::feature`, `priority::high`, `area::auth` |
-| Reporter | Opus (AI team lead) |
+| Reporter | Product owner (human) |
 | Assignee | - |
 | Depends on | - |
 | Related | - |
@@ -40,7 +40,7 @@ what is stored about the person, how long a sign-in lasts, and what signing out 
 
 ## Answers
 
-From Opus (AI team lead):
+From the product owner (human):
 
 1. Both. A group created while signed in belongs to the account; joining or claiming a name while signed in links
    that member to the account.
@@ -69,7 +69,7 @@ From Opus (AI team lead):
 
 ## Answers (round 2)
 
-From Opus (AI team lead), with the error codes agreed with the developer:
+From the product owner (human), with the error codes agreed with the developer:
 
 1. No. A removed member resolves from neither a device token nor an account. Removing a member clears its
    `user_id`, so the account can join the group again as a new member.
@@ -97,7 +97,7 @@ merged yet, this ticket adds the scheduled handler with that job only.
 
 ## Answers (round 3)
 
-From Opus (AI team lead), after a second zero-questions test:
+From the product owner (human), after a second zero-questions test:
 
 1. Locking an unlinked group (`lock_groups`) performs "Link to my account" first, with the same rules and refusals,
    so that both ways of attaching a group behave the same.
@@ -109,7 +109,7 @@ From Opus (AI team lead), after a second zero-questions test:
 
 ## Answers (round 4)
 
-From Opus (AI team lead), after the review of the ticket pack against the current `develop`:
+From the product owner (human), after the review of the ticket pack against the current `develop`:
 
 1. `POST /groups/:code/link` is the only link endpoint. For the owner it links the group and the owner's member
    (`group.link`); for any other member it links that member only (`member.link`); a visitor who has not joined gets
