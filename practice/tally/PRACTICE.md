@@ -6,10 +6,10 @@ chat thread.
 
 | Thread | Simulated role |
 |---|---|
-| `Owner-sim` | Opus, product owner: business rules, priorities, acceptance |
+| `Owner-sim` | Product owner (human): business rules, priorities, acceptance (played by the trainee) |
 | `User-sim` | Haiku (group member) and Gemini (group treasurer), end users |
 | `Tester-sim` | Sonnet, QA tester |
-| `Lead-sim` | Team lead: runs e2e, reviews and merges merge requests into `develop`, prepares releases to `main`; also seeds bugs and assesses the work |
+| `Lead-sim` | Opus, AI team lead: runs e2e, reviews and merges merge requests into `develop`, prepares releases to `main`; also seeds bugs and assesses the work |
 
 The trainee is the final human check: features merged into `develop` wait in `tickets/ready-to-review/` until
 the trainee has tested them by hand. Only then are they released to `main`.
@@ -96,7 +96,7 @@ When I type DEBRIEF, leave the role and assess me against: [criteria]. List what
 ```
 
 Suggested hidden facts:
-- **Opus, product owner (`purge_inactive_groups`, `lock_groups`):** "In a year-long shared fund, people sometimes
+- **Product owner (human) (`purge_inactive_groups`, `lock_groups`):** "In a year-long shared fund, people sometimes
   open the page to check the balance but nobody enters anything." The key question is whether viewing counts as
   activity.
 - **Haiku, end user (`wrong_name_claim`):** "The name was claimed by another member who thought the button showed
@@ -133,7 +133,7 @@ Day 0 (preparation) ends when this repository, the app, the docs and the backlog
 - **Day 10:** run Prompt B, then review branch `seeded/review`. Assess the review against the answer key.
 - **Day 11 (web):** `ui_redesign`. Add Playwright e2e tests and drive the app through the browser pane or Claude
   in Chrome.
-- **Day 12-15 (capstone):** the product owner (Opus) wants `google_sign_in`, `saved_bank_details`,
+- **Day 12-15 (capstone):** the product owner (human) wants `google_sign_in`, `saved_bank_details`,
   `purge_inactive_groups` and `lock_groups`. BA writes the spec, Dev implements, QA writes e2e tests, then a demo.
 
 ## 5. Completion checklist

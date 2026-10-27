@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-32` |
 | Labels | `type::improvement`, `priority::medium`, `area::security` |
-| Reporter | Opus (product owner) |
+| Reporter | Product owner (human) |
 | Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | - |

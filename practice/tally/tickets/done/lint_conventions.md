@@ -38,7 +38,7 @@ nothing reports a broken convention. A lint step should report these problems lo
 
 ## Answers
 
-Answered by Opus (product owner):
+From the product owner (human):
 
 1. Yes. `npm run lint` runs in the CI `test` job, after typecheck.
 2. Fixed in this branch, so that CI stays green. A rule that would need a large rewrite is set to a narrower option

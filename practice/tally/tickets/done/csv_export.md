@@ -40,7 +40,7 @@ From Gemini (reporter):
 4. One month is the usual need; exporting the whole group and filtering in Excel is acceptable.
 5. Unknown; referred to the product owner.
 
-From Opus (product owner):
+From the product owner (human):
 
 5. The download button is shown only to members who have joined. This is an interface rule, not a security
    boundary: anyone with the link can already view the same data, so no server endpoint is needed.

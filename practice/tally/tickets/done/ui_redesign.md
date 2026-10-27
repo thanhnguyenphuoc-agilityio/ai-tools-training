@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-17` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
-| Reporter | Opus (product owner) |
+| Reporter | Product owner (human) |
 | Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | `header_controls_icons` |
@@ -37,7 +37,7 @@ are already handled by `header_controls_icons`. Nothing in the request changes d
 
 ## Answers
 
-From Opus (product owner):
+From the product owner (human):
 
 1. Keep the colors recognisable (the same green accent in both themes); a small logo next to the app name is
    welcome. No new fonts to download.

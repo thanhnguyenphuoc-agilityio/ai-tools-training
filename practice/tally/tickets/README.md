@@ -22,7 +22,7 @@ moving to another folder (`git mv`).
 |---|---|
 | ID | `TAL-<n>` |
 | Labels | `type::feature`, `priority::medium`, `area::ui` |
-| Reporter | Opus (product owner) |
+| Reporter | Product owner (human) |
 | Assignee | - |
 | Depends on | `other_ticket` |
 | Related | - |
@@ -41,8 +41,9 @@ moving to another folder (`git mv`).
   - `priority::` high, medium or low.
   - `area::` auth, data, members, expenses, settle, ui or security.
   - `source::seeded` marks bugs planted for practice.
-- **Reporter** is a simulated person: an AI model name plus its role in the project (see "Simulated roles" in the
-  repository README).
+- **Reporter** is a simulated role (an AI model name plus its role in the project, such as Opus AI team lead,
+  Sonnet QA tester, Haiku or Gemini end user) or the human product owner (see "Simulated roles" in the repository
+  README).
 - **Assignee** is set when the ticket moves to `in-progress/`.
 - A question or a vague request is clarified before the ticket moves to `todo/`. The analysis goes into the ticket
   itself: `## Analysis`, `## Clarifying questions` with their `## Answers` (who answered), and `## Reproduce` for
