@@ -37,7 +37,7 @@ From Haiku (reporter):
 3. Unknown; referred to the product owner.
 4. Yes. A participant can owe zero and still be listed in the expense.
 
-From Opus (product owner):
+From the product owner (human):
 
 3. No. Typed amounts are stored exactly as entered; the rounding setting does not apply. Saving is blocked unless
    the parts add up exactly to the total.

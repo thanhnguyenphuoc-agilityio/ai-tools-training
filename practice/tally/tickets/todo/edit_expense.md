@@ -42,7 +42,7 @@ From Haiku (reporter):
 3. Other members should see that the expense was edited.
 4. and 5. Referred to the product owner.
 
-From Opus (product owner):
+From the product owner (human):
 
 2. All fields may change: amount, payer, participants, split, date and description.
 3. A visible "edited" marker is required in the first version. The previous values are recorded in the audit log;
@@ -52,7 +52,7 @@ From Opus (product owner):
 5. Nothing is blocked. Sent and confirmed transfers stay unchanged and balances are recalculated from the edited
    shares; any new difference is settled with a new transfer.
 
-From Opus (product owner), follow-up after review:
+From the product owner (human), follow-up after review:
 
 1. The author of the expense and the group owner may edit it. An expense without a recorded author can be edited
    only by the owner. The risk that a member reduces their own share is accepted for the first version: the

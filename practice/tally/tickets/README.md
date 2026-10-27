@@ -22,7 +22,7 @@ moving to another folder (`git mv`).
 |---|---|
 | ID | `TAL-<n>` |
 | Labels | `type::feature`, `priority::medium`, `area::ui` |
-| Reporter | Opus (product owner) |
+| Reporter | Product owner (human) |
 | Assignee | - |
 | Depends on | `other_ticket` |
 | Related | - |
@@ -34,15 +34,16 @@ moving to another folder (`git mv`).
 
 - **ID** is `TAL-<n>`: the next number after the highest ID on the board, assigned when the ticket is created and
   never reused or changed. Commit messages, merge requests and other tickets may cite the ID next to the file name
-  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-39`.
+  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-41`.
 - **Labels** follow GitLab scoped labels:
   - `type::` feature, bug, question or improvement. One `type::` label per ticket; a vague request stays
     `type::question` until it is clarified.
   - `priority::` high, medium or low.
   - `area::` auth, data, members, expenses, settle, ui or security.
   - `source::seeded` marks bugs planted for practice.
-- **Reporter** is a simulated person: an AI model name plus its role in the project (see "Simulated roles" in the
-  repository README).
+- **Reporter** is a simulated role (an AI model name plus its role in the project, such as Opus AI team lead,
+  Sonnet QA tester, Haiku or Gemini end user) or the human product owner (see "Simulated roles" in the repository
+  README).
 - **Assignee** is set when the ticket moves to `in-progress/`.
 - A question or a vague request is clarified before the ticket moves to `todo/`. The analysis goes into the ticket
   itself: `## Analysis`, `## Clarifying questions` with their `## Answers` (who answered), and `## Reproduce` for
@@ -70,8 +71,6 @@ moving to another folder (`git mv`).
 
 ## Dependencies
 
-- `joined_groups_list`, `saved_bank_details` and `lock_groups` need `google_sign_in`.
-- `lock_groups` also needs `purge_inactive_groups`.
+- `joined_groups_list`, `saved_bank_details`, `lock_groups` and `delete_account` need `google_sign_in`.
+- `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details`.
 - `owner_member_tools` is interface work on top of existing API endpoints.
-- `language_picker`, `theme_picker` and `ui_redesign` are UI work. The underlying i18n and theme support already
-  exists; see section 5 of `docs/design.md`.
