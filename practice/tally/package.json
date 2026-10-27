@@ -21,7 +21,8 @@
     "test:hooks": "node --test ../../.claude/hooks/*.test.mjs",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "seed": "node scripts/seed-demo.mjs"
+    "seed": "node scripts/seed-demo.mjs",
+    "board:sync": "node scripts/sync-board.mjs"
   },
   "dependencies": {
     "hono": "^4.13.13",
