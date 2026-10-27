@@ -6,6 +6,7 @@ import { findBank, type GroupDto } from '../../shared/types';
 import { buildVietQrPayload, sanitizeTransferMessage } from '../../shared/vietqr';
 import { QR_OPTIONS, VIETQR_MARK, VIETQR_WORDMARK, bankLogo } from '../qrCard';
 import { api } from '../api';
+import { useDialog } from '../hooks/useDialog';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
 import './QrDialog.scss';
@@ -23,6 +24,7 @@ export function QrDialog({
 }) {
   const { t, errorMessage } = useI18n();
   const { money } = useGroupMoney(group);
+  const panel = useDialog(onClose);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
   const from = group.members.find((m) => m.id === settlement.fromId)!;
@@ -70,7 +72,12 @@ export function QrDialog({
       aria-label={t('qr.dialogLabel', { name: to.name })}
       onClick={onClose}
     >
-      <div className="dialog__panel card stack qr-dialog" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panel}
+        tabIndex={-1}
+        className="dialog__panel card stack qr-dialog"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="card__title">{t('qr.title', { name: to.name, amount: money(settlement.amount) })}</h2>
         {!hasAccount && <p>{t('qr.noAccount', { name: to.name })}</p>}
         {hasAccount && (
@@ -122,7 +129,7 @@ export function QrDialog({
           <button className="button" onClick={recordSent}>
             {t('qr.sent')}
           </button>
-          <button className="button button--ghost" onClick={onClose}>
+          <button data-autofocus className="button button--ghost" onClick={onClose}>
             {t('common.close')}
           </button>
         </div>

@@ -39,6 +39,26 @@ test('remove a member who has settled up', async ({ page }) => {
   await page.mouse.click(2, 2);
   await expect(removeDialog).toHaveCount(0);
 
+  const removeSam = page.getByRole('button', { name: t('members.removeLabel', { name: 'Sam' }) });
+  await removeSam.click();
+  for (const key of [...Array(5).fill('Tab'), ...Array(5).fill('Shift+Tab')]) {
+    await page.keyboard.press(key);
+    expect(await removeDialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(removeDialog).toHaveCount(0);
+  await expect(removeSam).toBeFocused();
+
+  // Busy rule: while the removal is in flight, Escape does not close the dialog.
+  await page.route('**/members/*/remove', () => {});
+  await removeSam.click();
+  await removeDialog.getByRole('button', { name: t('members.remove') }).click();
+  await page.keyboard.press('Escape');
+  await expect(removeDialog).toBeVisible();
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.reload();
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+
   await page.getByRole('button', { name: t('members.removeLabel', { name: 'Jamie' }) }).click();
   await expect(removeDialog).toBeVisible();
   const reasonInput = removeDialog.getByLabel(t('members.removeReason'));

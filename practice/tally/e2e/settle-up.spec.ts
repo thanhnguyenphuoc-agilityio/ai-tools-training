@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
 import { buildVietQrPayload, sanitizeTransferMessage } from '../shared/vietqr';
@@ -89,7 +89,8 @@ test('create a group, split an expense and settle with VietQR', async ({ page })
   await expect(page.getByText(t('settle.allEven'))).toBeVisible();
 });
 
-test('settle-up QR falls back to VietQR mark when bank logo returns 404', async ({ page }) => {
+// Alex owes Sam 50k; Sam has a fake bank account. Ends on the expenses tab.
+async function owesSam(page: Page) {
   await page.goto('/');
   await page.getByLabel(t('home.create.groupName')).fill('Trip');
   await page.getByLabel(t('home.create.yourName')).fill('Alex');
@@ -115,6 +116,10 @@ test('settle-up QR falls back to VietQR mark when bank logo returns 404', async 
   await page.getByLabel(t('expenseForm.paidBy')).selectOption({ label: 'Sam' });
   await page.getByLabel(t('expenseForm.description')).fill('Snack');
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
+}
+
+test('settle-up QR falls back to VietQR mark when bank logo returns 404', async ({ page }) => {
+  await owesSam(page);
 
   // The bank logo fails to load.
   await page.route('**/bank-logos/970436.png', (route) => route.fulfill({ status: 404 }));
@@ -128,6 +133,24 @@ test('settle-up QR falls back to VietQR mark when bank logo returns 404', async 
   await expect(mark).toHaveAttribute('alt', t('qr.vietqrLogo'));
   await page.waitForTimeout(300);
   await expect(mark).toHaveAttribute('src', VIETQR_MARK);
+});
+
+test('the payment dialog keeps keyboard focus and closes with Escape', async ({ page }) => {
+  await owesSam(page);
+  await page.getByRole('tab', { name: t('group.tabs.settle') }).click();
+  const pay = page.getByRole('button', { name: t('settle.pay') });
+  await pay.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: t('common.close') })).toBeFocused();
+  for (const key of [...Array(6).fill('Tab'), ...Array(6).fill('Shift+Tab')]) {
+    await page.keyboard.press(key);
+    expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(pay).toBeFocused();
 });
 
 test('rejects a malformed group code on the home page', async ({ page }) => {
