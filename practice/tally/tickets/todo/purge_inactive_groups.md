@@ -74,6 +74,15 @@ From Opus (product owner), with the details agreed with the developer:
 
 Boundary: a group whose last change is exactly 10 days before the run is kept; one minute more and it is deleted.
 
+## Answers (round 3)
+
+From Opus (product owner), after a second zero-questions test:
+
+1. Saving group settings that are identical to the current ones changes nothing: no audit entry and no activity.
+2. Every other audited action keeps its audit entry; `audit()` and the activity update become two separate steps,
+   and `docs/business-rules.md` stops saying that every audited action counts as activity.
+3. PG-9 needs a test helper that applies the migrations up to `0002`, inserts groups, then applies `0003`.
+
 ## Acceptance criteria
 
 - Given a group whose last change is more than 10 days before the daily run, when the run happens, then the group

@@ -61,7 +61,7 @@ From Opus (product owner), with the details agreed with the developer:
 1. Only the deletion. A locked group works as before. To avoid the confusion, the interface says "Keep this group"
    instead of "lock"; the code keeps the name `lock`. The read-only wording in `policy.ts` changes in this
    ticket's branch.
-2. No. Locking only sets `groups.owner_user_id` when it is empty; members are not touched.
+2. Superseded by round 3, answer 1.
 3. `401 SIGN_IN_REQUIRED` without an account session; `403 OWNER_ONLY` for someone who is not the owner;
    `403 GROUP_OWNED_BY_OTHER_ACCOUNT`; `409 LOCK_LIMIT_REACHED` with `{ max: 10 }`.
 4. Both answer `200` and change nothing. Locking and unlocking are changes (audited as `group.lock` and
@@ -70,6 +70,16 @@ From Opus (product owner), with the details agreed with the developer:
    is shown with the note "Sign in to keep this group" and the sign-in button next to it.
 6. `locked: boolean`, and `expiresAt: null` while locked.
 7. Yes. The window is a few milliseconds for one person; it is recorded as a known limit in `docs/design.md`.
+
+## Answers (round 3)
+
+From Opus (product owner), after a second zero-questions test:
+
+1. Locking a group that has no account yet links it exactly like "Link to my account" (`google_sign_in`): the group
+   and the owner's member, with the same refusals (`409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
+   After that, "Link to my account" is no longer offered for that group.
+2. Order of checks: someone who is not the owner gets `403 OWNER_ONLY` whether signed in or not; an owner who is
+   not signed in gets `401 SIGN_IN_REQUIRED`.
 
 ## Acceptance criteria
 

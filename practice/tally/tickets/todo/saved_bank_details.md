@@ -65,6 +65,14 @@ From Opus (product owner), with the details agreed with the developer:
    stays optional, as there). `PATCH /api/me` without a session answers `401 SIGN_IN_REQUIRED`.
 4. No. Saved details live in the account, so groups are not touched and their deletion dates do not move.
 
+## Answers (round 3)
+
+From Opus (product owner), after a second zero-questions test:
+
+1. A member with group details who has saved details in their account sees "Use my saved bank details" on their bank
+   form; it clears the group details, so the saved ones apply again.
+2. The feature branch moves `bankSource` and these rules into `docs/design.md` and `docs/business-rules.md`.
+
 ## Acceptance criteria
 
 - Given a signed-in person, when they save bank details in their account menu, then the details are stored with the

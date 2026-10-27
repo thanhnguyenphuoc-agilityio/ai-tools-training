@@ -73,7 +73,7 @@ From Opus (product owner), with the error codes agreed with the developer:
 
 1. No. A removed member resolves from neither a device token nor an account. Removing a member clears its
    `user_id`, so the account can join the group again as a new member.
-2. Both, when possible: the group gets `owner_user_id`, and the owner's member is linked to the account. If the
+2. Both: the group gets `owner_user_id`, and the owner's member is linked to the account. If the
    account is already another member of the group, the whole link is refused (`409 ACCOUNT_ALREADY_MEMBER`).
 3. The device cookie wins, as in the design. Join, claim or link is refused with `409 ACCOUNT_ALREADY_MEMBER` when
    the account already has a member in the group, and with `409 MEMBER_LINKED_ELSEWHERE` when the member is linked
@@ -94,6 +94,18 @@ From Opus (product owner), with the error codes agreed with the developer:
 
 Also in scope (from the design): expired sessions are deleted by the daily job. If `purge_inactive_groups` has not
 merged yet, this ticket adds the scheduled handler with that job only.
+
+## Answers (round 3)
+
+From Opus (product owner), after a second zero-questions test:
+
+1. Locking an unlinked group (`lock_groups`) performs "Link to my account" first, with the same rules and refusals,
+   so that both ways of attaching a group behave the same.
+2. The e2e suite runs on its own server (a separate port) started by Playwright with the development sign-in
+   enabled, and never reuses a dev server started by hand.
+3. "When possible" is dropped: linking an owner links both the group and the owner's member, or nothing.
+4. The feature branch moves the round 2 and 3 decisions (removal clears `user_id`, error codes, `group.link` and
+   `member.link`) into `docs/design.md` and `docs/business-rules.md`.
 
 ## Acceptance criteria
 
