@@ -42,6 +42,29 @@ From Opus (product owner):
 5. Groups that used them show the new details, or none after clearing.
 6. No. A removed member shows no bank details, whether entered in the group or saved in the account.
 
+## Clarifying questions (round 2, from the zero-questions test)
+
+1. The member DTO cannot tell group details from saved ones. What does the member's own bank form show, and does
+   saving it copy the saved details into the group?
+2. How long are saved details kept, given that groups are deleted after inactivity?
+3. What does "My bank details" look like, is the account name required, and what does the API answer without a
+   session?
+4. Is changing saved details a change of the groups that use them?
+
+## Answers (round 2)
+
+From Opus (product owner), with the details agreed with the developer:
+
+1. The DTO gains `bankSource: 'group' | 'account' | null`. When the member uses saved details, their bank form in
+   the group shows "Using the bank details saved in your account" and a "Use different details in this group"
+   action that opens the empty form; saving it creates group details, which then win. Nothing is copied
+   otherwise. When the owner edits a member's bank details (API), that creates group details as today.
+2. Until the person changes or clears them. Deleting an account is a separate ticket, `delete_account`, added to
+   the backlog by this intake.
+3. A dialog opened from the account menu, with the same fields and validation as the group form (the account name
+   stays optional, as there). `PATCH /api/me` without a session answers `401 SIGN_IN_REQUIRED`.
+4. No. Saved details live in the account, so groups are not touched and their deletion dates do not move.
+
 ## Acceptance criteria
 
 - Given a signed-in person, when they save bank details in their account menu, then the details are stored with the
@@ -52,7 +75,11 @@ From Opus (product owner):
 - Given saved details that change or are cleared, when the group is opened again, then it shows the new details or
   none.
 - Given a member linked to the account who was removed from the group, then no bank details are shown.
-- Given a person who is not signed in, then the account menu with saved details is not offered.
+- Given a person who is not signed in, then the account menu with saved details is not offered, and
+  `PATCH /api/me` answers `401 SIGN_IN_REQUIRED`.
+- Given a member using saved details, when they open their bank form in the group, then it says so and offers to use
+  different details in this group; nothing is copied until they save that form.
+- Given saved details that change, then no group's deletion date moves.
 
 ## Test matrix (QA)
 
@@ -66,4 +93,7 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | SB-4 | Change and clear the saved details: two groups follow | API |
 | SB-5 | Removed member: no details from either source | API |
 | SB-6 | Pay a member through VietQR built from saved details | e2e (dev sign-in) |
-| SB-7 | Account menu hidden when signed out | e2e |
+| SB-7 | Account menu hidden when signed out; `PATCH /api/me` without a session: `401 SIGN_IN_REQUIRED` | e2e, API |
+| SB-8 | `bankSource` is `group`, `account` or `null` as expected | API |
+| SB-9 | Own bank form with saved details: note shown, no copy until saved | e2e |
+| SB-10 | Changing saved details leaves `last_activity_at` of the groups unchanged | API |

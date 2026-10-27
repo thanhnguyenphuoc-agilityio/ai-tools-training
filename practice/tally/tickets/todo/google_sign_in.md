@@ -53,6 +53,48 @@ From Opus (product owner):
 6. No. One account is at most one member per group.
 7. Yes, through the development sign-in in the design, which must be impossible to enable in production.
 
+## Clarifying questions (round 2, from the zero-questions test)
+
+1. A removed member linked to an account: does the account still resolve to that member, and can the account join
+   the group again?
+2. What does "Link to my account" change for an owner: the group only, or also the owner's member?
+3. A device cookie and an account can point to different members. Which wins, and what happens on join, claim or
+   link when the account already has a member in the group?
+4. Which error codes do the new refusals use?
+5. Where are the sign-in button, the account menu and "Link to my account"? What does the UI show when no Google
+   client id is configured, and how do e2e tests sign in on a fresh clone?
+6. Is the 30-day session fixed or extended by use?
+7. Do signing in and linking count as a change of the group (`purge_inactive_groups`)?
+8. Does `GET /api/me` also return the groups of the account?
+
+## Answers (round 2)
+
+From Opus (product owner), with the error codes agreed with the developer:
+
+1. No. A removed member resolves from neither a device token nor an account. Removing a member clears its
+   `user_id`, so the account can join the group again as a new member.
+2. Both, when possible: the group gets `owner_user_id`, and the owner's member is linked to the account. If the
+   account is already another member of the group, the whole link is refused (`409 ACCOUNT_ALREADY_MEMBER`).
+3. The device cookie wins, as in the design. Join, claim or link is refused with `409 ACCOUNT_ALREADY_MEMBER` when
+   the account already has a member in the group, and with `409 MEMBER_LINKED_ELSEWHERE` when the member is linked
+   to another account.
+4. `401 SIGN_IN_REQUIRED` for an action that needs an account; `401 INVALID_GOOGLE_TOKEN` for a rejected token;
+   `403 GROUP_OWNED_BY_OTHER_ACCOUNT`; the two `409` codes above. An expired or unknown session is treated as not
+   signed in (no error) and its cookie is cleared.
+5. "Sign in" sits in the header before the language picker; once signed in it becomes an account menu with the
+   person's name, "My bank details" (`saved_bank_details`) and "Sign out". "Link to my account" is in the group
+   header actions, shown only to a signed-in person whose device has owner or member access not yet linked. Without
+   a Google client id the Google button is not shown; when the development sign-in is enabled, a small email form
+   replaces it. The e2e suite must run on a fresh clone with no manual step: the Playwright web server enables the
+   development sign-in for its own process only; no committed production setting enables it, and the host check
+   stays.
+6. Fixed: 30 days from sign-in.
+7. Signing in is not a change. Linking a group or a member is a change (audited as `group.link` or `member.link`).
+8. Only `{ user }`. The list of groups is `joined_groups_list`, which stays in the backlog.
+
+Also in scope (from the design): expired sessions are deleted by the daily job. If `purge_inactive_groups` has not
+merged yet, this ticket adds the scheduled handler with that job only.
+
 ## Acceptance criteria
 
 - Given a person who is not signed in, when they open a group link, then they can view, join and pay exactly as
@@ -72,6 +114,9 @@ From Opus (product owner):
 - Given the development sign-in, when it is not enabled in the local configuration or the host is not `localhost`,
   then the endpoint answers 404.
 - The email of a person is never returned in a group's data.
+- Given a member linked to an account, when the owner removes the member, then the account no longer resolves to
+  it and can join the group again.
+- Given expired sessions, when the daily job runs, then they are deleted.
 
 ## Test matrix (QA)
 
@@ -90,3 +135,7 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | GS-9 | Group DTO never contains an email | API |
 | GS-10 | Google ID token check: wrong audience, wrong issuer, unverified email, expired: all refused | unit |
 | GS-11 | Sign-in button and account menu at 375px and 1366px, both themes | e2e (dev sign-in) |
+| GS-12 | Removed linked member: account resolves to nothing, joins again as a new member | API |
+| GS-13 | Each refusal returns its code: `SIGN_IN_REQUIRED`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `INVALID_GOOGLE_TOKEN` | API |
+| GS-14 | Daily job deletes expired sessions only | API |
+| GS-15 | e2e sign-in works on a fresh clone (no `.dev.vars`) | e2e |

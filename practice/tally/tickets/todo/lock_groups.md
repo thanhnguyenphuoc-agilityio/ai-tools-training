@@ -43,6 +43,34 @@ From Opus (product owner):
 4. It restarts: the group is deleted 10 days after the unlock unless something changes.
 5. Everyone who can view the group: the page says it is kept until the owner unlocks it, instead of a deletion date.
 
+## Clarifying questions (round 2, from the zero-questions test)
+
+1. A comment in `worker/policy.ts` and `docs/design.md` (section 3) mention a locked or closed group becoming
+   read-only. Does a lock stop changes, or only stop the deletion?
+2. When locking links the group to the account, are members changed too?
+3. Which status codes and error codes do the refusals use?
+4. What does locking a locked group, or unlocking an unlocked one, do? Is a lock a change?
+5. Where is the action, and what exactly happens when the owner is not signed in?
+6. What does the group DTO return for a locked group?
+7. Two locks at the same moment could pass the limit of 10. Is that acceptable?
+
+## Answers (round 2)
+
+From Opus (product owner), with the details agreed with the developer:
+
+1. Only the deletion. A locked group works as before. To avoid the confusion, the interface says "Keep this group"
+   instead of "lock"; the code keeps the name `lock`. The read-only wording in `policy.ts` changes in this
+   ticket's branch.
+2. No. Locking only sets `groups.owner_user_id` when it is empty; members are not touched.
+3. `401 SIGN_IN_REQUIRED` without an account session; `403 OWNER_ONLY` for someone who is not the owner;
+   `403 GROUP_OWNED_BY_OTHER_ACCOUNT`; `409 LOCK_LIMIT_REACHED` with `{ max: 10 }`.
+4. Both answer `200` and change nothing. Locking and unlocking are changes (audited as `group.lock` and
+   `group.unlock`).
+5. In the group settings card of the members tab, visible to the owner. When the owner is not signed in, the action
+   is shown with the note "Sign in to keep this group" and the sign-in button next to it.
+6. `locked: boolean`, and `expiresAt: null` while locked.
+7. Yes. The window is a few milliseconds for one person; it is recorded as a known limit in `docs/design.md`.
+
 ## Acceptance criteria
 
 - Given a signed-in owner with fewer than 10 locked groups, when they lock a group, then it is never deleted by the
@@ -53,6 +81,8 @@ From Opus (product owner):
 - Given a group that belongs to another account, when an owner here tries to lock it, then it is refused.
 - Given a locked group, when the owner unlocks it, then the deletion date is 10 days after the unlock.
 - Given a member or a guest, then they see the locked state but no lock action.
+- Given a locked group, then expenses, transfers and members can still be changed.
+- Given a locked group, then the group DTO has `locked: true` and `expiresAt: null`.
 
 ## Test matrix (QA)
 
@@ -60,10 +90,12 @@ Drafted by Sonnet (QA tester) from the criteria above.
 
 | ID | Scenario | Level |
 |---|---|---|
-| LG-1 | Locked group survives a purge 30 days later (fake `now`) | API |
-| LG-2 | 11th lock refused with its error code; unlocking one allows another | API |
-| LG-3 | Lock without an account session: refused | API |
-| LG-4 | Lock a group owned by another account: 403 | API |
+| LG-1 | Locked group survives purges at 10 days and 1 minute and at 30 days (fake `now`) | API |
+| LG-8 | Lock twice and unlock twice: `200`, no change; audit has `group.lock` and `group.unlock` | API |
+| LG-9 | Locked group still accepts an expense; DTO `locked: true`, `expiresAt: null` | API |
+| LG-2 | 11th lock: `409 LOCK_LIMIT_REACHED` with `{ max: 10 }`; unlocking one allows another | API |
+| LG-3 | Lock without an account session: `401 SIGN_IN_REQUIRED` | API |
+| LG-4 | Lock a group owned by another account: `403 GROUP_OWNED_BY_OTHER_ACCOUNT` | API |
 | LG-5 | Unlock sets the deletion date to unlock time plus 10 days | API |
 | LG-6 | Member and guest: no lock action, locked state shown | e2e |
 | LG-7 | Owner flow: sign in (dev), lock, unlock, both themes, 375px and 1366px | e2e |
