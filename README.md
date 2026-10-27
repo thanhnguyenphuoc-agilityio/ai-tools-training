@@ -10,16 +10,16 @@ into AI tools.
 ## Simulated roles
 
 This is a personal project with a single developer. To practise the way a real project team works, AI models play
-the other roles: they report tickets, answer business questions, test, review and seed bugs. Ticket reporters are
-named after the model that plays them, together with the role:
+the other roles: they report tickets, answer business questions, test, review and seed bugs, while the trainee
+acts as the human product owner. Ticket reporters are named after the model or role that plays them:
 
 | Name | Role in the project |
 |---|---|
-| Opus | Product owner: business rules, priorities, acceptance |
+| Product owner (human) | Product owner: business rules, priorities, acceptance (played by the trainee) |
+| Opus | AI team lead: runs the e2e tests, reviews merge requests and merges them into `develop`; prepares releases to `main` |
 | Sonnet | QA tester: test reports, security questions |
 | Haiku | End user (group member) |
 | Gemini | End user (group treasurer) |
-| Team lead | A Claude Code session: runs the e2e tests, reviews merge requests and merges them into `develop`; prepares releases to `main` |
 
 The trainee plays the developer, and in some exercises the BA, QA or reviewer. The trainee is also the final human
 check: every feature is tested by hand on `develop` before it reaches `main`. `practice/tally/PRACTICE.md`

@@ -39,7 +39,7 @@ From Gemini (reporter):
 3. No opinion; referred to the product owner.
 4. None known; Vietnamese and English are enough.
 
-From Opus (product owner):
+From the product owner (human):
 
 3. A "new group" form that is already open keeps its currency when the language changes. A newly opened form
    still takes its default currency from the current interface language (Vietnamese: VND, English: USD), as in

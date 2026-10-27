@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-14` |
 | Labels | `type::feature`, `priority::medium`, `area::members` |
-| Reporter | Opus (product owner) |
+| Reporter | Product owner (human) |
 | Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | - |
@@ -29,7 +29,7 @@ member and must keep showing the name.
 
 ## Answers
 
-From Opus (reporter):
+From the product owner (human):
 
 1. Only the owner. The owner cannot remove themself.
 2. No. The member settles up first (pays what they owe, or is paid what they are owed). The app does not write off
