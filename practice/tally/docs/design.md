@@ -154,7 +154,7 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### google_sign_in, joined_groups_list, saved_bank_details
 
-- **Migration `0002_accounts.sql`:**
+- **Migration `0003_accounts.sql`:**
   - Table `users(id, google_sub UNIQUE, email, name, bank_bin, account_no, account_name, created_at)`.
   - Table `sessions(token_hash PK, user_id, created_at, expires_at)`. Expired sessions are deleted by the daily
     cleanup job (`purgeInactiveGroups` from `purge_inactive_groups`, or a job of its own if that ticket is not done yet).
@@ -209,7 +209,7 @@ A future rule such as "a closed group is read-only" only needs `requireWritable(
 
 ### lock_groups
 
-- **Migration:** `0003_group_lock.sql` adds `groups.locked_at`.
+- **Migration:** `0004_group_lock.sql` adds `groups.locked_at`.
 - **Purge:** `purgeInactiveGroups` gains `AND locked_at IS NULL`.
 - **Endpoints:** `POST` and `DELETE /groups/:code/lock`.
   - Require both `isOwner` and `userId`, because the limit is counted per person.
