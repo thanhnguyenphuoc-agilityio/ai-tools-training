@@ -138,3 +138,4 @@ run stopped three times on an API error; its checks were rerun by the AI team le
 - Left as is (pre-existing, all dialogs): no focus trap, Escape does not close the dialog, focus does not move into
   it. Worth a separate ticket.
 - Still to do by the human: scan the code with two banking apps, in light and dark theme.
+- Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-27-2.

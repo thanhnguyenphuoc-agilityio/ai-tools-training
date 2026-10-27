@@ -232,4 +232,4 @@ Reviewed by Opus (AI team lead).
   - The panel shows no outline when focused.
   - The only console error is the expected 409 `MEMBER_HAS_BALANCE` response.
 - Checks re-run after the review: typecheck and lint clean, 291 unit/API tests, 56 e2e tests.
-
+- Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-27-2.

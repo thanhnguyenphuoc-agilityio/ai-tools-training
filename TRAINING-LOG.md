@@ -442,6 +442,8 @@ Shipped (merge requests, artifacts, screenshots):
   reported by the product owner (human), technical tickets (tooling, CI, review findings) by Opus (AI team lead).
 - `release/2026-10-27`: the human confirmed `e2e_runner_deps_install` (`TAL-39`); the ticket moved to `done/`,
   release notes written, and `develop` merged into `main` on the human's confirmation, tagged `v2026.10.27`.
+- `release/2026-10-27-2`: the human tested `vietqr_code_style` (`TAL-41`) and `dialog_keyboard_focus` (`TAL-42`)
+  on the Cloudflare deploy of `develop` and confirmed both; the tickets moved to `done/`.
 Observations (positive / negative):
 - The zero-questions test made the quality of a ticket measurable: each round produced fewer questions, and the
   remaining ones were about exact codes, ordering of checks and edge cases rather than the feature itself.
