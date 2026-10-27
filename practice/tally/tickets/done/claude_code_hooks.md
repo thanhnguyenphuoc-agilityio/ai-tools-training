@@ -5,7 +5,7 @@
 | ID | `TAL-33` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | `answer_key_guard` |
 | Related | - |
 

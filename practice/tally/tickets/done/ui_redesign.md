@@ -5,7 +5,7 @@
 | ID | `TAL-17` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Product owner (human) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `header_controls_icons` |
 

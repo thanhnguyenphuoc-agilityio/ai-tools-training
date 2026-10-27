@@ -5,7 +5,7 @@
 | ID | `TAL-31` |
 | Labels | `type::bug`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead, first GitHub Actions run on `develop`) |
-| Assignee | AI team lead |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `exact_split_share_layout` |
 

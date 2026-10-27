@@ -11,7 +11,8 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   `in-progress`, `waiting-to-merge`, `ready-to-review`, `done`); move tickets with `git mv`. Format and labels are
   in `tickets/README.md`; seeded bugs carry `source::seeded`.
 - Reporters are simulated roles named after AI models (Opus AI team lead, Sonnet QA tester, Haiku and Gemini end
-  users) plus the human product owner. Tickets describe the app as a general group expense tool; no single-sport or
+  users) plus the human product owner. Assignees are Haiku (developer). One model can play several roles; each role
+  is a separate person (Haiku developer is not Haiku end user). Tickets describe the app as a general group expense tool; no single-sport or
   single-use framing.
 - `TRAINING-LOG.md`: the user's daily log. Append, never rewrite past days.
 

@@ -5,7 +5,7 @@
 | ID | `TAL-38` |
 | Labels | `type::improvement`, `priority::low`, `area::ui` |
 | Reporter | Sonnet (QA tester) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | `ui_redesign` |
 | Related | - |
 

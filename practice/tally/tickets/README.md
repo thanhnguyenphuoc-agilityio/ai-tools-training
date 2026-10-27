@@ -44,7 +44,8 @@ moving to another folder (`git mv`).
 - **Reporter** is a simulated role (an AI model name plus its role in the project, such as Opus AI team lead,
   Sonnet QA tester, Haiku or Gemini end user) or the human product owner (see "Simulated roles" in the repository
   README).
-- **Assignee** is set when the ticket moves to `in-progress/`.
+- **Assignee** is set when the ticket moves to `in-progress/`: the role that implements it, such as Haiku
+  (developer). One model can play several roles, and each role counts as a separate person.
 - A question or a vague request is clarified before the ticket moves to `todo/`. The analysis goes into the ticket
   itself: `## Analysis`, `## Clarifying questions` with their `## Answers` (who answered), and `## Reproduce` for
   bugs.

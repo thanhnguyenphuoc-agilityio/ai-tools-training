@@ -5,7 +5,7 @@
 | ID | `TAL-27` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Product owner (human) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `language_picker`, `theme_picker`, `ui_redesign` |
 

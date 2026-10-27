@@ -5,7 +5,7 @@
 | ID | `TAL-16` |
 | Labels | `type::feature`, `priority::low`, `area::ui` |
 | Reporter | Haiku (end user, group member) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `language_picker` |
 
