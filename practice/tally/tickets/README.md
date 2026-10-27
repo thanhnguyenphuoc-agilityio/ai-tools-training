@@ -34,7 +34,7 @@ moving to another folder (`git mv`).
 
 - **ID** is `TAL-<n>`: the next number after the highest ID on the board, assigned when the ticket is created and
   never reused or changed. Commit messages, merge requests and other tickets may cite the ID next to the file name
-  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-41`.
+  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-43`.
 - **Labels** follow GitLab scoped labels:
   - `type::` feature, bug, question or improvement. One `type::` label per ticket; a vague request stays
     `type::question` until it is clarified.
@@ -44,7 +44,8 @@ moving to another folder (`git mv`).
 - **Reporter** is a simulated role (an AI model name plus its role in the project, such as Opus AI team lead,
   Sonnet QA tester, Haiku or Gemini end user) or the human product owner (see "Simulated roles" in the repository
   README).
-- **Assignee** is set when the ticket moves to `in-progress/`.
+- **Assignee** is set when the ticket moves to `in-progress/`: the role that implements it, such as Haiku
+  (developer). One model can play several roles, and each role counts as a separate person.
 - A question or a vague request is clarified before the ticket moves to `todo/`. The analysis goes into the ticket
   itself: `## Analysis`, `## Clarifying questions` with their `## Answers` (who answered), and `## Reproduce` for
   bugs.

@@ -5,7 +5,7 @@
 | ID | `TAL-14` |
 | Labels | `type::feature`, `priority::medium`, `area::members` |
 | Reporter | Product owner (human) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 

@@ -5,7 +5,7 @@
 | ID | `TAL-25` |
 | Labels | `type::bug`, `priority::high`, `area::ui` |
 | Reporter | Opus (AI team lead, screenshots for the `exact_amount_split` merge request) |
-| Assignee | AI team lead |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `exact_amount_split` |
 

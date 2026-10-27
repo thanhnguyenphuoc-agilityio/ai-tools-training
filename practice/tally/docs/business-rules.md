@@ -149,6 +149,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - The transfer message is stripped of diacritics, upper-cased, limited to `A-Z 0-9` and spaces, and capped at
   50 characters. The screen shows **exactly** the message encoded in the QR.
 - The QR code is generated in the browser. Account numbers are never sent to a third-party service.
+- The dialog shows the code as a VietQR card: the VietQR wordmark, the code in a thin frame with the recipient's
+  bank logo in its centre (the VietQR mark when the logo is missing or fails to load), then the bank name, account
+  number and amount. Logos are bundled with the app, so no third party learns the recipient's bank.
 
 ## Interface language
 

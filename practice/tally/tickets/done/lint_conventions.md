@@ -5,7 +5,7 @@
 | ID | `TAL-34` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | `claude_code_hooks` |
 | Related | - |
 

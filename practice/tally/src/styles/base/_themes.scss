@@ -26,6 +26,8 @@
   --color-toast-icon: #5eead4;
   // QR codes need a light background to scan, in every theme.
   --color-qr-bg: #ffffff;
+  --color-qr-frame: #d0d5dd;
+  --color-qr-text: #1c2330;
 }
 
 @mixin dark-palette {
@@ -49,6 +51,8 @@
   --color-toast-text: #11151c;
   --color-toast-icon: #0f766e;
   --color-qr-bg: #ffffff;
+  --color-qr-frame: #d0d5dd;
+  --color-qr-text: #1c2330;
 }
 
 :root {

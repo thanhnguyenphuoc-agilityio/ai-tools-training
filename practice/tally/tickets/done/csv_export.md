@@ -5,7 +5,7 @@
 | ID | `TAL-2` |
 | Labels | `type::feature`, `priority::low`, `area::expenses` |
 | Reporter | Gemini (end user, group treasurer) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 

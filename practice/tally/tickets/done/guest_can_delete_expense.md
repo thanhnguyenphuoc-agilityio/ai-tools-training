@@ -5,7 +5,7 @@
 | ID | `TAL-21` |
 | Labels | `type::bug`, `priority::high`, `area::security`, `source::seeded` |
 | Reporter | Sonnet (QA tester) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 

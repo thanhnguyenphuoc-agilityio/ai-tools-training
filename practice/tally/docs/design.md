@@ -152,6 +152,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - Stacking order tokens in `abstracts/_tokens.scss`: tab bar, menu, toast, dialog.
   - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
     (`button--icon`) always has an `aria-label`.
+- Modal dialogs use `useDialog` (`src/hooks/useDialog.ts`) for focus, `Tab` wrapping, `Escape` and focus return
+  (`dialog_keyboard_focus`).
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
@@ -376,6 +378,26 @@ Built. Project conventions are checked automatically by `npm run lint`:
 
 - Store the rate agreed by the group in `groups.settle_rate` (new migration); no external exchange-rate API.
 - The QR uses `amount * rate`, rounded to VND. The screen shows both amounts.
+
+### vietqr_code_style
+
+Built. src/qrCard.ts holds the QR options and asset paths; QrDialog renders the card.
+
+- Error correction H (about 30% recovery). The centre logo is wide and short (32% by 14% of the code, about 5% of
+  its area) on a white rounded box.
+- Logos are static files in public/bank-logos/<bin>.png, one per bank in shared/banks.json (a unit test keeps the
+  two in step), and public/qr/ for the VietQR wordmark and mark. An onError on the logo switches to the mark.
+- The card keeps a white background and dark text in both themes (--color-qr-bg, --color-qr-text).
+- The e2e test decodes a screenshot of the code with the logo on top (jsqr, pngjs).
+
+### dialog_keyboard_focus
+
+Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Escape` and returns focus to the opener.
+
+- Initial focus goes to the `data-autofocus` element, else the panel. React `autoFocus` is not used: under
+  StrictMode the effect cleanup focuses the opener before the effect runs again.
+- Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
+  reason field; `Escape` is ignored while the removal request runs.
 
 ## 7. Ticket workflow
 
