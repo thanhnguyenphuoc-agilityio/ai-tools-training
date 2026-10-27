@@ -1,11 +1,72 @@
 @use '../styles/abstracts' as *;
 
 .qr-dialog {
-  &__code {
-    align-self: center;
-    max-width: 100%;
-    border-radius: $radius-md;
+  // The card stays white in both themes so the code scans, so its text uses fixed QR colors.
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: space(2);
+    width: 100%;
+    max-width: 300px;
+    margin-inline: auto;
+    padding: space(3);
+    border-radius: $radius-lg;
     background: var(--color-qr-bg);
+    color: var(--color-qr-text);
+    text-align: center;
+  }
+
+  &__wordmark {
+    height: 28px;
+  }
+
+  &__frame {
+    width: 100%;
+    padding: space(2);
+    border: 1px solid var(--color-qr-frame);
+    border-radius: $radius-md;
+  }
+
+  &__code {
+    position: relative;
+    max-width: 260px;
+    margin-inline: auto;
+  }
+
+  &__canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  // Wide and short, so it covers about 5% of the code area; error correction H recovers 30%.
+  &__mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32%;
+    height: 14%;
+    padding: 2px;
+    transform: translate(-50%, -50%);
+    border-radius: $radius-sm;
+    background: var(--color-qr-bg);
+    object-fit: contain;
+  }
+
+  &__bank {
+    margin: space(2) 0 0;
+    font-weight: 600;
+  }
+
+  &__account {
+    margin: 0;
+  }
+
+  &__amount {
+    margin: 0;
+    font-size: font-size(lg);
+    font-weight: 700;
   }
 
   &__details {

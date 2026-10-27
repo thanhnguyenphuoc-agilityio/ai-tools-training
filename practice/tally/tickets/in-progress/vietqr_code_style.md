@@ -99,3 +99,42 @@ with at least two banking apps, in light and dark theme.
 
 Known question: bank and VietQR logos are trademarks of their owners; they are used only to identify the bank of
 the transfer.
+
+## Result
+
+Implemented by Haiku (developer) from the plan; changed after review and manual test (below).
+
+- src/qrCard.ts: QR_OPTIONS (error correction H), the wordmark and mark paths, ankLogo(bin).
+- src/components/QrDialog.tsx, .scss: the card (wordmark, framed code with the bank logo in the centre, bank
+  name, account number, amount). The logo falls back to the VietQR mark on onError. For VND groups the details list
+  below keeps only the account holder and transfer note; other currencies keep the full list.
+- src/styles/base/_themes.scss: --color-qr-frame, --color-qr-text (the card is white in both themes).
+- src/i18n/locales/en.ts, i.ts: qr.bankLogo, qr.vietqrLogo.
+- Dev dependencies jsqr, pngjs, @types/pngjs for the e2e decode.
+- Tests: 	ests/unit/qrCard.test.ts (level H; exactly one logo file per bank in anks.json);
+  e2e/settle-up.spec.ts (card content, bank logo, a screenshot of the code with the logo decodes to the payload,
+  fallback to the VietQR mark when the logo returns 404 and stays on it).
+- Docs: docs/business-rules.md (VietQR), docs/design.md (ietqr_code_style).
+
+Typecheck and lint clean, 291 unit and API tests and 54 e2e tests pass.
+
+## Review
+
+Manual test by Sonnet (QA tester) with Claude in Chrome: 14 checks pass (six banks, fallback, network only to the
+app origin, vi and en, long values, non-VND group, member without account, "I have sent it"). The Haiku (tester)
+run stopped three times on an API error; its checks were rerun by the AI team lead with a Playwright script
+(desktop light, 360px dark). Code review by Sonnet and the AI team lead with eview-checklist. Fixed:
+
+- Major: in dark theme the bank, account and amount were light text on the white card. The card now uses
+  --color-qr-text, and the frame color no longer changes with the theme.
+- Major: the centre box was 48px square regardless of the code size, and wide bank logos shrank inside it. It is now
+  32% by 14% of the code, without a shadow, so the logo is readable and covers about 5% of the code.
+- Minor: bank and account number were shown twice (card and list); the list drops them for VND groups.
+- Simpler: BANK_LOGO_BINS, the logo set, the QrOptions interface and two of the three mark states removed (one
+  logoFailed flag); the unit test checks the real invariant (logo files match anks.json); docs shortened.
+- Not a defect: the review suspected the logo fallback could flip back, since ank looked like a new object each
+  render. indBank returns the same entry of the static BANKS list; the state is now a single flag anyway, and the
+  e2e test checks the mark stays.
+- Left as is (pre-existing, all dialogs): no focus trap, Escape does not close the dialog, focus does not move into
+  it. Worth a separate ticket.
+- Still to do by the human: scan the code with two banking apps, in light and dark theme.
