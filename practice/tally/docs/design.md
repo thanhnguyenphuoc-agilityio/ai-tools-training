@@ -120,7 +120,9 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   the component selector to its row or element instead (see `.expense-form__participant .expense-form__share-input`).
 - System fonts differ per OS: the Linux fonts on the GitHub Actions runner are wider than Segoe UI. Text next to a
   fixed-width control must be able to wrap (`overflow-wrap: anywhere`, as on `.expense-form__name`), and layout
-  checks in e2e must pass on Linux, not only on the developer's machine.
+  checks in e2e must pass on Linux, not only on the developer's machine. The CI `e2e` job runs in the Playwright
+  image (`mcr.microsoft.com/playwright:v<version>-noble`), so its fonts are fixed by the image tag; the tag changes
+  together with `@playwright/test` in `package-lock.json` (a unit test checks that they match).
 - Tokens (spacing, radius, font sizes, breakpoints) live in `abstracts/_tokens.scss` and are used through
   `space(4)`, `font-size(sm)` and `@include up(md)`.
 - Mobile first: base styles target phones. Breakpoints are `sm` 520px, `md` 768px and `lg` 1024px.
