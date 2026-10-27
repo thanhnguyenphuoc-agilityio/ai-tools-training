@@ -107,6 +107,18 @@ From Opus (product owner), after a second zero-questions test:
 4. The feature branch moves the round 2 and 3 decisions (removal clears `user_id`, error codes, `group.link` and
    `member.link`) into `docs/design.md` and `docs/business-rules.md`.
 
+## Answers (round 4)
+
+From Opus (product owner), after the review of the ticket pack against the current `develop`:
+
+1. `POST /groups/:code/link` is the only link endpoint. For the owner it links the group and the owner's member
+   (`group.link`); for any other member it links that member only (`member.link`); a visitor who has not joined gets
+   `401 JOIN_FIRST`. "Link to my account" is hidden once everything this device can link is linked.
+2. The header keeps the one-row rule of `header_controls_icons` from 360px up. Below `sm` the sign-in button and the
+   account menu show an icon only; the person's name appears inside the open menu. GS-11 checks 360px.
+3. Linking a group or a member shows a confirmation toast, like other saves (`ui_redesign`). Signing in and signing
+   out do not.
+
 ## Acceptance criteria
 
 - Given a person who is not signed in, when they open a group link, then they can view, join and pay exactly as
@@ -129,6 +141,9 @@ From Opus (product owner), after a second zero-questions test:
 - Given a member linked to an account, when the owner removes the member, then the account no longer resolves to
   it and can join the group again.
 - Given expired sessions, when the daily job runs, then they are deleted.
+- Given a signed-in member who is not the owner, when they choose "Link to my account", then only their member is
+  linked; a visitor who has not joined is refused.
+- Given a phone 360px wide, then the header with the sign-in control stays on one row.
 
 ## Test matrix (QA)
 
@@ -146,8 +161,9 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | GS-8 | Dev sign-in: 404 without the flag, 404 with the flag on another host | API |
 | GS-9 | Group DTO never contains an email | API |
 | GS-10 | Google ID token check: wrong audience, wrong issuer, unverified email, expired: all refused | unit |
-| GS-11 | Sign-in button and account menu at 375px and 1366px, both themes | e2e (dev sign-in) |
+| GS-11 | Sign-in button and account menu at 360px (one header row) and 1366px, both themes | e2e (dev sign-in) |
 | GS-12 | Removed linked member: account resolves to nothing, joins again as a new member | API |
 | GS-13 | Each refusal returns its code: `SIGN_IN_REQUIRED`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `INVALID_GOOGLE_TOKEN` | API |
 | GS-14 | Daily job deletes expired sessions only | API |
 | GS-15 | e2e sign-in works on a fresh clone (no `.dev.vars`) | e2e |
+| GS-16 | Link as a non-owner member: only the member is linked (`member.link`); as a visitor: `401 JOIN_FIRST` | API |

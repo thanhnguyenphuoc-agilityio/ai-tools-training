@@ -73,6 +73,16 @@ From Opus (product owner), after a second zero-questions test:
    form; it clears the group details, so the saved ones apply again.
 2. The feature branch moves `bankSource` and these rules into `docs/design.md` and `docs/business-rules.md`.
 
+## Answers (round 4)
+
+From Opus (product owner), after the review of the ticket pack against the current `develop`:
+
+1. The member DTO does not say whether the viewer has saved details. The bank form reads it from `GET /api/me`
+   (`user` includes the saved details or `null`), so "Use my saved bank details" is offered only when the signed-in
+   viewer has some.
+2. Saving or clearing the details in the account menu, and switching between group and saved details, show a
+   confirmation toast, like other saves (`ui_redesign`).
+
 ## Acceptance criteria
 
 - Given a signed-in person, when they save bank details in their account menu, then the details are stored with the
@@ -88,6 +98,8 @@ From Opus (product owner), after a second zero-questions test:
 - Given a member using saved details, when they open their bank form in the group, then it says so and offers to use
   different details in this group; nothing is copied until they save that form.
 - Given saved details that change, then no group's deletion date moves.
+- Given a member with group details who has saved details in their account, when they choose "Use my saved bank
+  details", then the group details are cleared and the saved ones apply.
 
 ## Test matrix (QA)
 
@@ -105,3 +117,4 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | SB-8 | `bankSource` is `group`, `account` or `null` as expected | API |
 | SB-9 | Own bank form with saved details: note shown, no copy until saved | e2e |
 | SB-10 | Changing saved details leaves `last_activity_at` of the groups unchanged | API |
+| SB-11 | "Use my saved bank details": offered only with saved details; clears the group details, `bankSource` becomes `account` | API, e2e |

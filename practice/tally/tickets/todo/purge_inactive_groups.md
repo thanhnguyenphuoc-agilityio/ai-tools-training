@@ -83,6 +83,13 @@ From Opus (product owner), after a second zero-questions test:
    and `docs/business-rules.md` stops saying that every audited action counts as activity.
 3. PG-9 needs a test helper that applies the migrations up to `0002`, inserts groups, then applies `0003`.
 
+## Answers (round 4)
+
+From Opus (product owner), after the review of the ticket pack against the current `develop`:
+
+1. "Under the summary row" means directly below the group summary bar (`ui_redesign`), above the owner key banner
+   and the tabs, on every width.
+
 ## Acceptance criteria
 
 - Given a group whose last change is more than 10 days before the daily run, when the run happens, then the group

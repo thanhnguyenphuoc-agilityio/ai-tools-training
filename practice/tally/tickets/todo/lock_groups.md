@@ -81,6 +81,13 @@ From Opus (product owner), after a second zero-questions test:
 2. Order of checks: someone who is not the owner gets `403 OWNER_ONLY` whether signed in or not; an owner who is
    not signed in gets `401 SIGN_IN_REQUIRED`.
 
+## Answers (round 4)
+
+From Opus (product owner), after the review of the ticket pack against the current `develop`:
+
+1. Keeping and no longer keeping a group show a confirmation toast, like other saves (`ui_redesign`). The "kept
+   until the owner unlocks it" line takes the place of the deletion date below the summary bar.
+
 ## Acceptance criteria
 
 - Given a signed-in owner with fewer than 10 locked groups, when they lock a group, then it is never deleted by the

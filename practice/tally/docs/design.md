@@ -180,7 +180,9 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - `memberId` comes from `members.user_id` when there is no device cookie.
 - **Account linking:**
   - Creating, joining or claiming while signed in sets `user_id` automatically.
-  - `POST /groups/:code/link` attaches a group used through cookies to the account.
+  - `POST /groups/:code/link` attaches a group used through cookies to the account: for the owner, the group and
+    the owner's member (`group.link`); for another member, that member only (`member.link`); otherwise
+    `401 JOIN_FIRST`.
 - **`joined_groups_list`:** `GET /api/me` returns `{ user, groups[] }`: existing groups where `owner_user_id = me` or a member has
   `user_id = me`. The home page merges this list with the localStorage history.
 - **`saved_bank_details`:**
