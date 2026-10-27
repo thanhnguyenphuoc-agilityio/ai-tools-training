@@ -410,8 +410,58 @@ For the retro:
 Open before the next day:
 - [x] Test `header_controls_icons` and `ui_redesign` by hand on `develop` (phone and desktop, both themes)
 - [x] Claude in Chrome: console logs and form fill on the training app
-- [ ] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
-- [ ] Course: start the AI-native SDLC playbook
+- [x] Check the phone layout in device mode (Claude in Chrome could not resize the viewport)
+- [x] Course: start the AI-native SDLC playbook
+
+## Day 12: 2026-10-27
+
+Goal: capstone kickoff: intake of the vague feature brief, a ticket pack with Given/When/Then and open questions,
+and a test matrix drafted from the criteria.
+Left over from the previous day: none.
+Shipped (merge requests, artifacts, screenshots):
+- `docs/capstone_intake` merged: `google_sign_in` (`TAL-6`), `saved_bank_details` (`TAL-15`),
+  `purge_inactive_groups` (`TAL-12`) and `lock_groups` (`TAL-10`) moved from `backlog/` to `todo/`. Each ticket has
+  an analysis, clarifying questions with four rounds of answers, acceptance criteria in Given/When/Then (36 in
+  total) and a test matrix drafted by Sonnet (QA tester) with 45 cases at API and e2e level.
+- The rounds: the first questions came from the intake; round 2 from a zero-questions test, in which a subagent
+  tried to plan each ticket from the ticket alone and listed what it still had to ask; round 3 from a second
+  zero-questions test; round 4 from a review of the ticket pack against the current `develop` (link endpoint for an
+  existing member, the header at 360px, saved bank details in `GET /api/me`, confirmation toasts, the place of the
+  deletion date).
+- `docs/design.md`: the planned migrations renumbered after the existing ones (`0003_activity_reset` to
+  `0006_attachments`) and the designs aligned with the answers.
+- `delete_account` (`TAL-40`) added to the backlog: raised by an answer in `saved_bank_details`, since saved bank
+  details outlive the groups that are purged.
+- `chore/daily-review-2026-10-26` merged from the scheduled GitHub routine: the ticket `e2e_runner_deps_install`
+  (`TAL-39`). The two tickets created in parallel had both taken `TAL-39`; `delete_account` moved to `TAL-40` and
+  the next free ID is `TAL-41`.
+- `fix/e2e_runner_deps_install` (`TAL-39`) merged: the CI `e2e` job runs in the Playwright image of the locked
+  version instead of installing system packages on every run, with a unit test that keeps the image tag equal to
+  the lockfile version.
+- Ticket reporters reworded: Opus plays the AI team lead, the human is the product owner. Feature tickets are
+  reported by the product owner (human), technical tickets (tooling, CI, review findings) by Opus (AI team lead).
+Observations (positive / negative):
+- The zero-questions test made the quality of a ticket measurable: each round produced fewer questions, and the
+  remaining ones were about exact codes, ordering of checks and edge cases rather than the feature itself.
+- Questions only through the tickets kept every decision in the repository; the developer on Day 13 does not need
+  this conversation.
+- Reviewing the pack against the current `develop` found gaps the intake could not see, because Day 11 had changed
+  the header and added toasts after the tickets were first written.
+- Two branches created on the same day picked the same ticket ID. A shared counter in `tickets/README.md` does not
+  prevent this; a check on merge would.
+- Pinning the runner image removed the CI annotations but turned a 22-second step into a 13-minute download; the
+  side effect showed up only in the job duration, not as a failure.
+- The role rename took two corrections: first every former product owner ticket went to the human, then to Opus,
+  before the rule settled on the kind of ticket.
+For the retro:
+- A vague brief is answered faster by a test of the ticket (can someone plan from it?) than by more questions at
+  intake.
+- A rule about who reports a ticket should be written as a criterion (feature or technical), not as a list of
+  names.
+Open before the next day:
+- [ ] Push `develop` and confirm the `e2e` job is green and takes about 2 to 3 minutes in the Playwright image
+- [ ] Day 13: build the capstone tickets in dependency order, starting with `google_sign_in`
+- [ ] Course: finish the AI-native SDLC playbook
 
 ## For the retro
 
