@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-11` |
 | Labels | `type::feature`, `priority::medium`, `area::members` |
-| Reporter | Product owner (human) |
+| Reporter | Opus (AI team lead) |
 | Assignee | - |
 | Depends on | - |
 | Related | `remove_member` |

@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-26` |
 | Labels | `type::bug`, `priority::low`, `area::expenses` |
-| Reporter | Team lead (code review of `weighted_split_share_off`) |
+| Reporter | Opus (AI team lead, code review of `weighted_split_share_off`) |
 | Assignee | - |
 | Depends on | - |
 | Related | `weighted_split_share_off` |

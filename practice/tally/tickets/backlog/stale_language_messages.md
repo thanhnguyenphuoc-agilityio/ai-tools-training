@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-24` |
 | Labels | `type::bug`, `priority::low`, `area::ui` |
-| Reporter | Team lead (code review of `language_picker`) |
+| Reporter | Opus (AI team lead, code review of `language_picker`) |
 | Assignee | - |
 | Depends on | - |
 | Related | `language_picker` |

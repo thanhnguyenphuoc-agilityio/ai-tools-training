@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-33` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
-| Reporter | Product owner (human) |
+| Reporter | Human |
 | Assignee | Developer (trainee) |
 | Depends on | `answer_key_guard` |
 | Related | - |
@@ -39,7 +39,7 @@ added the first one, a `PreToolUse` hook that blocks a forbidden action. Two mor
 
 ## Answers
 
-From the product owner (human):
+From the human:
 
 1. No. Only files that are edited are formatted; the rest keep their layout until someone changes them.
 2. Code and style files inside `practice/tally` (`.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.css`, `.scss`).
