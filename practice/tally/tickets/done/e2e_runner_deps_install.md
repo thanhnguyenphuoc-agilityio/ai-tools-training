@@ -5,7 +5,7 @@
 | ID | `TAL-39` |
 | Labels | `type::bug`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `ci_actions_node24` |
 

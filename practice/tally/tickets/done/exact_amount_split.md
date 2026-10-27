@@ -5,7 +5,7 @@
 | ID | `TAL-5` |
 | Labels | `type::feature`, `priority::low`, `area::expenses` |
 | Reporter | Haiku (end user, group member) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 

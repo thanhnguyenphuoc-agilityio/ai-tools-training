@@ -11,19 +11,21 @@ into AI tools.
 
 This is a personal project with a single developer. To practise the way a real project team works, AI models play
 the other roles: they report tickets, answer business questions, test, review and seed bugs, while the trainee
-acts as the human product owner. Ticket reporters are named after the model or role that plays them:
+acts as the human product owner. Reporters and assignees are named after the model plus the role it plays:
 
 | Name | Role in the project |
 |---|---|
 | Product owner (human) | Product owner: business rules, priorities, acceptance (played by the trainee) |
-| Opus | AI team lead: runs the e2e tests, reviews merge requests and merges them into `develop`; prepares releases to `main` |
-| Sonnet | QA tester: test reports, security questions |
-| Haiku | End user (group member) |
-| Gemini | End user (group treasurer) |
+| Opus (AI team lead) | Plans complex tickets, runs the e2e tests, reviews merge requests and merges them into `develop`; prepares releases to `main` |
+| Sonnet (QA tester) | Test reports, security questions, reviews |
+| Haiku (developer) | Implements tickets from their plan |
+| Haiku (end user) | Group member |
+| Gemini (end user) | Group treasurer |
 
-The trainee plays the developer, and in some exercises the BA, QA or reviewer. The trainee is also the final human
-check: every feature is tested by hand on `develop` before it reaches `main`. `practice/tally/PRACTICE.md`
-describes how each role is simulated.
+One model can play several roles. Each role is a separate person in the project: Haiku (developer) and Haiku (end
+user) share a model but not a role, so a ticket reported by one is not the work of the other. The trainee is the
+final human check: every feature is tested by hand on `develop` before it reaches `main`.
+`practice/tally/PRACTICE.md` describes how each role is simulated.
 
 ## Contents
 

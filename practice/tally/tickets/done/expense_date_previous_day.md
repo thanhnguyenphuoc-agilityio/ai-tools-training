@@ -5,7 +5,7 @@
 | ID | `TAL-19` |
 | Labels | `type::bug`, `priority::medium`, `area::expenses`, `source::seeded` |
 | Reporter | Haiku (end user, group member) |
-| Assignee | Developer (trainee) |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 
