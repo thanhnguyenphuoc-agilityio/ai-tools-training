@@ -5,7 +5,7 @@
 | ID | `TAL-39` |
 | Labels | `type::bug`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | `ci_actions_node24` |
 
@@ -53,3 +53,16 @@ on `develop` took 14 min 57 s of its 20 min `timeout-minutes`. The tests themsel
    after the change the step is gone and no apt download appears.
 5. Verify: the CI run on the merge request is green; the `e2e` job takes about 2 to 3 minutes; the layout specs
    (`exact-split`, `language-picker` one-row header, `ui-redesign`) still pass on desktop and mobile.
+
+## Result
+
+Branch: `fix/e2e_runner_deps_install` from `develop`. Plan step 1 and the unit-test option of step 2.
+
+- `.github/workflows/ci.yml`: the `e2e` job runs in `mcr.microsoft.com/playwright:v1.64.0-noble`; the
+  `npx playwright install --with-deps chromium` step is removed.
+- `tests/unit/ciPlaywrightImage.test.ts` (new): the image tag equals the locked `@playwright/test` version, and the
+  workflow installs no browser packages. Both cases failed before the change.
+- `docs/design.md` (section 5, fonts): the CI font set comes from the image tag.
+
+Typecheck, lint and 289 unit and API tests pass. The container itself is checked by the first CI run after the
+push; the expected `e2e` job time is about 2 to 3 minutes.

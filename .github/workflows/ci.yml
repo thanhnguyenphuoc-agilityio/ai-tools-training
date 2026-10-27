@@ -35,6 +35,9 @@ jobs:
   e2e:
     needs: test
     runs-on: ubuntu-24.04
+    # Chromium, its system packages and fonts come with the image. Keep the tag equal to the @playwright/test
+    # version in package-lock.json (checked by tests/unit/ciPlaywrightImage.test.ts).
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -44,7 +47,6 @@ jobs:
           cache: npm
           cache-dependency-path: practice/tally/package-lock.json
       - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
       - run: npx playwright test
       - uses: actions/upload-artifact@v6
         if: failure()
