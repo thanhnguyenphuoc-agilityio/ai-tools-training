@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-15` |
 | Labels | `type::feature`, `priority::medium`, `area::auth` |
-| Reporter | Opus (AI team lead) |
+| Reporter | Product owner (human) |
 | Assignee | - |
 | Depends on | `google_sign_in` |
 | Related | - |
@@ -32,7 +32,7 @@ what happens when a group already has its own account for that member.
 
 ## Answers
 
-From Opus (AI team lead):
+From the product owner (human):
 
 1. Read each time: changing the saved details updates every group that uses them, with nothing to resync.
 2. Every group in which a member is linked to the account and has no account entered in the group.
@@ -53,7 +53,7 @@ From Opus (AI team lead):
 
 ## Answers (round 2)
 
-From Opus (AI team lead), with the details agreed with the developer:
+From the product owner (human), with the details agreed with the developer:
 
 1. The DTO gains `bankSource: 'group' | 'account' | null`. When the member uses saved details, their bank form in
    the group shows "Using the bank details saved in your account" and a "Use different details in this group"
@@ -67,7 +67,7 @@ From Opus (AI team lead), with the details agreed with the developer:
 
 ## Answers (round 3)
 
-From Opus (AI team lead), after a second zero-questions test:
+From the product owner (human), after a second zero-questions test:
 
 1. A member with group details who has saved details in their account sees "Use my saved bank details" on their bank
    form; it clears the group details, so the saved ones apply again.
@@ -75,7 +75,7 @@ From Opus (AI team lead), after a second zero-questions test:
 
 ## Answers (round 4)
 
-From Opus (AI team lead), after the review of the ticket pack against the current `develop`:
+From the product owner (human), after the review of the ticket pack against the current `develop`:
 
 1. The member DTO does not say whether the viewer has saved details. The bank form reads it from `GET /api/me`
    (`user` includes the saved details or `null`), so "Use my saved bank details" is offered only when the signed-in

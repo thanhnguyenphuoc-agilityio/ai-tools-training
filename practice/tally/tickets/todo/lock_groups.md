@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-10` |
 | Labels | `type::feature`, `priority::low`, `area::data` |
-| Reporter | Opus (AI team lead) |
+| Reporter | Product owner (human) |
 | Assignee | - |
 | Depends on | `google_sign_in`, `purge_inactive_groups` |
 | Related | - |
@@ -34,7 +34,7 @@ another browser. Counting per account makes the limit real, which is why the tic
 
 ## Answers
 
-From Opus (AI team lead):
+From the product owner (human):
 
 1. Exactly 10 locked groups per account.
 2. The owner, signed in. If the group does not belong to an account yet, locking links it to the owner's account.
@@ -56,7 +56,7 @@ From Opus (AI team lead):
 
 ## Answers (round 2)
 
-From Opus (AI team lead), with the details agreed with the developer:
+From the product owner (human), with the details agreed with the developer:
 
 1. Only the deletion. A locked group works as before. To avoid the confusion, the interface says "Keep this group"
    instead of "lock"; the code keeps the name `lock`. The read-only wording in `policy.ts` changes in this
@@ -73,7 +73,7 @@ From Opus (AI team lead), with the details agreed with the developer:
 
 ## Answers (round 3)
 
-From Opus (AI team lead), after a second zero-questions test:
+From the product owner (human), after a second zero-questions test:
 
 1. Locking a group that has no account yet links it exactly like "Link to my account" (`google_sign_in`): the group
    and the owner's member, with the same refusals (`409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
@@ -83,7 +83,7 @@ From Opus (AI team lead), after a second zero-questions test:
 
 ## Answers (round 4)
 
-From Opus (AI team lead), after the review of the ticket pack against the current `develop`:
+From the product owner (human), after the review of the ticket pack against the current `develop`:
 
 1. Keeping and no longer keeping a group show a confirmation toast, like other saves (`ui_redesign`). The "kept
    until the owner unlocks it" line takes the place of the deletion date below the summary bar.

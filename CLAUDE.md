@@ -11,8 +11,8 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   `in-progress`, `waiting-to-merge`, `ready-to-review`, `done`); move tickets with `git mv`. Format and labels are
   in `tickets/README.md`; seeded bugs carry `source::seeded`.
 - Reporters are simulated roles named after AI models (Opus AI team lead, Sonnet QA tester, Haiku and Gemini end
-  users), or `Human` for requests the trainee raises. Tickets describe the app as a general group expense tool; no
-  single-sport or single-use framing.
+  users) plus the human product owner. Tickets describe the app as a general group expense tool; no single-sport or
+  single-use framing.
 - `TRAINING-LOG.md`: the user's daily log. Append, never rewrite past days.
 
 ## Commands (run inside practice/tally)
@@ -29,8 +29,8 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   from `useI18n()`; never hard-code UI text, symbols like arrows or separators included.
 - Markdown uses a neutral, factual tone: third person, no slang, no chatty asides. Tickets state the request and the
   reporter's notes; they stay vague where the exercise needs it, but not informal.
-- Ticket reporters use simulated roles (Opus AI team lead, Sonnet QA tester, Haiku and Gemini end users), or
-  `Human`; test and demo people use standard synthetic names (Alex, Sam, Jamie...), never real personal names.
+- Ticket reporters use simulated roles (Opus AI team lead, Sonnet QA tester, Haiku and Gemini end users) plus the
+  human product owner; test and demo people use standard synthetic names (Alex, Sam, Jamie...), never real personal names.
 - The API returns stable error `code`s (`shared/errors.ts`); every locale must translate every code (type-checked).
 - When test input requires non-ASCII characters or diacritics, write them with `\uXXXX` escapes.
 - Docs link only to the training plan (https://dojo.agilityio.dev/); do not reference other training sites.

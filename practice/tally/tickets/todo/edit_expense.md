@@ -21,7 +21,7 @@ A member entered 2m instead of 200k and had to delete the expense and add it aga
 
 The ticket asks for expenses to be editable instead of deleted and re-entered. The open points are who may edit
 (author, owner, any member), which fields may change, and whether the previous values must be kept for the group
-to see. First step: settle the permission and history rules with Opus (AI team lead) before any design, as
+to see. First step: settle the permission and history rules with the product owner before any design, as
 `docs/business-rules.md` marks this as an open question.
 
 ## Clarifying questions
@@ -38,11 +38,11 @@ to see. First step: settle the permission and history rules with Opus (AI team l
 From Haiku (reporter):
 
 1. Both the author and the owner.
-2. The amount was the problem; other fields referred to Opus (AI team lead).
+2. The amount was the problem; other fields referred to the product owner.
 3. Other members should see that the expense was edited.
-4. and 5. Referred to Opus (AI team lead).
+4. and 5. Referred to the product owner.
 
-From Opus (AI team lead):
+From the product owner (human):
 
 2. All fields may change: amount, payer, participants, split, date and description.
 3. A visible "edited" marker is required in the first version. The previous values are recorded in the audit log;
@@ -52,7 +52,7 @@ From Opus (AI team lead):
 5. Nothing is blocked. Sent and confirmed transfers stay unchanged and balances are recalculated from the edited
    shares; any new difference is settled with a new transfer.
 
-From Opus (AI team lead), follow-up after review:
+From the product owner (human), follow-up after review:
 
 1. The author of the expense and the group owner may edit it. An expense without a recorded author can be edited
    only by the owner. The risk that a member reduces their own share is accepted for the first version: the

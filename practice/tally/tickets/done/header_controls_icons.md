@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-27` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
-| Reporter | Human |
+| Reporter | Product owner (human) |
 | Assignee | Developer (trainee) |
 | Depends on | - |
 | Related | `language_picker`, `theme_picker`, `ui_redesign` |
@@ -37,7 +37,7 @@ a phone.
 
 ## Answers
 
-From the human:
+From the product owner (human):
 
 1. Yes: a monitor for "same as device", a sun for light and a moon for dark, in the same segmented control.
 2. A dropdown whose button shows the flag and the name of the current language, with a chevron. The menu lists

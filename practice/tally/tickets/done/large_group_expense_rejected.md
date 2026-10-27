@@ -46,7 +46,7 @@ instead of the 16 KB the business rules require. Requests above 2 KB start at ab
 
 ## Clarifying questions
 
-- For Opus (AI team lead): with the 16 KB limit, an equal split fits about 257 participants (measured with the
+- For the product owner: with the 16 KB limit, an equal split fits about 257 participants (measured with the
   description "Monthly fee"). What is the maximum number of members in a group, and should groups larger than
   that be supported? This does not change the current rule and is not part of this fix. It is recorded as an
   OPEN QUESTION in the "Members" section of `docs/business-rules.md`.
