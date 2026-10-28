@@ -72,6 +72,7 @@ export const en = {
     expiry: {
       date: 'Deleted if nothing changes by {date}',
       soon: 'Add an expense or a transfer to keep it.',
+      kept: 'Kept until the owner stops keeping it',
     },
   },
   ownerKey: {
@@ -186,6 +187,15 @@ export const en = {
     removeHint: 'Their expenses stay in the history.',
     removeReason: 'Reason (optional)',
     removed: 'removed',
+  },
+  keepGroup: {
+    title: 'Keep this group',
+    label: 'Keep this group',
+    hint: 'A kept group is not deleted after inactivity. You can keep up to 10 groups.',
+    signInNote: 'Sign in to keep this group',
+    signIn: 'Sign in',
+    kept: 'This group is kept.',
+    released: 'This group is no longer kept. It is deleted after 10 days without changes.',
   },
   theme: {
     /** Name of the light/dark control in the header, for screen readers. */
@@ -310,6 +320,7 @@ export const en = {
     GROUP_OWNED_BY_OTHER_ACCOUNT: 'This group already belongs to another account.',
     ACCOUNT_ALREADY_MEMBER: 'Your account is already a member of this group.',
     MEMBER_LINKED_ELSEWHERE: 'This member is already linked to another account.',
+    LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
   } satisfies Record<ErrorCode, string>,
 };
 

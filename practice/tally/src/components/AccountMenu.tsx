@@ -22,7 +22,7 @@ declare global {
 }
 
 export function AccountMenu() {
-  const { config, user, refresh, signOut } = useAccount();
+  const { config, user, refresh, signOut, signInRequest } = useAccount();
   const { t, errorMessage } = useI18n();
   const notify = useToast();
   const [open, setOpen] = useState(false);
@@ -40,6 +40,12 @@ export function AccountMenu() {
     setError(null);
     if (refocus) button.current?.focus();
   }
+
+  useEffect(() => {
+    if (!signInRequest) return;
+    setOpen(true);
+    button.current?.focus();
+  }, [signInRequest]);
 
   useEffect(() => {
     if (!open) return;

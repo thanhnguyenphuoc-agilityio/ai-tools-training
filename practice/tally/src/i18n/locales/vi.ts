@@ -65,6 +65,7 @@ export const vi: Messages = {
     expiry: {
       date: 'Sẽ bị xoá nếu không có thay đổi trước {date}',
       soon: 'Thêm chi tiêu hoặc chuyển khoản để giữ lại nhóm.',
+      kept: 'Được giữ lại cho đến khi trưởng nhóm dừng giữ',
     },
   },
   ownerKey: {
@@ -177,6 +178,15 @@ export const vi: Messages = {
     removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
     removeReason: 'Lý do (không bắt buộc)',
     removed: 'đã bị xoá khỏi nhóm',
+  },
+  keepGroup: {
+    title: 'Giữ lại nhóm này',
+    label: 'Giữ lại nhóm này',
+    hint: 'Nhóm được giữ lại sẽ không bị xoá sau thời gian không hoạt động. Bạn có thể giữ tối đa 10 nhóm.',
+    signInNote: 'Đăng nhập để giữ lại nhóm này',
+    signIn: 'Đăng nhập',
+    kept: 'Nhóm này đã được giữ lại.',
+    released: 'Nhóm này không còn được giữ lại. Nhóm sẽ bị xoá sau 10 ngày nếu không có thay đổi.',
   },
   theme: {
     label: 'Giao diện',
@@ -294,6 +304,7 @@ export const vi: Messages = {
     GROUP_OWNED_BY_OTHER_ACCOUNT: 'Nhóm này đã thuộc về một tài khoản khác.',
     ACCOUNT_ALREADY_MEMBER: 'Tài khoản của bạn đã là thành viên trong nhóm này.',
     MEMBER_LINKED_ELSEWHERE: 'Thành viên này đã được liên kết với một tài khoản khác.',
+    LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
   },
 };
 
