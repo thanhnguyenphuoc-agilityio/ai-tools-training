@@ -44,6 +44,11 @@ export const vi: Messages = {
       title: 'Nhóm đã mở trên máy này',
       remove: 'Xoá {name} khỏi lịch sử',
     },
+    accountGroups: {
+      title: 'Nhóm của bạn',
+      hint: 'Các nhóm bạn đã tham gia hoặc sở hữu bằng tài khoản này, trên mọi thiết bị.',
+      empty: 'Chưa có nhóm nào liên kết với tài khoản của bạn.',
+    },
   },
   group: {
     notFound: 'Không tìm thấy nhóm này.',
