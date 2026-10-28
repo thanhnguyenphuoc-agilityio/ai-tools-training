@@ -1,4 +1,5 @@
 import { createApp, type Env } from './app';
+import { runDailyJobs } from './cleanup';
 
 const app = createApp();
 
@@ -6,4 +7,7 @@ const app = createApp();
 // everything else is served from the built web app.
 export default {
   fetch: app.fetch,
+  scheduled: async (controller, env, _ctx?: ExecutionContext) => {
+    await runDailyJobs(env, new Date(controller.scheduledTime));
+  },
 } satisfies ExportedHandler<Env>;

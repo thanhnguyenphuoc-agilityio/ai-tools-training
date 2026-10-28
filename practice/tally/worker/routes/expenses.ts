@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { exactSplitDifference, splitAmount, splitExact } from '../../shared/money';
 import type { NewExpense, SplitMode } from '../../shared/types';
-import { audit, loadActiveMemberIds, loadGroup, noneRemovedSql } from '../groupData';
+import { loadActiveMemberIds, loadGroup, noneRemovedSql, recordChange } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv } from '../http';
 import { requireCanDeleteExpense, requireMember } from '../policy';
 
@@ -68,7 +68,7 @@ expenseRoutes.post('/:code/expenses', async (c) => {
     if (!active.has(payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
     throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
   }
-  await audit(c.env.DB, group.code, me, 'expense.add', id);
+  await recordChange(c.env.DB, group.code, me, 'expense.add', id);
   return c.json({ id }, 201);
 });
 
@@ -105,6 +105,6 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
     if (!stillThere) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
     throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
   }
-  await audit(c.env.DB, group.code, me, 'expense.delete', id);
+  await recordChange(c.env.DB, group.code, me, 'expense.delete', id);
   return c.json({ ok: true });
 });
