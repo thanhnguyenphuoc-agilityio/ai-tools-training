@@ -28,6 +28,7 @@ export interface MemberDto extends BankDetails {
   /** Removed by the owner (remove_member). Kept so that past expenses and transfers still show the name. */
   removed: boolean;
   removedReason: string | null;
+  bankSource: 'group' | 'account' | null;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */
@@ -59,6 +60,7 @@ export interface TransferDto {
 export interface Me {
   memberId: string | null;
   isOwner: boolean;
+  accountLinked: boolean;
 }
 
 export interface GroupDto {
@@ -87,7 +89,7 @@ export interface CreateGroupResponse {
   ownerKey: string;
 }
 
-export interface UserDto {
+export interface UserDto extends BankDetails {
   id: string;
   name: string;
   email: string;

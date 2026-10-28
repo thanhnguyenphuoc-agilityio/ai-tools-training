@@ -1,25 +1,37 @@
 // Account authentication: Google ID token, development sign-in, session status and logout.
 import { Hono } from 'hono';
-import type { ConfigResponse, MeResponse, UserDto } from '../../shared/types';
+import type { BankDetails, ConfigResponse, MeResponse, UserDto } from '../../shared/types';
 import { createSession, endSession, resolveAccount } from '../auth';
 import { verifyGoogleIdToken } from '../google';
-import { ApiError, now, optionalText, readJson, text, type AppEnv } from '../http';
+import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv, type UserRow } from '../http';
+import { requireSignedIn } from '../policy';
 
 export const accountRoutes = new Hono<AppEnv>();
+
+function toUserDto(row: UserRow): UserDto {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    bankBin: row.bank_bin ?? null,
+    accountNo: row.account_no ?? null,
+    accountName: row.account_name ?? null,
+  };
+}
 
 /**
  * Creates the user for a Google account id or refreshes its email and name. One statement, so two first
  * sign-ins of the same person at the same moment cannot fail on the unique index of google_sub.
  */
-async function upsertUser(db: D1Database, googleSub: string, email: string, name: string): Promise<string> {
+async function upsertUser(db: D1Database, googleSub: string, email: string, name: string): Promise<UserRow> {
   const row = await db
     .prepare(
       `INSERT INTO users (id, google_sub, email, name, created_at) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name RETURNING id`,
+       ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name RETURNING *`,
     )
     .bind(crypto.randomUUID(), googleSub, email, name, now())
-    .first<{ id: string }>();
-  return row!.id;
+    .first<UserRow>();
+  return row!;
 }
 
 accountRoutes.get('/config', (c) => {
@@ -41,10 +53,10 @@ accountRoutes.post('/auth/google', async (c) => {
     clientId: c.env.GOOGLE_CLIENT_ID,
   });
 
-  const userId = await upsertUser(c.env.DB, googleUser.sub, googleUser.email, googleUser.name);
+  const userRow = await upsertUser(c.env.DB, googleUser.sub, googleUser.email, googleUser.name);
 
-  await createSession(c, userId);
-  const user: UserDto = { id: userId, name: googleUser.name, email: googleUser.email };
+  await createSession(c, userRow.id);
+  const user = toUserDto(userRow);
   return c.json({ user });
 });
 
@@ -63,10 +75,10 @@ accountRoutes.post('/auth/dev', async (c) => {
   const userName = optionalText(body.name, 'name', 80) ?? email.split('@')[0];
   const sub = 'dev:' + email.toLowerCase();
 
-  const userId = await upsertUser(c.env.DB, sub, email, userName);
+  const userRow = await upsertUser(c.env.DB, sub, email, userName);
 
-  await createSession(c, userId);
-  const user: UserDto = { id: userId, name: userName, email };
+  await createSession(c, userRow.id);
+  const user = toUserDto(userRow);
   return c.json({ user });
 });
 
@@ -81,6 +93,24 @@ accountRoutes.get('/me', async (c) => {
     return c.json({ user: null } satisfies MeResponse);
   }
   return c.json({
-    user: { id: account.id, name: account.name, email: account.email },
+    user: toUserDto(account),
   } satisfies MeResponse);
+});
+
+accountRoutes.patch('/me', async (c) => {
+  const account = await resolveAccount(c);
+  const userId = requireSignedIn(account);
+  const body = await readJson(c);
+  const current: BankDetails = {
+    bankBin: account!.bank_bin,
+    accountNo: account!.account_no,
+    accountName: account!.account_name,
+  };
+  const patch = bankDetails(body, current);
+  const updated = await c.env.DB.prepare(
+    'UPDATE users SET bank_bin = ?, account_no = ?, account_name = ? WHERE id = ? RETURNING *',
+  )
+    .bind(patch.bankBin, patch.accountNo, patch.accountName, userId)
+    .first<UserRow>();
+  return c.json({ user: toUserDto(updated!) });
 });
