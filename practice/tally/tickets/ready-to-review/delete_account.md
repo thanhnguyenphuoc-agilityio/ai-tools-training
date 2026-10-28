@@ -133,3 +133,27 @@ Commits: `docs(tickets): start delete_account with a plan`, `feat: add the audit
   - `npm run typecheck` and `npm run lint`: clean.
   - `npm test`: 33 files, 381 tests passed. Failing-first: the 8 DA API tests answered `404` before the route existed.
   - `npx playwright test --config playwright.local.config.ts e2e/delete-account.spec.ts` (port 5192): 8 passed.
+
+## Review
+
+Reviewed by Opus (AI team lead) with the `review-checklist` lens, against the draft merge `00dd49a` and the batch
+review fix `d921c4d`.
+
+Findings:
+
+- **Checked, no change:** every Answer is honoured. The six-statement batch matches the draft; the audit `INSERT` runs
+  before the `UPDATE` that clears `locked_at`; non-kept groups keep `last_activity_at`; the route uses
+  `requireSignedIn` from `worker/policy.ts` and `resolveAccount`/`clearSessionCookie` from `worker/auth.ts` (the
+  `d921c4d` form). `0006_audit_details.sql` is a plain `ADD COLUMN` with no default, safe on live D1. No
+  `ACCOUNT_OWNS_SHARED_GROUP` or `countSharedOwnedGroups` code leaked from the later draft.
+- **Fixed (minor):** `vi.ts` still spelled `savedBank.clear` and `savedBank.cleared` with "Xóa"/"xóa" while the rest of
+  the file, including this ticket's strings, uses "Xoá" (the `d921c4d` spelling fix). Both strings aligned.
+- **Fixed (minor):** a click on the dialog backdrop closed `DeleteAccountDialog` during the request, although Escape and
+  Cancel were blocked while deleting. The backdrop now closes only when not deleting.
+- **Skipped (accepted):** the product owner Answers line reads "From the product owner (human):" instead of the draft's
+  Opus line; the answer text is verbatim. In the real repo the product owner is the human.
+- **Skipped (not a defect):** `khóa` in `deleteAccount.ownerWarning` is copied verbatim from the draft and has no
+  "khoá" counterpart elsewhere in `vi.ts`.
+
+Checks on this branch (worktree): `npm run typecheck` and `npm run lint` clean; `npm test` 33 files, 381 passed;
+`npx playwright test --config playwright.local.config.ts` (port 5192) 100 passed (desktop and mobile).
