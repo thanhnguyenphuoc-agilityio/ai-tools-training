@@ -80,9 +80,14 @@ function findKeysDir(dir) {
   return path.dirname(repo);
 }
 
-/** True when a path segment names an answer key, or is a glob that could match one. */
+/**
+ * True when a path segment names an answer key, or is a glob that could match one. Variable names (`$TALLY_X`,
+ * `${TALLY_X}`, PowerShell `$env:TALLY_X`) are dropped first, so `$env:TALLY_X=[Environment]::...` is not read as a
+ * `tally*[` glob; the text around a variable is still checked.
+ */
 function namesKey(text) {
   return text
+    .replace(/\$(\{[^}]*\}|(env:)?\w+)/gi, '')
     .split(/[\\/]/)
     .some(
       (part) =>
