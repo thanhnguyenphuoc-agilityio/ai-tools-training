@@ -112,3 +112,25 @@ Branch `feat/joined_groups_list` from `develop`. No migration, no new error code
   - `npx playwright test --config playwright.local.config.ts`: 102 tests passed (desktop and mobile, port 5191); 10
     of them are this ticket's e2e tests.
   - Failing-first: before the route was mounted, all 6 API tests failed with `404` (`expected 404 to be 200`).
+
+## Review
+
+Reviewed by Opus (AI team lead) with the `review-checklist` lens, against the draft merge `09f796a`.
+
+Findings:
+
+- **Checked, no change:** every Answer is honoured. `GET /api/me/groups` is a read with no write, uses
+  `resolveAccount` (`worker/auth.ts`) and `requireSignedIn` (`worker/policy.ts`), returns only `code`, `name`,
+  `currency`, `isOwner` and `lastActivityAt`, and excludes removed members. The route, query and DTO match the draft.
+  The home page clears the account list on every account change and hides device entries already listed. No migration.
+- **Skipped (accepted gap):** JG-3 covers removal only. Member release (`POST .../members/:id/release`) is not on
+  `develop`, so there is nothing to test; when it is ported, it must clear `members.user_id` (as removal does) and
+  JG-3 should gain the release case.
+- **Skipped (accepted):** the product owner Answers line reads "From the product owner (human):" instead of the draft's
+  Opus line; the answer text is verbatim.
+- **Skipped (flaky, rerun green):** one Playwright run under parallel load failed `account.spec.ts` GS-11 at 360px
+  (desktop); the rerun of `account.spec.ts` and `joined-groups.spec.ts` passed 24 of 24.
+
+Checks on this branch (worktree): `npm run typecheck` and `npm run lint` clean; `npm test` 33 files, 379 passed;
+`npx playwright test --config playwright.local.config.ts` (port 5191) 101 passed and 1 flaky failure, then 24 of 24 on
+rerun.
