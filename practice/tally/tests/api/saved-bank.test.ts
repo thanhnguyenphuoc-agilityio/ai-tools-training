@@ -205,6 +205,41 @@ describe('saved bank details API', () => {
     expect(bobMember?.bankSource).toBeNull();
   });
 
+  it('SB-5: removed member with group details also shows nothing', async () => {
+    const owner = new Browser(env.env);
+    const code = (await owner.call('POST', '/groups', { name: 'Trip', ownerName: 'Alice' })).json.code;
+
+    const bob = new Browser(env.env);
+    await signIn(bob, 'bob@example.com');
+    await bob.call('PATCH', '/me', {
+      bankBin: '970415',
+      accountNo: '0123456789',
+      accountName: 'BOB',
+    });
+    const joinRes = await bob.call<{ id: string }>('POST', `/groups/${code}/members`, { name: 'Bob', claim: true });
+    const bobId = joinRes.json.id;
+
+    const groupBank = await bob.call('PATCH', `/groups/${code}/members/${bobId}`, {
+      bankBin: '970436',
+      accountNo: '9876543210',
+      accountName: 'BOB GROUP',
+    });
+    expect(groupBank.status).toBe(200);
+
+    expect((await owner.call('POST', `/groups/${code}/members/${bobId}/remove`, { reason: 'Moved away' })).status).toBe(
+      200,
+    );
+
+    const guest = new Browser(env.env);
+    const groupRes = await guest.call<GroupDto>('GET', `/groups/${code}`);
+    const bobMember = groupRes.json.members.find((m) => m.id === bobId);
+    expect(bobMember?.removed).toBe(true);
+    expect(bobMember?.bankBin).toBeNull();
+    expect(bobMember?.accountNo).toBeNull();
+    expect(bobMember?.accountName).toBeNull();
+    expect(bobMember?.bankSource).toBeNull();
+  });
+
   it('SB-7 API: PATCH /me without session returns 401 SIGN_IN_REQUIRED', async () => {
     const guest = new Browser(env.env);
     const res = await guest.call<ErrorBody>('PATCH', '/me', {
@@ -285,6 +320,43 @@ describe('saved bank details API', () => {
     expect(g1After?.last_activity_at).toBe(g1Before?.last_activity_at);
     expect(g2After?.last_activity_at).toBe(g2Before?.last_activity_at);
     expect(auditCountAfter).toBe(auditCountBefore);
+  });
+
+  it('SB-11: clearing the group details makes the saved details apply again', async () => {
+    const owner = new Browser(env.env);
+    const code = (await owner.call('POST', '/groups', { name: 'Trip', ownerName: 'Alice' })).json.code;
+
+    const bob = new Browser(env.env);
+    await signIn(bob, 'bob@example.com');
+    await bob.call('PATCH', '/me', {
+      bankBin: '970415',
+      accountNo: '0123456789',
+      accountName: 'BOB',
+    });
+    const joinRes = await bob.call<{ id: string }>('POST', `/groups/${code}/members`, { name: 'Bob', claim: true });
+    const bobId = joinRes.json.id;
+
+    const groupBank = await bob.call('PATCH', `/groups/${code}/members/${bobId}`, {
+      bankBin: '970436',
+      accountNo: '9876543210',
+      accountName: 'BOB GROUP',
+    });
+    expect(groupBank.status).toBe(200);
+
+    const cleared = await bob.call('PATCH', `/groups/${code}/members/${bobId}`, {
+      bankBin: '',
+      accountNo: '',
+      accountName: '',
+    });
+    expect(cleared.status).toBe(200);
+
+    const guest = new Browser(env.env);
+    const groupRes = await guest.call<GroupDto>('GET', `/groups/${code}`);
+    const bobMember = groupRes.json.members.find((m) => m.id === bobId);
+    expect(bobMember?.bankBin).toBe('970415');
+    expect(bobMember?.accountNo).toBe('0123456789');
+    expect(bobMember?.accountName).toBe('BOB');
+    expect(bobMember?.bankSource).toBe('account');
   });
 
   it('accountLinked: true for account member, false for device-only member', async () => {
