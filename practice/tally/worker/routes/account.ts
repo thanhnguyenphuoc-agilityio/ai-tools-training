@@ -1,7 +1,8 @@
 // Account authentication: Google ID token, development sign-in, session status and logout.
 import { Hono } from 'hono';
 import type { BankDetails, ConfigResponse, MeResponse, UserDto } from '../../shared/types';
-import { createSession, endSession, resolveAccount } from '../auth';
+import { clearSessionCookie, createSession, endSession, resolveAccount } from '../auth';
+import { deleteAccount } from '../accountDelete';
 import { verifyGoogleIdToken } from '../google';
 import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv, type UserRow } from '../http';
 import { requireSignedIn } from '../policy';
@@ -113,4 +114,11 @@ accountRoutes.patch('/me', async (c) => {
     .bind(patch.bankBin, patch.accountNo, patch.accountName, userId)
     .first<UserRow>();
   return c.json({ user: toUserDto(updated!) });
+});
+
+accountRoutes.delete('/me', async (c) => {
+  const userId = requireSignedIn(await resolveAccount(c));
+  await deleteAccount(c.env.DB, userId, now());
+  clearSessionCookie(c);
+  return c.json({ ok: true });
 });
