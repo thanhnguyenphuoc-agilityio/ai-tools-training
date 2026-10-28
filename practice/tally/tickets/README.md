@@ -87,5 +87,5 @@ an error, so run `node scripts/sync-board.mjs <project url> --repo <owner>/<name
 ## Dependencies
 
 - `joined_groups_list`, `saved_bank_details`, `lock_groups` and `delete_account` need `google_sign_in`.
-- `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details`.
+- `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details` and `lock_groups`.
 - `owner_member_tools` is interface work on top of existing API endpoints.

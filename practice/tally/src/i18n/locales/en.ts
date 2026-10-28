@@ -239,6 +239,7 @@ export const en = {
     devSubmit: 'Sign in',
     link: 'Link to my account',
     bankDetails: 'My bank details',
+    deleteAccount: 'Delete account',
   },
   savedBank: {
     title: 'My bank details',
@@ -251,6 +252,14 @@ export const en = {
     useDifferent: 'Use different details in this group',
     useSaved: 'Use my saved bank details',
     usingSavedNow: 'Using your saved bank details.',
+  },
+  deleteAccount: {
+    title: 'Delete account',
+    deleted: 'Your sign-in details, saved bank details and sessions on every device are deleted.',
+    kept: 'Groups and their data stay. Groups you keep from deletion are deleted after 10 days without changes.',
+    ownerWarning: 'You keep owner access only on devices that hold the owner key or through the recovery link.',
+    confirm: 'Delete my account',
+    done: 'Your account was deleted.',
   },
   csvExport: {
     download: 'Download CSV',
