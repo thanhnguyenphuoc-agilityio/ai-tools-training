@@ -213,3 +213,31 @@ Implements `saved_bank_details` (TAL-15). Allows signed-in users to save receivi
 - Kept clean develop baseline: did not import draft changes belonging to other tickets (`joined_groups_list`, `lock_groups`, `delete_account`, `owner_member_tools`).
 - Used existing `0004_accounts.sql` migration; no new migration required.
 - Aligned error handling with `errorMessage` in `SavedBankDialog` and `MembersPanel` matching real develop patterns.
+
+## Review
+
+Reviewer: Sonnet (AI team lead). Reviewed `git diff develop...feat/saved_bank_details`.
+
+Findings:
+
+- [minor] `docs/business-rules.md`: the "Not changes" list under automatic deletion named viewing, recovery links, identical settings and signing in, but not saving or clearing bank details in the account. The Accounts section already said this is not a group change. Added it to the list, including that it writes no audit row.
+- [minor] `tests/api/saved-bank.test.ts`: SB-5 covered a removed member who only had saved details, and SB-11 was covered in e2e but not in the API. Added the removed member who also has group details (nulls, `bankSource: null`) and the API case that clearing the group details brings the saved details back (`bankSource: 'account'`).
+
+Checked and found correct:
+
+- Identity stays in `worker/auth.ts`; the only new permission check is `requireSignedIn` in `worker/policy.ts`.
+- `PATCH /api/me` writes only the `users` row. It calls neither `recordChange` nor `audit`, so `last_activity_at` and `audit_log` stay as they are (SB-10). `GET` writes nothing.
+- `bankDetails` validates the body: a VietQR bank, an account number of 4-19 letters or digits, an account name up to 60 characters, and clearing the account number clears all three.
+- Saved details reach a group only through `toMemberDto`, and only for a member linked to the account. A guest sees them there because VietQR needs them; `GET /api/me` without a session returns `{ user: null }`; a removed member gets nulls from both sources. The email is still absent from group data.
+- `loadMembers` selects `m.*` plus aliased user columns. The shared names (`id`, `name`, `bank_bin`, `account_no`, `account_name`, `created_at`) come from `members`, so duplicate-name checks and active-member lookups keep the member's own values.
+- Bank numbers in tests and e2e are `0123456789` and `9876543210`. VietQR is unchanged and still limited to VND groups.
+- New UI text goes through `t()`. `savedBank.*` and `account.bankDetails` exist in both locales; `vi.ts` stays UTF-8 without a BOM. No new error code.
+- SCSS is one BEM block (`saved-bank`) with no color of its own. The dialog reuses existing blocks.
+- Fixture edits in `groups.test.ts`, `remove-member.test.ts` and the unit tests only add the new required fields (`bankSource`, `accountLinked`). No assertion was weakened.
+- No changes from `joined_groups_list`, `lock_groups`, `delete_account` or `owner_member_tools`. No new migration; the columns already exist in `0004_accounts.sql`.
+
+Checks after the fixes: `npm run typecheck` clean, `npm run lint` clean (oxlint and stylelint), `npm test` 31 files and 363 tests passing, `npx playwright test` 82 tests passing. No reruns.
+
+**Verdict:** approve with nits. Both findings are fixed on this branch.
+
+**Could I review this from the MR description alone?** No. The summary lists the behaviour but not the activity decision (no `recordChange`, no audit row) and not who sees the saved details, both of which the rules settle and the diff has to show.
