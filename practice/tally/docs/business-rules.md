@@ -187,6 +187,12 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - What an account restores:
   - An owner who signed in can access and manage their group on another device without the recovery link.
   - A member who signed in can act as their member on another device without claiming the name again.
+  - **Groups list (`joined_groups_list`):**
+    - A signed-in person sees a list of all groups they joined or own on any device.
+    - Groups opened only as a guest do not appear in the list.
+    - Groups from which the member was removed or released leave the list.
+    - The list is ordered by the latest change in the group (`last_activity_at`, newest first), then by code.
+    - On the home page, groups in the account list are omitted from the device history list.
 - Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
   claiming a name while signed in links that member to the account (`members.user_id`).
 - **Link to my account:**
