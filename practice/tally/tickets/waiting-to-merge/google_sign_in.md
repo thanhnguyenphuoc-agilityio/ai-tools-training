@@ -1,13 +1,13 @@
 # Sign in with Google
 
-| Field | Value |
-|---|---|
-| ID | `TAL-6` |
-| Labels | `type::feature`, `priority::high`, `area::auth` |
-| Reporter | Product owner (human) |
-| Assignee | Haiku (developer) |
-| Depends on | - |
-| Related | - |
+| Field      | Value                                           |
+| ---------- | ----------------------------------------------- |
+| ID         | `TAL-6`                                         |
+| Labels     | `type::feature`, `priority::high`, `area::auth` |
+| Reporter   | Product owner (human)                           |
+| Assignee   | Haiku (developer)                               |
+| Depends on | -                                               |
+| Related    | -                                               |
 
 ## Description
 
@@ -149,46 +149,50 @@ From the product owner (human), after the review of the ticket pack against the 
 
 Drafted by Sonnet (QA tester) from the criteria above.
 
-| ID | Scenario | Level |
-|---|---|---|
-| GS-1 | Guest and device-token flows unchanged (existing API and e2e suites) | API, e2e |
-| GS-2 | Create while signed in, then sign in on a second browser context: owner | API, e2e |
-| GS-3 | Join, then claim, while signed in; second context signed in: same member | API |
-| GS-4 | Link a group with the owner key; link a group owned by another account: 403 | API |
-| GS-5 | Same account as a second member of one group: refused | API |
-| GS-6 | Sign out keeps the owner key access of the device | API |
-| GS-7 | Expired session (fake clock) does not identify | API |
-| GS-8 | Dev sign-in: 404 without the flag, 404 with the flag on another host | API |
-| GS-9 | Group DTO never contains an email | API |
-| GS-10 | Google ID token check: wrong audience, wrong issuer, unverified email, expired: all refused | unit |
-| GS-11 | Sign-in button and account menu at 360px (one header row) and 1366px, both themes | e2e (dev sign-in) |
-| GS-12 | Removed linked member: account resolves to nothing, joins again as a new member | API |
-| GS-13 | Each refusal returns its code: `SIGN_IN_REQUIRED`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `INVALID_GOOGLE_TOKEN` | API |
-| GS-14 | Daily job deletes expired sessions only | API |
-| GS-15 | e2e sign-in works on a fresh clone (no `.dev.vars`) | e2e |
-| GS-16 | Link as a non-owner member: only the member is linked (`member.link`); as a visitor: `401 JOIN_FIRST` | API |
+| ID    | Scenario                                                                                                                                                       | Level             |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| GS-1  | Guest and device-token flows unchanged (existing API and e2e suites)                                                                                           | API, e2e          |
+| GS-2  | Create while signed in, then sign in on a second browser context: owner                                                                                        | API, e2e          |
+| GS-3  | Join, then claim, while signed in; second context signed in: same member                                                                                       | API               |
+| GS-4  | Link a group with the owner key; link a group owned by another account: 403                                                                                    | API               |
+| GS-5  | Same account as a second member of one group: refused                                                                                                          | API               |
+| GS-6  | Sign out keeps the owner key access of the device                                                                                                              | API               |
+| GS-7  | Expired session (fake clock) does not identify                                                                                                                 | API               |
+| GS-8  | Dev sign-in: 404 without the flag, 404 with the flag on another host                                                                                           | API               |
+| GS-9  | Group DTO never contains an email                                                                                                                              | API               |
+| GS-10 | Google ID token check: wrong audience, wrong issuer, unverified email, expired: all refused                                                                    | unit              |
+| GS-11 | Sign-in button and account menu at 360px (one header row) and 1366px, both themes                                                                              | e2e (dev sign-in) |
+| GS-12 | Removed linked member: account resolves to nothing, joins again as a new member                                                                                | API               |
+| GS-13 | Each refusal returns its code: `SIGN_IN_REQUIRED`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `INVALID_GOOGLE_TOKEN` | API               |
+| GS-14 | Daily job deletes expired sessions only                                                                                                                        | API               |
+| GS-15 | e2e sign-in works on a fresh clone (no `.dev.vars`)                                                                                                            | e2e               |
+| GS-16 | Link as a non-owner member: only the member is linked (`member.link`); as a visitor: `401 JOIN_FIRST`                                                          | API               |
 
 ## Plan
 
 Build `google_sign_in` on branch `feat/google_sign_in` off `develop`. Add optional Google sign-in with a dev sign-in stub for tests, migration `0004_accounts.sql`, account sessions in `auth.ts`, policies in `policy.ts`, linking endpoints, UI components, tests, and documentation.
 
 ### 1. Database schema (`migrations/0004_accounts.sql`)
+
 - Create `users` table: id, google_sub, email, name, bank_bin, account_no, account_name, created_at.
 - Create `sessions` table: token_hash, user_id (cascade delete), created_at, expires_at; index on expires_at.
 - Add `user_id` column to `members` with foreign key to users, set null on delete; partial unique index on (group_code, user_id) where user_id is not null.
 - Add `owner_user_id` column to `groups` with foreign key to users, set null on delete; index on owner_user_id.
 
 ### 2. Shared contracts
+
 - `shared/errors.ts`: add error codes `SIGN_IN_REQUIRED`, `INVALID_GOOGLE_TOKEN`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`.
 - `shared/types.ts`: add `UserDto`, `MeResponse`, `ConfigResponse`; add `canLinkAccount` to `GroupDto`.
 - `src/i18n/locales/*.ts`: translate new error codes and UI strings for `account.*` in both `en.ts` and `vi.ts`.
 
 ### 3. Identity and permissions
+
 - `worker/auth.ts`: add session management (`createSession`, `endSession`, `resolveAccount`, `deleteExpiredSessions`, `clearSessionCookie`). Update `Identity` to track `userId`, `hasOwnerKey`, `deviceMemberId`, `accountMemberId`. Update `resolveIdentity` so device token wins over account, and account resolves owner and member.
 - `worker/policy.ts`: add `requireAccount`, `requireSignedIn`, `requireGroupNotOwnedByOther`, `requireMemberLinkable`, `canLinkToAccount`. Update `requireNotMember` to check `accountMemberId` first (`ACCOUNT_ALREADY_MEMBER`), then `memberId` (`ALREADY_MEMBER`).
 - `worker/http.ts`: add `GOOGLE_CLIENT_ID` and `DEV_LOGIN` to `Env`, update `AppEnv` variables for user caching.
 
 ### 4. Google token verification and routes
+
 - `worker/google.ts`: verify RS256 Google ID tokens via WebCrypto SubtleCrypto with public certs fetching and caching.
 - `worker/routes/account.ts`: endpoints `/config`, `/auth/google`, `/auth/dev` (localhost and dev flag only), `/auth/logout`, `/me`.
 - `worker/accountLink.ts`: pure linking logic for groups and members with race handling.
@@ -199,6 +203,7 @@ Build `google_sign_in` on branch `feat/google_sign_in` off `develop`. Add option
 - `worker/app.ts`: mount account and link routes.
 
 ### 5. Frontend UI
+
 - `src/api.ts`: API methods for config, me, google sign-in, dev sign-in, sign-out, link account.
 - `src/account.tsx`: `AccountProvider` and `useAccount` hook providing auth state and reload triggering.
 - `src/components/AccountMenu.tsx` & `.scss`: header control with sign-in button (dev email form or Google GIS button) and account dropdown. Compact icon-only on mobile (<= 360px).
@@ -207,9 +212,18 @@ Build `google_sign_in` on branch `feat/google_sign_in` off `develop`. Add option
 - `src/App.tsx` & `src/main.tsx`: wrap with `AccountProvider` and place `AccountMenu` in header controls.
 
 ### 6. Tests and tooling
+
 - `vite.config.ts`: support `TALLY_PORT` and `TALLY_DEV_LOGIN`.
 - `tests/unit/google.test.ts`: test Google token verification with mock RS256 keys.
 - `tests/api/account.test.ts`: API tests covering all GS matrix scenarios (GS-1 to GS-9, GS-12 to GS-14, GS-16).
 - `e2e/account.spec.ts`: Playwright tests for dev sign-in, account menu at 360px and desktop, linking account.
 - `docs/business-rules.md` and `docs/design.md`: document account rules, design decisions, and status.
 
+## Merge request
+
+- Branch: `feat/google_sign_in` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- Built against `develop` (at `0f689e9`) with migration `0004_accounts.sql`. Token verification uses native WebCrypto without external dependencies (`jose`).
+- Unrelated features (`edit_expense`, `purge_inactive_groups`, `lock_groups`, `saved_bank_details`, `delete_account`) omitted. Daily session cleanup ready in `worker/cleanup.ts`.
+- Verified with Vitest (26 test files, 320 unit/API tests passing; 34 new tests across `tests/unit/google.test.ts` and `tests/api/account.test.ts`), CSS linting (`npm run lint:css`), and full Playwright e2e test suite (70 tests passing across desktop and mobile, including 14 tests in `e2e/account.spec.ts`).
+- Known limits: real Google sign-in requires `GOOGLE_CLIENT_ID` and is not exercised in automated tests; verified end-to-end via the dev sign-in form.

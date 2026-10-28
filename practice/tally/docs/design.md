@@ -45,11 +45,11 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 
 There are three identity sources, all resolved in `resolveIdentity()`:
 
-| Source | Client storage | Server storage | Provides |
-|---|---|---|---|
-| Owner key | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash` | `isOwner` |
-| Device token | cookie `tally_member_<code>` = `<memberId>.<token>` | `members.token_hash` | `memberId` |
-| *(`google_sign_in`)* Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
+| Source         | Client storage                                                    | Server storage                   | Provides                                              |
+| -------------- | ----------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------- |
+| Owner key      | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash`          | `isOwner`                                             |
+| Device token   | cookie `tally_member_<code>` = `<memberId>.<token>`               | `members.token_hash`             | `memberId`                                            |
+| Google session | cookie `tally_session` (path `/api`)                              | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
 `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
@@ -157,47 +157,66 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
-### google_sign_in, joined_groups_list, saved_bank_details
+### google_sign_in (built), joined_groups_list, saved_bank_details
 
 - **Migration `0004_accounts.sql`:**
   - Table `users(id, google_sub UNIQUE, email, name, bank_bin, account_no, account_name, created_at)`.
   - Table `sessions(token_hash PK, user_id, created_at, expires_at)`. Expired sessions are deleted by the daily
-    cleanup job (`purgeInactiveGroups` from `purge_inactive_groups`, or a job of its own if that ticket is not done yet).
+    cleanup job (`runDailyJobs` from `worker/cleanup.ts`).
   - Column `members.user_id`, with a unique index on `(group_code, user_id) WHERE user_id IS NOT NULL`.
   - Column `groups.owner_user_id`.
 - **Sign-in:**
-  - The client uses *Google Identity Services* (the "Sign in with Google" button) to obtain an ID token (JWT).
-  - The token is sent to `POST /api/auth/google`. The Worker verifies it with `jose` (`createRemoteJWKSet` with
-    `https://www.googleapis.com/oauth2/v3/certs`, Google's `issuer`, `audience` = `GOOGLE_CLIENT_ID`, and
-    `email_verified` required), upserts `users` and opens a session.
+  - The client uses _Google Identity Services_ to obtain an ID token (JWT).
+  - The token is sent to `POST /api/auth/google`. The Worker verifies it with WebCrypto in `worker/google.ts`
+    instead of a JWT library: it adds no dependency and the Workers runtime already provides WebCrypto. It verifies
+    the RS256 signature using Google's public JWKS (`https://www.googleapis.com/oauth2/v3/certs`, cached in module
+    scope per `Cache-Control`), checks issuer, `audience = GOOGLE_CLIENT_ID`, `email_verified` and expiry, upserts
+    `users` in one `INSERT ... ON CONFLICT(google_sub) DO UPDATE` and opens a 30-day session (`tally_session`).
+    `POST /api/auth/dev` shares the same upsert.
+  - A token whose `kid` is not in the cached keys refetches the keys at most once per 60 seconds
+    (`MIN_REFETCH_MS`): the endpoint is open to anyone, so forged tokens with random key ids must not cause one
+    outbound request each.
   - Only the `openid email profile` scopes are needed. No client secret is required.
 - **Configuration:**
-  - `GOOGLE_CLIENT_ID` (public value, in `vars` of `wrangler.jsonc`).
-  - A *Web* OAuth client ID in Google Cloud Console, with origins `http://localhost:5173` and the deployed domain.
+  - `GOOGLE_CLIENT_ID` (public value, in `vars` of `wrangler.jsonc`; empty string disables Google button).
+  - A _Web_ OAuth client ID in Google Cloud Console, with origins `http://localhost:5173` and the deployed domain.
 - **Development and tests:**
-  - `POST /api/auth/dev {email}`, enabled only when `DEV_LOGIN=true` (in `.dev.vars`, which is git-ignored)
-    **and** the hostname is `localhost`.
-  - API and e2e tests use this endpoint. A test must show that it returns 404 when either condition is missing.
-- **`resolveIdentity` gains a source:**
+  - `POST /api/auth/dev {email, name?}`, enabled only when `DEV_LOGIN=true` **and** the hostname is `localhost`.
+  - API and e2e tests use this endpoint. It returns 404 when either condition is missing.
+  - `TALLY_PORT` and `TALLY_DEV_LOGIN` allow running development and Playwright on separate ports (e2e on port 5174,
+    `reuseExistingServer: false`, so it never reuses a dev server started by hand on 5173).
+- **`resolveIdentity`:**
   - `Identity.userId`.
   - `isOwner` is also true when `groups.owner_user_id = userId`.
-  - `memberId` comes from `members.user_id` when there is no device cookie.
-- **Account linking:**
+  - `memberId` comes from device token if present, else from `members.user_id`.
+- **Account linking (`worker/accountLink.ts`, reused by `lock_groups`):**
   - Creating, joining or claiming while signed in sets `user_id` automatically.
-  - `POST /groups/:code/link` attaches a group used through cookies to the account: for the owner, the group and
-    the owner's member (`group.link`); for another member, that member only (`member.link`); otherwise
-    `401 JOIN_FIRST`.
-- **`joined_groups_list`:** `GET /api/me` returns `{ user, groups[] }`: existing groups where `owner_user_id = me` or a member has
-  `user_id = me`. The home page merges this list with the localStorage history.
+  - `POST /groups/:code/link` attaches a group used through cookies to the account. It records `group.link` (target:
+    the owner member) or `member.link` (target: the linked member) with `recordChange`, so linking moves
+    `last_activity_at`.
+  - "Both or nothing" for an owner: each of the two `UPDATE`s in the `db.batch` also requires the other row to be free
+    for this account (`EXISTS` subquery), so a request that lost a race changes neither `groups.owner_user_id` nor
+    `members.user_id`, and the route then answers the matching 403 or 409.
+  - `canLinkAccount` in `GET /groups/:code` comes from `canLinkToAccount` in `policy.ts`, which mirrors those checks
+    without throwing: the button is offered only when the request can succeed (nothing is linked yet, or the owner key
+    is held and only one of the two rows is linked to this account).
+  - A unique-index violation (`idx_members_group_user`) from two simultaneous joins, claims or links of one account
+    answers `409 ACCOUNT_ALREADY_MEMBER`, never `500`.
+  - Points (1) and (2) settled:
+    (1) `requireNotMember(me)` checks `me.accountMemberId` first (`409 ACCOUNT_ALREADY_MEMBER`), then `me.memberId`
+    (`409 ALREADY_MEMBER`).
+    (2) Both member removal and member release (`POST .../members/:id/release`) clear `members.user_id`, so released
+    and removed members no longer resolve to the account.
+- **`joined_groups_list`:** `GET /api/me` returns `{ user }`.
 - **`saved_bank_details`:**
   - `PATCH /api/me` stores bank details in `users`.
-  - A member with a `user_id` but no account of their own gets the profile's details in the DTO
+  - A member with a `user_id` but no account entered in the group gets the profile's details in the DTO
     (`LEFT JOIN users` in `loadMembers`, chosen in `toMemberDto`).
   - An account entered in the group always takes precedence over the profile.
 - **Files:**
-  - New: `worker/google.ts`, `worker/routes/account.ts`, `src/components/AccountMenu.tsx`.
-  - Changed: `auth.ts`, `groupData.ts`, `http.ts` (`Env`, Hono `user` variable), `shared/types.ts` (`UserDto`,
-    `MeResponse`, `ConfigResponse`).
+  - New: `worker/google.ts`, `worker/routes/account.ts`, `worker/accountLink.ts`, `worker/routes/link.ts`,
+    `src/account.tsx`, `src/components/AccountMenu.tsx` (+ `.scss`).
+  - Changed: `auth.ts`, `policy.ts`, `groupData.ts`, `http.ts`, `shared/types.ts`, `shared/errors.ts`, `locales/*.ts`.
 
 ### purge_inactive_groups
 
@@ -205,7 +224,8 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 
 - **Rules:** `shared/rules.ts` with `INACTIVE_DAYS = 10`, `expiresAt(lastActivityAt)` and `inactiveBefore(now)`.
 - **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)` and `runDailyJobs(env, now)`. Runs
-  `DELETE FROM groups WHERE last_activity_at < ? RETURNING code`.
+  `DELETE FROM groups WHERE last_activity_at < ? RETURNING code`. `google_sign_in` adds expired-session deletion to
+  the same job, which returns both counts.
   Child tables are removed by `ON DELETE CASCADE`, declared since v1.
 - **Schedule:**
   - `worker/index.ts` exports `scheduled()`.
@@ -317,6 +337,7 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 ### lint_conventions
 
 Built. Project conventions are checked automatically by `npm run lint`:
+
 - **JavaScript/TypeScript:** `oxlint` parses TypeScript 7.x directly without needing `typescript-eslint` peer dependencies. A custom JS plugin (`practice/tally/lint/tally-plugin.mjs`, rule `tally/no-literal-ui-text`) ensures all user-facing JSX text and attributes (`aria-label`, `title`, `placeholder`, `alt`) come from `t()`/`tp()` in `src/i18n/locales`. The rule inspects bare JSX text, string literals in JSX expression containers (`{'...'}`), template literals, and conditional/logical expression branches, while allowing whitespace-only layout literals (`{' '}`) and non-target attributes (`className`, `key`, `href`). Built-in plugins `typescript` and `react` provide correctness checks and React hooks validation (`exhaustive-deps`).
 - **Styles:** `stylelint` with `stylelint-config-standard-scss` enforces BEM class selectors (`selector-class-pattern`) and forbids raw hex and named colors outside `src/styles/base/_themes.scss` (`color-no-hex`, `color-named`). Stylistic and layout rules managed by Prettier are turned off in `stylelint.config.mjs`.
 

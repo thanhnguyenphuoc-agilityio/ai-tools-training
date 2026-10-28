@@ -22,17 +22,26 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: space(2);
+    gap: space(1);
     padding: space(4) 0;
+
+    @include up(sm) {
+      gap: space(2);
+    }
   }
 
   &__brand {
     display: inline-flex;
     align-items: center;
-    gap: space(2);
+    gap: space(1);
     color: var(--color-text);
     font-weight: 700;
-    font-size: font-size(lg);
+    font-size: font-size(base);
+
+    @include up(sm) {
+      gap: space(2);
+      font-size: font-size(lg);
+    }
 
     &:hover {
       text-decoration: none;
@@ -44,18 +53,27 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: $radius-md;
     background: var(--color-accent);
     color: var(--color-on-accent);
+
+    @include up(sm) {
+      width: 32px;
+      height: 32px;
+    }
   }
 
   // Preference controls (language, theme) stay together at the end of the row.
   &__controls {
     display: flex;
     align-items: center;
-    gap: space(2);
+    gap: space(1);
     margin-inline-start: auto;
+
+    @include up(sm) {
+      gap: space(2);
+    }
   }
 }

@@ -198,6 +198,19 @@ export const vi: Messages = {
     inviteCopied: 'Đã sao chép link mời.',
     recoveryCopied: 'Đã sao chép link khôi phục.',
     joined: 'Bạn đã vào nhóm.',
+    signedIn: 'Đã đăng nhập.',
+    signedOut: 'Đã đăng xuất.',
+    accountLinked: 'Đã liên kết với tài khoản của bạn.',
+  },
+  account: {
+    signIn: 'Đăng nhập',
+    signOut: 'Đăng xuất',
+    menuLabel: 'Tài khoản: {name}',
+    devTitle: 'Đăng nhập thử nghiệm',
+    devEmail: 'Email',
+    devEmailPlaceholder: 'alex@example.com',
+    devSubmit: 'Đăng nhập',
+    link: 'Liên kết với tài khoản của tôi',
   },
   csvExport: {
     download: 'Tải file CSV',
@@ -262,6 +275,12 @@ export const vi: Messages = {
     MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
     CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
     EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể xoá được nữa.',
+    ALREADY_MEMBER: 'Thiết bị này đã là thành viên trong nhóm.',
+    SIGN_IN_REQUIRED: 'Vui lòng đăng nhập trước.',
+    INVALID_GOOGLE_TOKEN: 'Không thể xác thực đăng nhập Google.',
+    GROUP_OWNED_BY_OTHER_ACCOUNT: 'Nhóm này đã thuộc về một tài khoản khác.',
+    ACCOUNT_ALREADY_MEMBER: 'Tài khoản của bạn đã là thành viên trong nhóm này.',
+    MEMBER_LINKED_ELSEWHERE: 'Thành viên này đã được liên kết với một tài khoản khác.',
   },
 };
 

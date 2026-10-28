@@ -210,6 +210,19 @@ export const en = {
     inviteCopied: 'Invite link copied.',
     recoveryCopied: 'Recovery link copied.',
     joined: 'You joined the group.',
+    signedIn: 'Signed in.',
+    signedOut: 'Signed out.',
+    accountLinked: 'Linked to your account.',
+  },
+  account: {
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    menuLabel: 'Account: {name}',
+    devTitle: 'Development sign-in',
+    devEmail: 'Email',
+    devEmailPlaceholder: 'alex@example.com',
+    devSubmit: 'Sign in',
+    link: 'Link to my account',
   },
   csvExport: {
     download: 'Download CSV',
@@ -278,6 +291,12 @@ export const en = {
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
     EXPENSE_HAS_REMOVED_MEMBER:
       'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
+    ALREADY_MEMBER: 'This device is already a member of the group.',
+    SIGN_IN_REQUIRED: 'Sign in first.',
+    INVALID_GOOGLE_TOKEN: 'The Google sign-in could not be verified.',
+    GROUP_OWNED_BY_OTHER_ACCOUNT: 'This group already belongs to another account.',
+    ACCOUNT_ALREADY_MEMBER: 'Your account is already a member of this group.',
+    MEMBER_LINKED_ELSEWHERE: 'This member is already linked to another account.',
   } satisfies Record<ErrorCode, string>,
 };
 

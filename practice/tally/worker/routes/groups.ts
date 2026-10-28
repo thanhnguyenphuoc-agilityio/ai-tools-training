@@ -4,10 +4,10 @@ import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
 import { expiresAt } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
-import { memberCookieName, ownerCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
+import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
 import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { requireOwner } from '../policy';
+import { canLinkToAccount, requireOwner } from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -30,6 +30,9 @@ groupRoutes.post('/', async (c) => {
   const groupCurrency = currency(body.currency ?? DEFAULT_CURRENCY);
   const rounding = roundTo(body.roundTo, groupCurrency);
 
+  const account = await resolveAccount(c);
+  const userId = account?.id ?? null;
+
   const code = generateGroupCode();
   const ownerKey = randomToken();
   const memberId = crypto.randomUUID();
@@ -38,11 +41,11 @@ groupRoutes.post('/', async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), at, at),
+      'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, owner_user_id, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), userId, at, at),
     c.env.DB.prepare(
-      'INSERT INTO members (id, group_code, name, token_hash, is_owner, created_at) VALUES (?, ?, ?, ?, 1, ?)',
-    ).bind(memberId, code, ownerName, await sha256Hex(memberToken), at),
+      'INSERT INTO members (id, group_code, name, token_hash, user_id, is_owner, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
+    ).bind(memberId, code, ownerName, await sha256Hex(memberToken), userId, at),
   ]);
 
   setGroupCookie(c, code, ownerCookieName(code), ownerKey);
@@ -59,6 +62,9 @@ groupRoutes.get('/:code', async (c) => {
     loadMembers(db, group.code),
     loadLedger(db, group.code),
   ]);
+  const ownerMember = members.find((m) => m.is_owner === 1 && !m.removed_at) ?? null;
+  const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
+  const canLinkAccount = canLinkToAccount(me, group, ownerMember, deviceMember);
 
   const dto: GroupDto = {
     code: group.code,
@@ -69,10 +75,11 @@ groupRoutes.get('/:code', async (c) => {
     lastActivityAt: group.last_activity_at,
     expiresAt: expiresAt(group.last_activity_at),
     currencyLocked: await isCurrencyLocked(db, group.code),
+    canLinkAccount,
     members: members.map(toMemberDto),
     expenses,
     transfers,
-    me,
+    me: { memberId: me.memberId, isOwner: me.isOwner },
   };
   return c.json(dto);
 });
