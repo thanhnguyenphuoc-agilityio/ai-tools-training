@@ -189,3 +189,20 @@ Branch `feat/purge_inactive_groups` off `develop`. Migration `0003_activity_rese
 - `docs/design.md`: document `purge_inactive_groups` architecture, scheduled cron, `recordChange`, `GroupExpiry`, updated migration numbering (0003 activity reset, 0004 accounts, 0005 lock, 0006 attachments).
 - `README.md`: update privacy section to state groups are deleted automatically after 10 days.
 
+## Merge request
+
+- Branch: `feat/purge_inactive_groups` into `develop`.
+- Implements automatic deletion of inactive groups after 10 days without changes (TAL-12).
+- How tested:
+  - `npm run typecheck`: clean (excluding pre-existing jsqr/pngjs missing types in settle-up.spec.ts).
+  - `npm run lint`: clean (0 errors, 0 warnings across oxlint and stylelint).
+  - `npm test`: 28 files, 316 unit + API tests passed.
+  - Playwright: 6 passed in `e2e/purge.spec.ts` (desktop and mobile).
+- Adapted from draft (`dd7a3bb` + `8062ddb`):
+  - Numbered migration as `0003_activity_reset.sql` instead of draft's `0004_activity_reset.sql`, matching develop baseline (0001, 0002) and `docs/design.md`.
+  - Maintained roadmap numbering: `0004_accounts.sql`, `0005_group_lock.sql`, `0006_attachments.sql`.
+  - Excluded all changes belonging to `edit_expense` (such as `expenses.edited_at`, `audit_log.details`, `expense.edit` route handler) and `google_sign_in` (account links, sessions).
+  - `recordChange` in `worker/groupData.ts` omits `details` column update since `0003_expense_edits` is not on develop.
+  - Used pure state initialization for `now` in `GroupExpiry` to satisfy oxlint purity rule.
+
+

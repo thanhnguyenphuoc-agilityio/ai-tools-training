@@ -32,7 +32,7 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 | `worker/routes/*.ts` | One file per resource | Add a new file rather than growing an existing one |
 | `worker/auth.ts` | **The only place** that answers "who is calling" | Add identity sources (for example a Google session) |
 | `worker/policy.ts` | **The only place** that answers "may they do this" | Add new permission rules |
-| `worker/groupData.ts` | Reads groups and members, `touch`, `audit` | Add columns to DTOs |
+| `worker/groupData.ts` | Reads groups and members, `audit`, `recordChange` | Add columns to DTOs |
 | `worker/http.ts` | `Env`, `ApiError`, input validation | Add new bindings to `Env` |
 | `migrations/NNNN_*.sql` | Schema, numbered in order | **One new migration per feature**; existing migrations are never edited |
 | `src/api.ts` | Typed client for every endpoint | Add a function per new endpoint |
@@ -65,7 +65,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
 - No `CHECK (x IN (...))` for extensible enum-like values, because SQLite has to rebuild the table to change one.
   Values are validated in code.
-- `last_activity_at` has been maintained since v1 (`audit()` and member GETs), so `purge_inactive_groups` has data to work with.
+- `last_activity_at` tracks the time of the last change (through `recordChange` in `worker/groupData.ts`). Viewing does not move it. Used by `purge_inactive_groups`.
 
 ## 5. Language, currency and interface
 
@@ -201,20 +201,25 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 
 ### purge_inactive_groups
 
+Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
+
 - **Rules:** `shared/rules.ts` with `INACTIVE_DAYS = 10`, `expiresAt(lastActivityAt)` and `inactiveBefore(now)`.
-- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)`, running
-  `DELETE FROM groups WHERE last_activity_at < ?`.
-  Child tables are removed by `ON DELETE CASCADE`, declared since v1. This ticket does not depend on accounts or locks;
-  `lock_groups` and `google_sign_in` extend the same function later.
+- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)` and `runDailyJobs(env, now)`. Runs
+  `DELETE FROM groups WHERE last_activity_at < ? RETURNING code`.
+  Child tables are removed by `ON DELETE CASCADE`, declared since v1.
 - **Schedule:**
-  - `worker/index.ts` also exports `scheduled()`.
-  - `wrangler.jsonc` gains `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time).
+  - `worker/index.ts` exports `scheduled()`.
+  - `wrangler.jsonc` has `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time).
   - Tests call `purgeInactiveGroups` directly with a fake `now`.
 - **Migration:** `0003_activity_reset.sql` sets `last_activity_at` of every existing group to the migration time,
-  so that no group is deleted by the first run (decided in the ticket).
-- **Activity:** only changes move `last_activity_at` (list in the ticket); viewing no longer does. Planned
-  migrations are numbered in build order: `0003` this ticket, `0004` accounts, `0005` lock, `0006` attachments.
-- **UI:** shows the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours.
+  so that no group is deleted by the first run.
+- **Activity:** only changes move `last_activity_at` (through `recordChange` in `worker/groupData.ts`); viewing and recovery links no longer do.
+- **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
+- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). The claim is audited with `audit()` only.
+  - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
+- **Migration numbers:** `0003_activity_reset.sql` is built. `0004_accounts.sql` (`google_sign_in`), `0005_group_lock.sql` (`lock_groups`), `0006_attachments.sql` (`receipt_photos`).
+- **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours.
+- **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
 ### lock_groups
 
@@ -224,7 +229,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - Require both `isOwner` and `userId`, because the limit is counted per person.
   - If `owner_user_id` is empty, it is set to the current account. If the group belongs to another account, 403.
   - Count `locked_at IS NOT NULL AND owner_user_id = ?`. When the count is >= `MAX_LOCKED_GROUPS`, 409.
-  - Unlocking calls `touch`, so the expiry restarts from the moment of unlocking.
+  - Unlocking calls `recordChange`, so the expiry restarts from the moment of unlocking.
 - **Permissions:** `requireOwnerAccount(me)` in `policy.ts`.
 - A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep
   this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).

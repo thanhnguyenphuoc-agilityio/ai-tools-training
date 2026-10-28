@@ -25,9 +25,14 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Supported: VND, USD, EUR, GBP, AUD, SGD, THB, CNY, JPY, KRW.
   - The currency can be changed only while the group has **no expenses and no transfers**. Deleted expenses count too,
     because they stay in the history with their amounts in the original currency.
-- Every change is recorded in `audit_log` and counts as group **activity** (`last_activity_at`).
-  A member viewing the group also counts as activity (current behaviour). A guest (not joined) viewing it does not.
-  OPEN QUESTION: once inactive groups are deleted, should viewing still count as activity? (`purge_inactive_groups`)
+- **Automatic deletion (`purge_inactive_groups`):**
+  - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
+  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, and saving group settings that differ from the current values.
+  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, and signing in. None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings and signing in write nothing.
+  - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
+  - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
+  - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
+  - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
 
 ## Members
 
@@ -186,10 +191,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
   the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
   shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
-  that caused them and stay until the next attempt.
-- **Group summary:** above the tabs, the group page shows the total spent, the number of current members and, for
+  that caused them and stay until the next attempt. Saving group settings that are identical to the stored ones changes
+  nothing, so it shows no message.
+- **Group summary and deletion date:** above the tabs, the group page shows the total spent, the number of current members and, for
   a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
-  count, as in the balances. A visitor who has not joined sees no personal balance.
+  count, as in the balances. A visitor who has not joined sees no personal balance. Directly below the summary bar, the deletion date line shows when the group will be deleted if no changes are made, highlighted during the last 72 hours.
 - **Phones:** below 768px wide, the group tabs are a bar at the bottom of the screen.
 
 ## Planned (in the backlog)

@@ -55,7 +55,7 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
   themselves.
 - **VietQR is VND only.** Groups in other currencies show the account details without a QR code.
 - **Privacy.** Groups contain bank account numbers, so codes are long and random, secrets are stored only as hashes,
-  and inactive groups are planned to be deleted automatically (`purge_inactive_groups`).
+  and inactive groups are deleted automatically after 10 days without changes (`purge_inactive_groups`).
 
 ### Not in the MVP
 
