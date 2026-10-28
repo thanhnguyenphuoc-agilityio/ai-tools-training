@@ -115,3 +115,15 @@ export interface NewExpense {
   /** `weight` is read in weight mode; `amount` (minor units, zero allowed) in exact mode. */
   participants: { memberId: string; weight?: number; amount?: number }[];
 }
+
+export interface MyGroupDto {
+  code: string;
+  name: string;
+  currency: string;
+  isOwner: boolean;
+  lastActivityAt: string;
+}
+
+export interface MyGroupsResponse {
+  groups: MyGroupDto[];
+}

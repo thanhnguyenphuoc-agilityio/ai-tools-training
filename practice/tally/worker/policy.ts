@@ -9,7 +9,7 @@ export function requireAccount(me: Identity): string {
   return me.userId;
 }
 
-/** A route outside a group (`/me`) that needs a signed-in account; there is no group identity to resolve. */
+/** A route outside a group (`/me`, `/me/groups`) that needs a signed-in account; there is no group identity to resolve. */
 export function requireSignedIn(account: { id: string } | null): string {
   if (!account) throw new ApiError(401, 'SIGN_IN_REQUIRED', 'sign in first');
   return account.id;
