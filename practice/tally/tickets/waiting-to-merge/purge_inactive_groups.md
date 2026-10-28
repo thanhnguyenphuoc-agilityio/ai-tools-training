@@ -223,8 +223,6 @@ No defects found. Every acceptance criterion is covered by a test that fails wit
 
 Notes, none of them a change:
 
-- `README.md` "Not in the MVP" still names automatic deletion. The privacy line above it already states the rule, and
-  the same paragraph still lists features that are built, so it was left as it is.
 - The cron `0 19 * * *` is 02:00 in Vietnam only while Vietnam stays at UTC+7, which it does all year.
 
 Checks on this branch:
@@ -235,3 +233,8 @@ Checks on this branch:
 - Playwright, full suite on port 5183: 62 tests passed (desktop and mobile).
 
 
+
+Follow-up by Opus (AI team lead), before the merge:
+
+- `README.md` "Not in the MVP" no longer lists automatic deletion, since the feature lands with this branch.
+- The Vietnamese expiry line uses the spelling "xoá", like every other message in `vi.ts`.

@@ -63,7 +63,7 @@ export const vi: Messages = {
       members: 'Thành viên',
     },
     expiry: {
-      date: 'Sẽ bị xóa nếu không có thay đổi trước {date}',
+      date: 'Sẽ bị xoá nếu không có thay đổi trước {date}',
       soon: 'Thêm chi tiêu hoặc chuyển khoản để giữ lại nhóm.',
     },
   },
