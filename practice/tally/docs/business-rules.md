@@ -27,12 +27,20 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     because they stay in the history with their amounts in the original currency.
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
-  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, and saving group settings that differ from the current values.
+  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
   - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings, signing in and saving account bank details write nothing.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
   - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
+  - **Kept groups (`lock_groups`):**
+    - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
+    - If the group does not belong to an account yet, keeping it links the group and the owner member to the owner's account with the same checks and refusals as "Link to my account" (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
+    - Kept groups are exempt from the daily purge (`locked_at IS NULL`).
+    - Unlocking restarts the 10 days: `last_activity_at` is set to the unlock time, so the expiry is 10 days after the unlock.
+    - Keeping and unlocking are changes audited in `audit_log` as `group.lock` and `group.unlock`.
+    - A kept group stays fully editable: expenses, transfers, and members can still be added or changed.
+    - Everyone who views the group sees "Kept until the owner stops keeping it" instead of the deletion date line, without warning colors. Members and guests see no keep control.
 
 ## Members
 

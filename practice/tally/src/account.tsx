@@ -10,6 +10,8 @@ interface AccountContextValue {
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   version: number;
+  requestSignIn: () => void;
+  signInRequest: number;
 }
 
 const AccountContext = createContext<AccountContextValue | null>(null);
@@ -18,7 +20,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [user, setUser] = useState<UserDto | null>(null);
   const [version, setVersion] = useState(0);
+  const [signInRequest, setSignInRequest] = useState(0);
   const notify = useToast();
+
+  const requestSignIn = () => setSignInRequest((n) => n + 1);
 
   const refresh = async () => {
     try {
@@ -49,7 +54,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AccountContext.Provider value={{ config, user, refresh, signOut, version }}>{children}</AccountContext.Provider>
+    <AccountContext.Provider value={{ config, user, refresh, signOut, version, requestSignIn, signInRequest }}>
+      {children}
+    </AccountContext.Provider>
   );
 }
 

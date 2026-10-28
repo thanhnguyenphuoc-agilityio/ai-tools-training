@@ -12,6 +12,7 @@ export interface GroupRow {
   round_to: number;
   owner_key_hash: string;
   owner_user_id: string | null;
+  locked_at: string | null;
   last_activity_at: string;
   created_at: string;
 }

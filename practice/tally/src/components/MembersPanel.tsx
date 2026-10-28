@@ -6,6 +6,7 @@ import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { KeepGroup } from './KeepGroup';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
@@ -300,6 +301,7 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
         {error && <p className="text text--error">{error}</p>}
         <button className="button button--block-mobile">{t('common.save')}</button>
       </form>
+      <KeepGroup group={group} onSaved={onSaved} />
     </section>
   );
 }

@@ -52,8 +52,8 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
-A future rule such as "a closed group is read-only" (not planned; `lock_groups` does not do this) only needs
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
+A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
 ## 4. Data
@@ -228,8 +228,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 
 - **Rules:** `shared/rules.ts` with `INACTIVE_DAYS = 10`, `expiresAt(lastActivityAt)` and `inactiveBefore(now)`.
-- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)` and `runDailyJobs(env, now)`. Runs
-  `DELETE FROM groups WHERE last_activity_at < ? RETURNING code`. `google_sign_in` adds expired-session deletion to
+- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)` and `runDailyJobs(env, now)`, running
+  `DELETE FROM groups WHERE last_activity_at < ? AND locked_at IS NULL RETURNING code`. `google_sign_in` adds expired-session deletion to
   the same job, which returns both counts.
   Child tables are removed by `ON DELETE CASCADE`, declared since v1.
 - **Schedule:**
@@ -242,22 +242,28 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). The claim is audited with `audit()` only.
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0003_activity_reset.sql` is built. `0004_accounts.sql` (`google_sign_in`), `0005_group_lock.sql` (`lock_groups`), `0006_attachments.sql` (`receipt_photos`).
-- **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours.
+- **Migration numbers:** `0005_group_lock.sql` (`lock_groups`) is now the newest migration, after `0004_accounts.sql` (`google_sign_in`). `0006` stays reserved for `receipt_photos` (`0006_attachments.sql`). They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
-### lock_groups
+### lock_groups (built)
 
-- **Migration:** `0005_group_lock.sql` adds `groups.locked_at`.
+- **Migration:** `0005_group_lock.sql` adds `groups.locked_at` (`TEXT`, NULL = not locked). No new index: the count uses the existing `idx_groups_owner_user`.
 - **Purge:** `purgeInactiveGroups` gains `AND locked_at IS NULL`.
-- **Endpoints:** `POST` and `DELETE /groups/:code/lock`.
-  - Require both `isOwner` and `userId`, because the limit is counted per person.
-  - If `owner_user_id` is empty, it is set to the current account. If the group belongs to another account, 403.
-  - Count `locked_at IS NOT NULL AND owner_user_id = ?`. When the count is >= `MAX_LOCKED_GROUPS`, 409.
-  - Unlocking calls `recordChange`, so the expiry restarts from the moment of unlocking.
+- **Endpoints:**
+  - `POST /groups/:code/lock`: answers `{ ok: true, changed: boolean }`.
+  - `DELETE /groups/:code/lock`: answers `{ ok: true, changed: boolean }`.
+  - `GET /groups/:code`: returns `GroupDto` with `locked: boolean` and `expiresAt: string | null` (`null` while kept).
+  - Require both `isOwner` and `userId` (`requireOwnerAccount(me)` in `policy.ts`), because the limit is counted per person.
+  - Check order (round 3, answer 2): `403 OWNER_ONLY` comes first, whether the visitor is signed in or not; then `401 SIGN_IN_REQUIRED` for an owner without an account session.
+  - A group with no account yet is linked exactly like "Link to my account": the route calls `linkToAccount` (`worker/accountLink.ts`) before it locks, so the group and the owner member are linked together, all or nothing. Its refusals apply: `403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`. After that `canLinkAccount` is false for the group. Setting `groups.owner_user_id` alone would leave the owner member unlinked and `canLinkAccount` still true.
+  - Count `SELECT COUNT(*) FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL`. When the count is >= `MAX_LOCKED_GROUPS` (10), answers `409 LOCK_LIMIT_REACHED` with params `{ max: 10 }`.
+  - Repeat lock or repeat unlock returns `{ ok: true, changed: false }` and writes nothing.
+  - Unlocking is a change (`recordChange`), so `last_activity_at` is set to the unlock time and the expiry restarts from the moment of unlocking (unlock + 10 days).
 - **Permissions:** `requireOwnerAccount(me)` in `policy.ts`.
-- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep
-  this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
+- **UI:** `<KeepGroup>` component rendered at the end of `OwnerSettings` in `MembersPanel.tsx`. `<GroupExpiry>` renders `t('group.expiry.kept')` without warning colors when locked.
+- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
+- **Tests:** `tests/api/lock-groups.test.ts`, `e2e/lock-groups.spec.ts`.
 
 ### receipt_photos
 

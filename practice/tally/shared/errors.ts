@@ -49,6 +49,7 @@ export const ERROR_CODES = [
   'GROUP_OWNED_BY_OTHER_ACCOUNT',
   'ACCOUNT_ALREADY_MEMBER',
   'MEMBER_LINKED_ELSEWHERE',
+  'LOCK_LIMIT_REACHED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

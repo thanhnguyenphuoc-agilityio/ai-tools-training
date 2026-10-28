@@ -6,7 +6,10 @@ import type { Env } from './app';
 export async function purgeInactiveGroups(db: D1Database, now: Date): Promise<number> {
   const cutoff = inactiveBefore(now);
   // RETURNING gives one row per deleted group; `meta.changes` would also count the cascaded child rows.
-  const result = await db.prepare('DELETE FROM groups WHERE last_activity_at < ? RETURNING code').bind(cutoff).all();
+  const result = await db
+    .prepare('DELETE FROM groups WHERE last_activity_at < ? AND locked_at IS NULL RETURNING code')
+    .bind(cutoff)
+    .all();
   return result.results.length;
 }
 

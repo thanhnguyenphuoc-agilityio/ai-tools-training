@@ -2,12 +2,13 @@
 import { Hono } from 'hono';
 import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
-import { expiresAt } from '../../shared/rules';
+import { expiresAt, MAX_LOCKED_GROUPS } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
 import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
+import { linkToAccount } from '../accountLink';
 import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { canLinkToAccount, requireOwner } from '../policy';
+import { canLinkToAccount, requireGroupNotOwnedByOther, requireOwner, requireOwnerAccount } from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -66,6 +67,7 @@ groupRoutes.get('/:code', async (c) => {
   const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
   const canLinkAccount = canLinkToAccount(me, group, ownerMember, deviceMember);
 
+  const locked = group.locked_at !== null;
   const dto: GroupDto = {
     code: group.code,
     name: group.name,
@@ -73,7 +75,8 @@ groupRoutes.get('/:code', async (c) => {
     roundTo: group.round_to,
     createdAt: group.created_at,
     lastActivityAt: group.last_activity_at,
-    expiresAt: expiresAt(group.last_activity_at),
+    expiresAt: locked ? null : expiresAt(group.last_activity_at),
+    locked,
     currencyLocked: await isCurrencyLocked(db, group.code),
     canLinkAccount,
     members: members.map(toMemberDto),
@@ -134,4 +137,56 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
   await audit(c.env.DB, group.code, { ...me, isOwner: true }, 'owner.claim', null);
   return c.json({ ok: true });
+});
+
+// Lock a group: exempt it from inactivity deletion.
+groupRoutes.post('/:code/lock', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireOwnerAccount(me);
+
+  if (group.owner_user_id !== me.userId) {
+    requireGroupNotOwnedByOther(me, group);
+    const { changed, memberId } = await linkToAccount(c.env.DB, group, me);
+    if (changed) {
+      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+    }
+  }
+
+  if (group.locked_at !== null) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  const countRow = await c.env.DB.prepare(
+    'SELECT COUNT(*) AS total FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL',
+  )
+    .bind(me.userId)
+    .first<{ total: number }>();
+  if ((countRow?.total ?? 0) >= MAX_LOCKED_GROUPS) {
+    throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
+  }
+
+  const updateRes = await c.env.DB.prepare('UPDATE groups SET locked_at = ? WHERE code = ? AND locked_at IS NULL')
+    .bind(now(), group.code)
+    .run();
+  if ((updateRes.meta.changes ?? 0) === 0) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  await recordChange(c.env.DB, group.code, me, 'group.lock', null);
+  return c.json({ ok: true, changed: true });
+});
+
+// Unlock a group: restarts inactivity timer.
+groupRoutes.delete('/:code/lock', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireOwnerAccount(me);
+  requireGroupNotOwnedByOther(me, group);
+
+  if (group.locked_at === null) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  await c.env.DB.prepare('UPDATE groups SET locked_at = NULL WHERE code = ?').bind(group.code).run();
+  await recordChange(c.env.DB, group.code, me, 'group.unlock', null);
+  return c.json({ ok: true, changed: true });
 });

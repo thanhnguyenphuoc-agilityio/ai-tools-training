@@ -6,6 +6,7 @@
 export const INACTIVE_DAYS = 10;
 export const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
 export const EXPIRY_WARNING_HOURS = 72;
+export const MAX_LOCKED_GROUPS = 10;
 
 /**
  * Returns ISO timestamp when the group expires (lastActivityAt + exactly 10 days).
