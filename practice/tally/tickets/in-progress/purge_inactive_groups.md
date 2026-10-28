@@ -5,7 +5,7 @@
 | ID | `TAL-12` |
 | Labels | `type::feature`, `priority::low`, `area::data` |
 | Reporter | Product owner (human) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 
@@ -120,3 +120,72 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | PG-6 | Deletion date shown; highlighted from 72 hours before `expiresAt` (fake clock) | e2e |
 | PG-7 | Deleted group: not found, removed from recent groups | e2e |
 | PG-8 | The scheduled handler calls the purge (worker export) | unit |
+
+## Plan
+
+Branch `feat/purge_inactive_groups` off `develop`. Migration `0003_activity_reset.sql`: 0003 is the next free number on `develop` (planned as `0003` in `docs/design.md`). Accounts (`google_sign_in`, built in parallel) take `0004`, `lock_groups` `0005`, `receipt_photos` `0006`. This branch updates `docs/design.md` with those numbers.
+
+### Rules: `shared/rules.ts` (new)
+
+- Constants: `INACTIVE_DAYS = 10`, `INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000`, `EXPIRY_WARNING_HOURS = 72`.
+- `expiresAt(lastActivityAt: string): string`: ISO string, `lastActivityAt` plus exactly 10 days.
+- `inactiveBefore(now: Date): string`: ISO cutoff, `now` minus 10 days. A group is deleted when `last_activity_at < cutoff` (strictly less, so exactly 10 days is kept).
+- `isExpiringSoon(expiresAt: string, now: Date): boolean`: true when `now >= expiresAt - 72h`.
+
+### Migration `migrations/0003_activity_reset.sql`
+
+- Statement: `UPDATE groups SET last_activity_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');`
+- Format matches `new Date().toISOString()`, keeping string comparison valid.
+- Keep `;` out of comments so migration runners splitting on `;` do not break.
+
+### Purge: `worker/cleanup.ts` (new)
+
+- `purgeInactiveGroups(db: D1Database, now: Date): Promise<number>`: runs `DELETE FROM groups WHERE last_activity_at < ? RETURNING code` with `inactiveBefore(now)` and returns the count of deleted groups. Child rows cascade automatically via foreign keys declared in `0001_init.sql`.
+- `runDailyJobs(env: Env, now: Date): Promise<{ groups: number }>`: calls `purgeInactiveGroups` and logs deleted count with `console.log`. Future daily jobs join here.
+- `worker/index.ts`: export default gains `scheduled: (controller, env, ctx) => runDailyJobs(env, new Date(controller.scheduledTime))`, satisfying `ExportedHandler<Env>`.
+- `wrangler.jsonc`: add `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time / 19:00 UTC).
+
+### Activity: only changes (`worker/groupData.ts`)
+
+- `audit()` only inserts `audit_log` row; remove the `UPDATE groups` from its batch.
+- Remove obsolete `touch()` if unused.
+- New `recordChange(db, code, me, action, target, details?)`: runs single `db.batch` with audit insert and `UPDATE groups SET last_activity_at = ?`.
+- `worker/routes/expenses.ts`: use `recordChange` for `expense.add` and `expense.delete`.
+- `worker/routes/transfers.ts`: use `recordChange` for `transfer.add` and `transfer.confirm`.
+- `worker/routes/members.ts`: use `recordChange` for `member.add` (join and by name), `member.claim`, `member.update`, `member.remove`, and `member.release`.
+- `worker/routes/groups.ts`:
+  - GET: remove `touch` call.
+  - Group DTO: add `expiresAt: expiresAt(group.last_activity_at)`.
+  - PATCH `/groups/:code`: check stored name, code, rounding against body. If all unchanged, return `{ ok: true, changed: false }` without DB update or audit. If changed, update DB and `recordChange('group.update')`, returning `{ ok: true, changed: true }`.
+  - POST `/groups/:code/owner/claim`: read body first, then call `loadGroup`. Use `audit()` only (not a change). Return 404 `GROUP_NOT_FOUND` if deleted.
+- `shared/types.ts`: add `expiresAt: string` to `GroupDto`. Update test fixtures in `tests/unit/groupCsv.test.ts` and `tests/unit/groupSummary.test.ts`.
+- `src/api.ts`: `updateGroup` return type becomes `Promise<{ ok: true; changed: boolean }>`.
+
+### UI
+
+- `src/i18n/index.tsx`: add `localDate(iso: string)` formatting helper using `Intl.DateTimeFormat(bundle.intl, { day: '2-digit', month: '2-digit', year: 'numeric' })` in viewer's time zone.
+- `src/components/GroupExpiry.tsx` and `GroupExpiry.scss`:
+  - Block `group-expiry`. Base: muted text, small font.
+  - Modifier `group-expiry--soon`: warning background/border/text, extra sentence.
+  - Uses `t('group.expiry.date', { date: localDate(group.expiresAt) })` and `t('group.expiry.soon')`.
+- `src/pages/GroupPage.tsx`:
+  - Place `<GroupExpiry group={group} />` below `<GroupSummaryBar>`.
+  - In `reload()` catch on 404 `ApiError`, call `forgetGroup(code)` before setting `notFound: true`.
+  - On claim 404, forget group and show not found.
+- i18n locales: add `group.expiry.date` and `group.expiry.soon` in `en.ts` and `vi.ts`.
+
+### Tests
+
+- `tests/unit/rules.test.ts`: test `expiresAt`, `inactiveBefore`, and `isExpiringSoon`.
+- `tests/api/purge.test.ts`: PG-1, PG-2, PG-3, PG-4, PG-5, PG-8.
+- `tests/api/activity-reset.test.ts`: PG-9 (migration sets `last_activity_at` for existing groups).
+- `tests/api/helpers.ts`: support `beforeMigration` and `seed` options in `createTestEnv`.
+- `e2e/purge.spec.ts`: PG-6 (deletion date and 72h warning), PG-7 (deleted group 404 and removal from recent groups).
+- Update existing tests (`tests/unit/groupCsv.test.ts`, `tests/unit/groupSummary.test.ts`, `tests/api/expenses.test.ts`, `tests/api/members.test.ts`, `tests/api/groups.test.ts`) where fixtures or expectations need adaptation.
+
+### Docs
+
+- `docs/business-rules.md`: document automatic deletion rules (10-day rule, 02:00 VN cron, changes vs non-changes, complete deletion, deletion date line, recent groups cleanup, migration reset).
+- `docs/design.md`: document `purge_inactive_groups` architecture, scheduled cron, `recordChange`, `GroupExpiry`, updated migration numbering (0003 activity reset, 0004 accounts, 0005 lock, 0006 attachments).
+- `README.md`: update privacy section to state groups are deleted automatically after 10 days.
+
