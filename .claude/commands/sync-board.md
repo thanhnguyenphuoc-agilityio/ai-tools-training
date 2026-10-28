@@ -13,7 +13,8 @@ repository is the source of truth; the board only mirrors it.
    read it from there for the command. If it is missing, ask the human to set it to a token with the `project`
    scope, plus `repo` (or `public_repo` for a public repository) when a repository is used. Never ask for the token
    value in chat and never write it to a file.
-3. Inside `practice/tally`, run the dry run: `npm run board:sync -- <url> [--repo <owner>/<name>]`. Show the plan
+3. Inside `practice/tally`, run the dry run: `node scripts/sync-board.mjs <url> [--repo <owner>/<name>]`. Call
+   `node` directly: from PowerShell, `npm run` drops the `--` separator and takes `--repo` as its own option. Show the plan
    in short form: new fields, missing options, created, converted and updated tickets, and board items that are not
    in the repository.
 4. If it lists `MISSING` options, the board has a field with that name but without the option. Tell the human

@@ -4,6 +4,7 @@
 // ticket in done/ closes its issue; without it they are draft items. Title, body, state and those fields are
 // overwritten from the ticket; comments are left alone and nothing is ever deleted.
 // Usage: GITHUB_TOKEN=<token> npm run board:sync -- <project url> [--repo <owner>/<name>] [--apply]
+// From PowerShell, npm drops the "--", so call node scripts/sync-board.mjs directly (or write "-- --").
 // The token needs the project scope, plus repo (or public_repo) with --repo. The project URL and repository can
 // also come from TALLY_BOARD_URL and TALLY_BOARD_REPO. Without --apply the script only prints the plan.
 import { fileURLToPath } from 'node:url';
