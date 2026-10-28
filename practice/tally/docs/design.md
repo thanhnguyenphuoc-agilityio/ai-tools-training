@@ -170,7 +170,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - The token is sent to `POST /api/auth/google`. The Worker verifies it with WebCrypto in `worker/google.ts`
     instead of a JWT library: it adds no dependency and the Workers runtime already provides WebCrypto. It verifies
     the RS256 signature using Google's public JWKS (`https://www.googleapis.com/oauth2/v3/certs`, cached in module
-    scope per `Cache-Control`), checks issuer, `audience = GOOGLE_CLIENT_ID`, `email_verified` and expiry, upserts
+    scope per `Cache-Control`), checks issuer, `audience` (a string or an array) contains `GOOGLE_CLIENT_ID`,
+    `email_verified` and expiry, upserts
     `users` in one `INSERT ... ON CONFLICT(google_sub) DO UPDATE` and opens a 30-day session (`tally_session`).
     `POST /api/auth/dev` shares the same upsert.
   - A token whose `kid` is not in the cached keys refetches the keys at most once per 60 seconds
