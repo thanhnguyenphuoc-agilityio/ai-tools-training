@@ -1,13 +1,13 @@
 # Sign in with Google
 
-| Field      | Value                                           |
-| ---------- | ----------------------------------------------- |
-| ID         | `TAL-6`                                         |
-| Labels     | `type::feature`, `priority::high`, `area::auth` |
-| Reporter   | Product owner (human)                           |
-| Assignee   | Haiku (developer)                               |
-| Depends on | -                                               |
-| Related    | -                                               |
+| Field | Value |
+|---|---|
+| ID | `TAL-6` |
+| Labels | `type::feature`, `priority::high`, `area::auth` |
+| Reporter | Product owner (human) |
+| Assignee | Haiku (developer) |
+| Depends on | - |
+| Related | - |
 
 ## Description
 
@@ -227,3 +227,18 @@ Build `google_sign_in` on branch `feat/google_sign_in` off `develop`. Add option
 - Unrelated features (`edit_expense`, `purge_inactive_groups`, `lock_groups`, `saved_bank_details`, `delete_account`) omitted. Daily session cleanup ready in `worker/cleanup.ts`.
 - Verified with Vitest (26 test files, 320 unit/API tests passing; 34 new tests across `tests/unit/google.test.ts` and `tests/api/account.test.ts`), CSS linting (`npm run lint:css`), and full Playwright e2e test suite (70 tests passing across desktop and mobile, including 14 tests in `e2e/account.spec.ts`).
 - Known limits: real Google sign-in requires `GOOGLE_CLIENT_ID` and is not exercised in automated tests; verified end-to-end via the dev sign-in form.
+
+## Review
+
+Reviewer: Sonnet (QA tester). Reviewed after rebasing onto `develop` (which now includes `purge_inactive_groups`).
+
+Findings:
+
+- [major] `worker/routes/link.ts`: linking used `audit`, which writes the audit log but does not move `last_activity_at`. Business rules say linking a group or a member is a change. Switched to `recordChange`.
+- [major] `worker/google.ts`: the `aud` claim was compared as a string. Google sends an array when a token names more than one audience, so a genuine token would be refused. The check now accepts either form. Covered by two unit tests, one of which failed before the fix.
+- [minor] Rebase conflict resolution: `worker/cleanup.ts` now runs both daily jobs in `runDailyJobs` and returns `{ groups, sessions }`. Viewing a group no longer calls `touch` (removed by `purge_inactive_groups`); member add, claim, update and remove keep `recordChange`.
+- [minor] `worker/routes/members.ts`: a claimed name is recorded with the claimer's member id as the actor, matching the behaviour before the rebase.
+- [nit] Prettier re-padded the README Concepts and Structure tables, the identity table in `docs/design.md`, and the ticket header. The padding was reverted; the header change also broke `tests/unit/board-sync.test.ts`, which reads the `| ID |` cell literally.
+- [nit] `playwright.config.ts` serves e2e on port 5174 with `TALLY_DEV_LOGIN` and `reuseExistingServer: false`. Acceptable: CI runs `npx playwright test` with no fixed port, and a dev server started by hand on 5173 is left alone. Noted in the README.
+
+Checks after the fixes: `npm run typecheck` clean, `npm run lint` clean (oxlint and stylelint), `npm test` 30 files and 352 tests passing, `npm run e2e` 76 tests passing.

@@ -45,11 +45,11 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 
 There are three identity sources, all resolved in `resolveIdentity()`:
 
-| Source         | Client storage                                                    | Server storage                   | Provides                                              |
-| -------------- | ----------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------- |
-| Owner key      | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash`          | `isOwner`                                             |
-| Device token   | cookie `tally_member_<code>` = `<memberId>.<token>`               | `members.token_hash`             | `memberId`                                            |
-| Google session | cookie `tally_session` (path `/api`)                              | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
+| Source | Client storage | Server storage | Provides |
+|---|---|---|---|
+| Owner key | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash` | `isOwner` |
+| Device token | cookie `tally_member_<code>` = `<memberId>.<token>` | `members.token_hash` | `memberId` |
+| Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
 `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.

@@ -23,17 +23,17 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Concepts
 
-| Term              | Meaning                                                                                                                                                                                                                                                                                                                                        |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Group             | One event or shared fund. Identified by a random code such as `x7kq-m2pz-9hfw`; anyone with the link can view it. Has one currency (VND, USD, THB...).                                                                                                                                                                                         |
-| Owner             | The person who created the group. Proven by a secret owner key, shown once as a recovery link. Can rename the group, change rounding and currency, delete any expense, remove a member who has settled up; through the API (no interface yet, see `owner_member_tools`) also edit other members' bank details and record transfers for others. |
-| Member            | A person in the group. Either joined from their own device, or added by name by someone else and claimed later ("I am <name>").                                                                                                                                                                                                                |
-| Guest             | Someone who opened the link but has not joined. Can only view.                                                                                                                                                                                                                                                                                 |
-| Expense           | One payment: who paid, how much, what for, on which date, and who shares it (equally, by weight or by exact shares). Only its author or the owner can delete it.                                                                                                                                                                               |
-| Share             | Each participant's part of an expense, computed once when the expense is saved. Shares always add up exactly to the amount.                                                                                                                                                                                                                    |
-| Balance           | Paid minus owed, plus confirmed transfers. Positive means the member is owed money; the balances of a group always sum to zero.                                                                                                                                                                                                                |
-| Transfer          | A repayment between two members. It is `sent` when the payer says so, and `confirmed` when the receiver says the money arrived. Only confirmed transfers change balances.                                                                                                                                                                      |
-| Receiving account | A member's bank, account number and holder name, used to build the VietQR code. Visible to anyone with the link.                                                                                                                                                                                                                               |
+| Term | Meaning |
+|---|---|
+| Group | One event or shared fund. Identified by a random code such as `x7kq-m2pz-9hfw`; anyone with the link can view it. Has one currency (VND, USD, THB...). |
+| Owner | The person who created the group. Proven by a secret owner key, shown once as a recovery link. Can rename the group, change rounding and currency, delete any expense, remove a member who has settled up; through the API (no interface yet, see `owner_member_tools`) also edit other members' bank details and record transfers for others. |
+| Member | A person in the group. Either joined from their own device, or added by name by someone else and claimed later ("I am <name>"). |
+| Guest | Someone who opened the link but has not joined. Can only view. |
+| Expense | One payment: who paid, how much, what for, on which date, and who shares it (equally, by weight or by exact shares). Only its author or the owner can delete it. |
+| Share | Each participant's part of an expense, computed once when the expense is saved. Shares always add up exactly to the amount. |
+| Balance | Paid minus owed, plus confirmed transfers. Positive means the member is owed money; the balances of a group always sum to zero. |
+| Transfer | A repayment between two members. It is `sent` when the payer says so, and `confirmed` when the receiver says the money arrived. Only confirmed transfers change balances. |
+| Receiving account | A member's bank, account number and holder name, used to build the VietQR code. Visible to anyone with the link. |
 
 ### Main flow
 
@@ -124,18 +124,18 @@ behaviour they check.
 
 ## Structure
 
-| Path                     | Description                                                                                                                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared/`                | Pure logic shared by the UI and the API: `money.ts` (parsing, splitting), `settle.ts` (balances, debt simplification), `vietqr.ts`, `groupCode.ts`, `types.ts`                |
-| `worker/`                | Hono API on Cloudflare Workers. `auth.ts` identifies the caller, `policy.ts` decides what the caller may do, `routes/` is split by resource                                   |
-| `migrations/`            | D1 (SQLite) schema, numbered in order                                                                                                                                         |
-| `src/`                   | React SPA. `api.ts` is the typed client, `pages/` and `components/` are the UI, `i18n/` holds all user-facing text (vi, en), `styles/` is SCSS with BEM and light/dark themes |
-| `tests/`, `e2e/`         | Vitest and Playwright                                                                                                                                                         |
-| `scripts/seed-demo.mjs`  | Creates a demo group through the API                                                                                                                                          |
-| `docs/business-rules.md` | Required behaviour, as stated by the customer                                                                                                                                 |
-| `docs/design.md`         | Architecture, extension points and up-front designs per ticket                                                                                                                |
-| `tickets/`               | Backlog. Some tickets are intentionally vague                                                                                                                                 |
-| `PRACTICE.md`            | Practice method: bug seeding, personas, ticket map, 15-day schedule                                                                                                           |
+| Path | Description |
+|---|---|
+| `shared/` | Pure logic shared by the UI and the API: `money.ts` (parsing, splitting), `settle.ts` (balances, debt simplification), `vietqr.ts`, `groupCode.ts`, `types.ts` |
+| `worker/` | Hono API on Cloudflare Workers. `auth.ts` identifies the caller, `policy.ts` decides what the caller may do, `routes/` is split by resource |
+| `migrations/` | D1 (SQLite) schema, numbered in order |
+| `src/` | React SPA. `api.ts` is the typed client, `pages/` and `components/` are the UI, `i18n/` holds all user-facing text (vi, en), `styles/` is SCSS with BEM and light/dark themes |
+| `tests/`, `e2e/` | Vitest and Playwright |
+| `scripts/seed-demo.mjs` | Creates a demo group through the API |
+| `docs/business-rules.md` | Required behaviour, as stated by the customer |
+| `docs/design.md` | Architecture, extension points and up-front designs per ticket |
+| `tickets/` | Backlog. Some tickets are intentionally vague |
+| `PRACTICE.md` | Practice method: bug seeding, personas, ticket map, 15-day schedule |
 
 ## Practice rules
 
