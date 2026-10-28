@@ -66,6 +66,7 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
     createdAt: '2026-10-01T08:00:00.000Z',
     lastActivityAt: '2026-10-03T12:00:00.000Z',
     expiresAt: '2026-10-13T12:00:00.000Z',
+    locked: false,
     currencyLocked: true,
     members: [member('alex', 'Alex'), member('sam', 'Sam'), member('jamie', 'Jamie')],
     // The API lists expenses and transfers newest first.
