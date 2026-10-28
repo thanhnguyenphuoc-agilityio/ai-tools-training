@@ -5,7 +5,7 @@
 | ID | `TAL-6` |
 | Labels | `type::feature`, `priority::high`, `area::auth` |
 | Reporter | Product owner (human) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | - |
 
@@ -167,3 +167,49 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | GS-14 | Daily job deletes expired sessions only | API |
 | GS-15 | e2e sign-in works on a fresh clone (no `.dev.vars`) | e2e |
 | GS-16 | Link as a non-owner member: only the member is linked (`member.link`); as a visitor: `401 JOIN_FIRST` | API |
+
+## Plan
+
+Build `google_sign_in` on branch `feat/google_sign_in` off `develop`. Add optional Google sign-in with a dev sign-in stub for tests, migration `0004_accounts.sql`, account sessions in `auth.ts`, policies in `policy.ts`, linking endpoints, UI components, tests, and documentation.
+
+### 1. Database schema (`migrations/0004_accounts.sql`)
+- Create `users` table: id, google_sub, email, name, bank_bin, account_no, account_name, created_at.
+- Create `sessions` table: token_hash, user_id (cascade delete), created_at, expires_at; index on expires_at.
+- Add `user_id` column to `members` with foreign key to users, set null on delete; partial unique index on (group_code, user_id) where user_id is not null.
+- Add `owner_user_id` column to `groups` with foreign key to users, set null on delete; index on owner_user_id.
+
+### 2. Shared contracts
+- `shared/errors.ts`: add error codes `SIGN_IN_REQUIRED`, `INVALID_GOOGLE_TOKEN`, `GROUP_OWNED_BY_OTHER_ACCOUNT`, `ACCOUNT_ALREADY_MEMBER`, `MEMBER_LINKED_ELSEWHERE`.
+- `shared/types.ts`: add `UserDto`, `MeResponse`, `ConfigResponse`; add `canLinkAccount` to `GroupDto`.
+- `src/i18n/locales/*.ts`: translate new error codes and UI strings for `account.*` in both `en.ts` and `vi.ts`.
+
+### 3. Identity and permissions
+- `worker/auth.ts`: add session management (`createSession`, `endSession`, `resolveAccount`, `deleteExpiredSessions`, `clearSessionCookie`). Update `Identity` to track `userId`, `hasOwnerKey`, `deviceMemberId`, `accountMemberId`. Update `resolveIdentity` so device token wins over account, and account resolves owner and member.
+- `worker/policy.ts`: add `requireAccount`, `requireSignedIn`, `requireGroupNotOwnedByOther`, `requireMemberLinkable`, `canLinkToAccount`. Update `requireNotMember` to check `accountMemberId` first (`ACCOUNT_ALREADY_MEMBER`), then `memberId` (`ALREADY_MEMBER`).
+- `worker/http.ts`: add `GOOGLE_CLIENT_ID` and `DEV_LOGIN` to `Env`, update `AppEnv` variables for user caching.
+
+### 4. Google token verification and routes
+- `worker/google.ts`: verify RS256 Google ID tokens via WebCrypto SubtleCrypto with public certs fetching and caching.
+- `worker/routes/account.ts`: endpoints `/config`, `/auth/google`, `/auth/dev` (localhost and dev flag only), `/auth/logout`, `/me`.
+- `worker/accountLink.ts`: pure linking logic for groups and members with race handling.
+- `worker/routes/link.ts`: `POST /groups/:code/link` route.
+- `worker/routes/groups.ts`: pass `owner_user_id` on create; build `me` and `canLinkAccount` in GET.
+- `worker/routes/members.ts`: attach `user_id` on join/claim; clear `user_id` on remove and release.
+- `worker/cleanup.ts`: scheduled handler to delete expired sessions.
+- `worker/app.ts`: mount account and link routes.
+
+### 5. Frontend UI
+- `src/api.ts`: API methods for config, me, google sign-in, dev sign-in, sign-out, link account.
+- `src/account.tsx`: `AccountProvider` and `useAccount` hook providing auth state and reload triggering.
+- `src/components/AccountMenu.tsx` & `.scss`: header control with sign-in button (dev email form or Google GIS button) and account dropdown. Compact icon-only on mobile (<= 360px).
+- `src/components/Icon.tsx`: add `user` icon SVG.
+- `src/pages/GroupPage.tsx`: "Link to my account" button when `canLinkAccount` is true.
+- `src/App.tsx` & `src/main.tsx`: wrap with `AccountProvider` and place `AccountMenu` in header controls.
+
+### 6. Tests and tooling
+- `vite.config.ts`: support `TALLY_PORT` and `TALLY_DEV_LOGIN`.
+- `tests/unit/google.test.ts`: test Google token verification with mock RS256 keys.
+- `tests/api/account.test.ts`: API tests covering all GS matrix scenarios (GS-1 to GS-9, GS-12 to GS-14, GS-16).
+- `e2e/account.spec.ts`: Playwright tests for dev sign-in, account menu at 360px and desktop, linking account.
+- `docs/business-rules.md` and `docs/design.md`: document account rules, design decisions, and status.
+
