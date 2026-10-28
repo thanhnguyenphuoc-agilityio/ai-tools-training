@@ -464,7 +464,7 @@ For the retro:
   names.
 Open before the next day:
 - [ ] Push `develop` and confirm the `e2e` job is green and takes about 2 to 3 minutes in the Playwright image
-- [ ] Day 13: build the capstone tickets in dependency order, starting with `google_sign_in`
+- [x] Day 13: build the capstone tickets in dependency order, starting with `google_sign_in`
 - [ ] Course: finish the AI-native SDLC playbook
 
 ## Day 13: 2026-10-28
