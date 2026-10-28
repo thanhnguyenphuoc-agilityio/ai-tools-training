@@ -5,11 +5,8 @@ import { createApp, type Env } from '../../worker/app';
 
 const MIGRATIONS = join(import.meta.dirname, '../../migrations');
 
-/** A fresh in-memory D1 database with all migrations applied. */
-export async function createTestEnv(): Promise<{ env: Env; dispose: () => Promise<void> }> {
-  const mf = new Miniflare({ modules: true, script: 'export default {}', d1Databases: ['DB'] });
-  const db = (await mf.getD1Database('DB')) as unknown as D1Database;
-  for (const file of readdirSync(MIGRATIONS).sort()) {
+export async function applyMigrations(db: D1Database, files: string[]): Promise<void> {
+  for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS, file), 'utf8').replace(/--.*$/gm, '');
     for (const statement of sql
       .split(';')
@@ -18,6 +15,40 @@ export async function createTestEnv(): Promise<{ env: Env; dispose: () => Promis
       await db.prepare(statement).run();
     }
   }
+}
+
+export interface CreateTestEnvOptions {
+  beforeMigration?: string;
+  seed?: (db: D1Database) => Promise<void>;
+}
+
+/** A fresh in-memory D1 database with all migrations applied (or up to beforeMigration, seed, then remaining). */
+export async function createTestEnv(
+  options?: CreateTestEnvOptions,
+): Promise<{ env: Env; dispose: () => Promise<void> }> {
+  const mf = new Miniflare({ modules: true, script: 'export default {}', d1Databases: ['DB'] });
+  const db = (await mf.getD1Database('DB')) as unknown as D1Database;
+  const allFiles = readdirSync(MIGRATIONS).sort();
+
+  if (options?.beforeMigration) {
+    const beforeIndex = allFiles.indexOf(options.beforeMigration);
+    const splitIndex = beforeIndex === -1 ? allFiles.findIndex((f) => f >= options.beforeMigration!) : beforeIndex;
+    const targetIndex = splitIndex === -1 ? allFiles.length : splitIndex;
+    const firstBatch = allFiles.slice(0, targetIndex);
+    const secondBatch = allFiles.slice(targetIndex);
+
+    await applyMigrations(db, firstBatch);
+    if (options.seed) {
+      await options.seed(db);
+    }
+    await applyMigrations(db, secondBatch);
+  } else {
+    await applyMigrations(db, allFiles);
+    if (options?.seed) {
+      await options.seed(db);
+    }
+  }
+
   return { env: { DB: db }, dispose: () => mf.dispose() };
 }
 

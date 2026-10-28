@@ -64,6 +64,7 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
     roundTo: 1,
     createdAt: '2026-10-01T08:00:00.000Z',
     lastActivityAt: '2026-10-03T12:00:00.000Z',
+    expiresAt: '2026-10-13T12:00:00.000Z',
     currencyLocked: true,
     members: [member('alex', 'Alex'), member('sam', 'Sam'), member('jamie', 'Jamie')],
     // The API lists expenses and transfers newest first.
@@ -86,8 +87,22 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
       }),
     ],
     transfers: [
-      transfer({ id: 't2', fromId: 'alex', toId: 'sam', amount: 2_500, status: 'sent', createdAt: '2026-10-03T12:00:00.000Z' }),
-      transfer({ id: 't1', fromId: 'jamie', toId: 'sam', amount: 3_000, status: 'confirmed', createdAt: '2026-10-01T12:00:00.000Z' }),
+      transfer({
+        id: 't2',
+        fromId: 'alex',
+        toId: 'sam',
+        amount: 2_500,
+        status: 'sent',
+        createdAt: '2026-10-03T12:00:00.000Z',
+      }),
+      transfer({
+        id: 't1',
+        fromId: 'jamie',
+        toId: 'sam',
+        amount: 3_000,
+        status: 'confirmed',
+        createdAt: '2026-10-01T12:00:00.000Z',
+      }),
     ],
     me: { memberId: 'alex', isOwner: true },
     ...overrides,
@@ -116,7 +131,16 @@ describe('buildGroupCsv', () => {
     // 18:30 UTC on 1 October is 01:30 on 2 October in UTC+7.
     const late = group({
       expenses: [],
-      transfers: [transfer({ id: 't1', fromId: 'alex', toId: 'sam', amount: 100, status: 'sent', createdAt: '2026-10-01T18:30:00.000Z' })],
+      transfers: [
+        transfer({
+          id: 't1',
+          fromId: 'alex',
+          toId: 'sam',
+          amount: 100,
+          status: 'sent',
+          createdAt: '2026-10-01T18:30:00.000Z',
+        }),
+      ],
     });
     expect(lines(buildGroupCsv(late, en))[1]).toBe('Transfer,2026-10-02,,Alex,Sam,1.00,USD,Sent,,,');
   });
@@ -124,7 +148,14 @@ describe('buildGroupCsv', () => {
   it('writes whole numbers for a zero-digit currency', () => {
     const vnd = group({
       currency: 'VND',
-      expenses: [expense({ id: 'e1', payerId: 'alex', amount: 300_000, shares: [share('alex', 150_000), share('sam', 150_000)] })],
+      expenses: [
+        expense({
+          id: 'e1',
+          payerId: 'alex',
+          amount: 300_000,
+          shares: [share('alex', 150_000), share('sam', 150_000)],
+        }),
+      ],
       transfers: [],
     });
     expect(lines(buildGroupCsv(vnd, en))[1]).toBe('Expense,2026-10-01,Expense,Alex,,300000,VND,,150000,150000,');
@@ -158,8 +189,20 @@ describe('buildGroupCsv', () => {
     const risky = group({
       members: [member('alex', '@Alex'), member('sam', 'Sam "S"')],
       expenses: [
-        expense({ id: 'e1', payerId: 'alex', amount: 100, description: '=HYPERLINK("x")', shares: [share('alex', 100)] }),
-        expense({ id: 'e2', payerId: 'sam', amount: 100, description: '-5 deposit\nreturned', shares: [share('sam', 100)] }),
+        expense({
+          id: 'e1',
+          payerId: 'alex',
+          amount: 100,
+          description: '=HYPERLINK("x")',
+          shares: [share('alex', 100)],
+        }),
+        expense({
+          id: 'e2',
+          payerId: 'sam',
+          amount: 100,
+          description: '-5 deposit\nreturned',
+          shares: [share('sam', 100)],
+        }),
       ],
       transfers: [],
     });
@@ -174,7 +217,13 @@ describe('buildGroupCsv', () => {
   it('keeps non-ASCII text as it is', () => {
     const accented = group({
       expenses: [
-        expense({ id: 'e1', payerId: 'alex', amount: 100, description: '\u0102n t\u1ed1i', shares: [share('alex', 100)] }),
+        expense({
+          id: 'e1',
+          payerId: 'alex',
+          amount: 100,
+          description: '\u0102n t\u1ed1i',
+          shares: [share('alex', 100)],
+        }),
       ],
       transfers: [],
     });
@@ -184,7 +233,9 @@ describe('buildGroupCsv', () => {
   it('adds a column for a share whose member is not in the group, so shares still add up', () => {
     const gone = group({
       members: [member('alex', 'Alex')],
-      expenses: [expense({ id: 'e1', payerId: 'alex', amount: 1_000, shares: [share('alex', 600), share('left', 400)] })],
+      expenses: [
+        expense({ id: 'e1', payerId: 'alex', amount: 1_000, shares: [share('alex', 600), share('left', 400)] }),
+      ],
       transfers: [],
     });
     expect(lines(buildGroupCsv(gone, en))).toEqual([
@@ -209,7 +260,10 @@ describe('buildGroupCsv', () => {
     // Each row's shares still add up to its amount (both columns are in major units, two digits).
     for (const row of rows) {
       const cells = row.split(',');
-      const shares = cells.slice(8).filter((c) => c !== '').map((c) => Math.round(Number(c) * 100));
+      const shares = cells
+        .slice(8)
+        .filter((c) => c !== '')
+        .map((c) => Math.round(Number(c) * 100));
       expect(shares.reduce((a, b) => a + b, 0)).toBe(Math.round(Number(cells[5]) * 100));
     }
   });
