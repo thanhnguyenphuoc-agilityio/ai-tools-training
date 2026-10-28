@@ -5,7 +5,7 @@
 | ID | `TAL-15` |
 | Labels | `type::feature`, `priority::medium`, `area::auth` |
 | Reporter | Product owner (human) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | `google_sign_in` |
 | Related | - |
 
@@ -118,3 +118,69 @@ Drafted by Sonnet (QA tester) from the criteria above.
 | SB-9 | Own bank form with saved details: note shown, no copy until saved | e2e |
 | SB-10 | Changing saved details leaves `last_activity_at` of the groups unchanged | API |
 | SB-11 | "Use my saved bank details": offered only with saved details; clears the group details, `bankSource` becomes `account` | API, e2e |
+
+## Plan
+
+Branch `feat/saved_bank_details` from `develop`. No new migration: `users.bank_bin`, `account_no`, `account_name` already exist in `0004_accounts.sql`. Intake, criteria and test matrix above are kept.
+
+### Server
+
+- `worker/policy.ts`:
+  - `requireSignedIn(account: { id: string } | null): string`: already exists from develop, enforces `401 SIGN_IN_REQUIRED`.
+- `worker/routes/account.ts`:
+  - `toUserDto(row: UserRow): UserDto`: return `id, name, email, bankBin, accountNo, accountName`. `GET /me`, `POST /auth/google`, and `POST /auth/dev` use it (`upsertUser` gains `RETURNING *` so bank columns are returned).
+  - `PATCH /me`: resolves account, calls `requireSignedIn(account)` (returns 401 `SIGN_IN_REQUIRED` without session). Body parsed with `readJson` and validated with `bankDetails(body, current)` from `worker/http.ts` (VietQR bank, 4-19 chars account number, clearing account number clears all three). Updates `users` table via `RETURNING *` and returns `{ user }`. No group activity is updated (`last_activity_at` does not move, no audit row).
+- `worker/groupData.ts`:
+  - `MemberRow` gains `user_bank_bin`, `user_account_no`, `user_account_name` (`string | null`).
+  - `loadMembers`: `LEFT JOIN users u ON u.id = m.user_id` selecting user bank columns.
+  - `toMemberDto`: removed members get nulls and `bankSource: null`; else group `account_no` wins (`'group'`); else user saved details (`'account'`); else `null`.
+- `worker/routes/groups.ts`:
+  - `GET /groups/:code` includes `me.accountLinked: boolean` (`me.accountMemberId !== null && me.accountMemberId === me.memberId`).
+
+### Types (`shared/types.ts`)
+
+- `MemberDto.bankSource: 'group' | 'account' | null`.
+- `Me.accountLinked: boolean`.
+- `UserDto extends BankDetails`.
+
+### Client
+
+- `src/api.ts`:
+  - `updateMe(patch: BankDetails): Promise<{ user: UserDto }>`.
+- `src/components/AccountMenu.tsx`:
+  - Add "My bank details" menu item for signed-in user, opening `SavedBankDialog`.
+- `src/components/SavedBankDialog.tsx` and `SavedBankDialog.scss`:
+  - Dialog with bank selector, account number, account name. Save calls `updateMe`, `refresh()`, toasts `savedBank.saved`. Clear calls `updateMe` with empty strings, `refresh()`, toasts `savedBank.cleared`.
+- `src/components/MembersPanel.tsx`:
+  - `BankForm` checks `bankSource`.
+  - When `bankSource === 'account'`, displays `savedBank.usingSaved` note and `savedBank.useDifferent` button.
+  - When editing own member and `bankSource === 'group'` with `accountLinked` and user has saved account, show `savedBank.useSaved` button which sends empty bank details to clear group details.
+  - Prefill bank form inputs only when `bankSource === 'group'`.
+
+### i18n (`src/i18n/locales/en.ts`, `vi.ts`)
+
+- `account.bankDetails`: "My bank details" / "Thông tin tài khoản ngân hàng".
+- `savedBank` namespace: `title`, `hint`, `save`, `clear`, `saved`, `cleared`, `usingSaved`, `useDifferent`, `useSaved`, `usingSavedNow`.
+
+### Tests
+
+- Unit tests: update fixtures in `expenseRow.test.ts`, `groupCsv.test.ts`, `groupSummary.test.ts`, `ownerTools.test.ts` to include `bankSource` and `accountLinked`.
+- API tests (`tests/api/saved-bank.test.ts`):
+  - SB-1: valid save, invalid bank 400 `UNKNOWN_BANK`, invalid account no 400 `INVALID_ACCOUNT_NO`, `GET /me` returns bank fields.
+  - SB-2: linked member without group account shows saved details to guest with `bankSource: 'account'`.
+  - SB-3: group account takes precedence over saved details with `bankSource: 'group'`.
+  - SB-4: changing and clearing saved details updates groups; clear yields `bankSource: null`.
+  - SB-5: removed member shows nulls for all bank fields and `bankSource: null`.
+  - SB-7 API: `PATCH /me` without session returns 401 `SIGN_IN_REQUIRED`.
+  - SB-8: verify `group`, `account`, `null` `bankSource` values.
+  - SB-10: `PATCH /me` leaves `last_activity_at` and `audit_log` untouched across multiple groups.
+  - `accountLinked`: true for linked account member, false for device-only member.
+- e2e tests (`e2e/saved-bank.spec.ts`):
+  - SB-6: dev sign-in, save bank details, join VND group, other member sees QR with saved details.
+  - SB-7 UI: signed out person has no "My bank details" menu item.
+  - SB-9 & SB-11: own form shows saved note; "Use different details" opens empty form with no network request until save; saving sets `bankSource: 'group'`; "Use my saved bank details" clears group details and restores saved details.
+
+### Documentation
+
+- `docs/business-rules.md`: update Members and Accounts sections for receiving account precedence, saved bank details rules, immutability of group deletion dates.
+- `docs/design.md`: update `saved_bank_details` section marking it built, documenting DTO fields and precedence.
