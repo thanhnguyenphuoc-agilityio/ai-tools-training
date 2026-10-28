@@ -202,3 +202,29 @@ Branch `feat/lock_groups` from `develop`. Migration `0005_group_lock.sql`. Intak
   - `npx vitest run`: 32 test files, 372 tests passed.
   - `npx playwright test`: 92 passed across desktop and mobile Chrome projects.
   - `npm run test:hooks`: 29 passed.
+
+## Review
+
+Reviewed `develop...feat/lock_groups` against the Day-3 checklist, the ticket answers (rounds 1-4) and the plan.
+
+### Findings
+
+```
+[severity: major] practice/tally/docs/business-rules.md:30
+The activity list omitted keeping and stopping keeping a group. A reader of that bullet would treat group.lock and group.unlock as non-changes, while the endpoints call recordChange and the "Kept groups" section says both are changes. The two sections disagreed.
+Suggested fix: name both actions in the activity list. Fixed in this review.
+```
+
+```
+[severity: minor] practice/tally/tests/api/lock-groups.test.ts
+No test covered the plan's step 4: when the 11th lock is refused, a link done for an unlinked group stays, with its own group.link audit row, and the group stays unlocked. A later change that rolled the link back would still pass.
+Suggested fix: add LG-12. Fixed in this review.
+```
+
+Checked and found sound, so not listed as findings: `0005_group_lock.sql` is one additive `ALTER TABLE` (existing rows get `locked_at` NULL and stay purgeable); keep and unlock go through `recordChange` (audit row and `last_activity_at` in one batch), so unlock restarts the 10 days; purge adds `AND locked_at IS NULL`; `requireOwnerAccount` checks `OWNER_ONLY` before `SIGN_IN_REQUIRED` and lives only in `worker/policy.ts`; members and guests get no keep control (e2e LG-6); the kept line replaces the deletion date without `group-expiry--soon`; new strings are in `en.ts` and `vi.ts` (`vi.ts` is UTF-8 without a BOM) and `LOCK_LIMIT_REACHED` is translated in both; `KeepGroup.scss` uses BEM and theme custom properties; no `delete_account` code or wording leaked in; `GroupExpiry` reads the clock once through `useState`, so the warning state does not go stale and does not loop.
+
+### Verdict
+
+Approve with nits. The feature matches the answers: owner only, signed in, limit of 10 per account, linking on the first keep, repeat lock and unlock return `changed: false`, a kept group stays editable, and the DTO returns `locked: true` with `expiresAt: null`.
+
+Could I review this from the MR description alone? Yes. The description names the migration, the purge exemption, the check order, the endpoints, the UI and what was adapted from the draft. It does not mention the activity-list gap, which the diff shows.
