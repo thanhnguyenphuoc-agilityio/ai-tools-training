@@ -176,3 +176,29 @@ Branch `feat/lock_groups` from `develop`. Migration `0005_group_lock.sql`. Intak
 ### Commits
 
 `docs(tickets): start lock_groups with a plan`, `feat: add group lock column and purge exemption`, `feat: add lock and unlock endpoints`, `feat: keep this group control and kept line`, `test: add API and e2e tests for group locking`, `docs: describe kept groups`.
+
+## Merge request
+
+- Branch: `feat/lock_groups` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- Summary of changes:
+  - Added migration `0005_group_lock.sql` adding `locked_at` to `groups`.
+  - Updated `worker/cleanup.ts` to exempt kept groups from inactivity purge (`locked_at IS NULL`).
+  - Added policy `requireOwnerAccount` in `worker/policy.ts` (checks `OWNER_ONLY` before `SIGN_IN_REQUIRED`).
+  - Added endpoints `POST /groups/:code/lock` and `DELETE /groups/:code/lock` in `worker/routes/groups.ts`. Locking links unlinked owner account via `linkToAccount`, enforces `MAX_LOCKED_GROUPS = 10`, audits `group.lock`. Unlocking resets `locked_at` and updates `last_activity_at` via `recordChange(..., 'group.unlock')`.
+  - Added `KeepGroup` UI component with keep checkbox, dev sign-in helper when unsigned, and toast notifications.
+  - Updated `GroupExpiry` to display "Kept until the owner stops keeping it" without warning highlight.
+  - Added comprehensive Vitest API test suite covering LG-1 to LG-5, LG-8 to LG-11 (10 test cases).
+  - Added Playwright e2e test suite covering LG-6 and LG-7 (guest/member view and owner flow across themes and viewports).
+  - Updated `docs/business-rules.md` and `docs/design.md`.
+- What was adapted vs the draft:
+  - Migration numbered `0005_group_lock.sql` (draft used `0006_group_lock.sql` due to draft's additional migrations).
+  - Adapted against existing develop changes (`saved_bank_details`, `google_sign_in`, `purge_inactive_groups`).
+  - Left out draft references to `delete_account`.
+  - Handled `GroupExpiry` React impure Date warning cleanly with component state.
+- Commands run and results:
+  - `npm run typecheck`: clean (0 errors).
+  - `npm run lint`: clean (0 errors, 0 warnings).
+  - `npx vitest run`: 32 test files, 372 tests passed.
+  - `npx playwright test`: 92 passed across desktop and mobile Chrome projects.
+  - `npm run test:hooks`: 29 passed.
