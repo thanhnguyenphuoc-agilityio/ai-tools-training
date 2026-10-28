@@ -5,7 +5,7 @@
 | ID | `TAL-43` |
 | Labels | `type::bug`, `priority::low`, `area::data` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `board_sync` |
 
@@ -43,3 +43,15 @@ parsing, so they pass.
 5. Verify: `npm run typecheck`, `npm run lint`, `npm test`, then
    `node scripts/sync-board.mjs https://github.com/users/alex/projects/1` without a token reports the missing token,
    not the missing URL.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `parseArgs(argv, env)` in `scripts/board-sync/tickets.mjs` now owns the command line; `sync-board.mjs` calls it
+  and keeps its error messages. The `--repo` value is skipped only when the flag is present, and `--repo` with no
+  value (or followed by another flag) is rejected.
+- Four new unit tests in `tests/unit/board-sync.test.ts`; the URL-only case fails on the old expression.
+- Checks: `npm run lint` passes, `npm test` 303 passed. `npm run typecheck` reports only the existing missing
+  `jsqr`/`pngjs` types in `e2e/settle-up.spec.ts`. Without a token, the URL-only command now stops at the missing
+  token instead of the missing URL. No e2e run: the change is limited to a Node script.

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { STATUSES, parseTicket, planSync, readTickets } from '../../scripts/board-sync/tickets.mjs';
+import { STATUSES, parseArgs, parseTicket, planSync, readTickets } from '../../scripts/board-sync/tickets.mjs';
 
 const ticket = (id: string, status: string, labels = '`type::bug`, `priority::high`, `area::ui`') =>
   parseTicket(
@@ -114,5 +114,29 @@ describe('planSync', () => {
     });
     const foreign = { ...issue, repo: 'sam/other', title: 'TAL-5 Their title', closed: false };
     expect(planSync([t], [foreign], fullFields, repo).actions[0]).toMatchObject({ kind: 'same', content: [] });
+  });
+});
+
+describe('parseArgs', () => {
+  const url = 'https://github.com/users/alex/projects/1';
+
+  it('reads the project URL without --repo', () => {
+    expect(parseArgs([url], {})).toEqual({ url, repo: undefined, apply: false });
+  });
+
+  it('reads --repo and --apply in any order', () => {
+    expect(parseArgs([url, '--repo', 'a/b'], {})).toEqual({ url, repo: 'a/b', apply: false });
+    expect(parseArgs(['--repo', 'https://github.com/a/b/', url, '--apply'], {})).toEqual({ url, repo: 'a/b', apply: true });
+    expect(parseArgs(['--apply', url], {})).toEqual({ url, repo: undefined, apply: true });
+  });
+
+  it('falls back to TALLY_BOARD_URL and TALLY_BOARD_REPO', () => {
+    expect(parseArgs([], { TALLY_BOARD_URL: url, TALLY_BOARD_REPO: 'a/b' })).toEqual({ url, repo: 'a/b', apply: false });
+    expect(parseArgs([url, '--repo', 'c/d'], { TALLY_BOARD_URL: 'x', TALLY_BOARD_REPO: 'a/b' }).repo).toBe('c/d');
+  });
+
+  it('rejects --repo without a value', () => {
+    expect(() => parseArgs([url, '--repo'], {})).toThrow('--repo');
+    expect(() => parseArgs(['--repo', '--apply', url], {})).toThrow('--repo');
   });
 });

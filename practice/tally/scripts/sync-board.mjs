@@ -7,16 +7,9 @@
 // The token needs the project scope, plus repo (or public_repo) with --repo. The project URL and repository can
 // also come from TALLY_BOARD_URL and TALLY_BOARD_REPO. Without --apply the script only prints the plan.
 import { fileURLToPath } from 'node:url';
-import { FIELD_KEYS, fieldName, findOption, norm, planSync, readTickets } from './board-sync/tickets.mjs';
+import { FIELD_KEYS, fieldName, findOption, norm, parseArgs, planSync, readTickets } from './board-sync/tickets.mjs';
 
-const args = process.argv.slice(2);
-const apply = args.includes('--apply');
-const repoFlag = args.indexOf('--repo');
-const repo = (repoFlag >= 0 ? args[repoFlag + 1] : process.env.TALLY_BOARD_REPO)?.replace(
-  /^https:\/\/github\.com\/|\/$/g,
-  '',
-);
-const url = args.find((a, i) => !a.startsWith('--') && i !== repoFlag + 1) ?? process.env.TALLY_BOARD_URL;
+const { url, repo, apply } = parseArgs(process.argv.slice(2), process.env);
 const token = process.env.GITHUB_TOKEN;
 const match = url?.match(/github\.com\/(users|orgs)\/([^/]+)\/projects\/(\d+)/);
 if (!match)
