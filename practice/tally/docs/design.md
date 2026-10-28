@@ -209,11 +209,15 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
     (2) Both member removal and member release (`POST .../members/:id/release`) clear `members.user_id`, so released
     and removed members no longer resolve to the account.
 - **`joined_groups_list`:** `GET /api/me` returns `{ user }`.
-- **`saved_bank_details`:**
-  - `PATCH /api/me` stores bank details in `users`.
+- **`saved_bank_details` (built):**
+  - The bank columns on `users` are already added in `0004_accounts.sql`.
+  - `PATCH /api/me` stores bank details in `users` (validated with `bankDetails`, 401 `SIGN_IN_REQUIRED` without session).
   - A member with a `user_id` but no account entered in the group gets the profile's details in the DTO
     (`LEFT JOIN users` in `loadMembers`, chosen in `toMemberDto`).
+  - `toMemberDto` assigns `bankSource`: `'group'` if `account_no` entered in group, else `'account'` if saved details exist on linked user, else `null`. Removed members always receive `null` and `bankSource: null`.
+  - `GET /groups/:code` returns `me.accountLinked: boolean` (true when caller's member is linked to their account).
   - An account entered in the group always takes precedence over the profile.
+  - In `MembersPanel`, the own member form shows a note when `bankSource === 'account'` and reveals an empty form only on "Use different details in this group"; forms prefill only when `bankSource === 'group'`, preventing accidental copies of saved details into the group.
 - **Files:**
   - New: `worker/google.ts`, `worker/routes/account.ts`, `worker/accountLink.ts`, `worker/routes/link.ts`,
     `src/account.tsx`, `src/components/AccountMenu.tsx` (+ `.scss`).

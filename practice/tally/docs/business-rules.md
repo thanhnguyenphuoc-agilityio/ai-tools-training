@@ -44,7 +44,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
-  (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
+  (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
+  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf (API only in the MVP; the interface is
   `owner_member_tools`). Clearing the account
   number clears all three fields.
 - **Removing a member** (`remove_member`):
@@ -193,6 +194,17 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
 - Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
   is **never returned in group data** or shown to other members.
+- **Saved bank details (`saved_bank_details`):**
+  - A signed-in person can save one set of bank details in their account (`PATCH /api/me`, returning 401
+    `SIGN_IN_REQUIRED` without a session).
+  - Saved details are read each time a group is viewed: they apply to every group where a member is linked to the
+    account and has no account entered in the group.
+  - In those groups, anyone with the group link can see them, because VietQR transfers require them. They are never
+    shown in a group where the person is not a member.
+  - Changing or clearing saved details updates every group that uses them, with nothing to resync and without touching
+    groups (not a group change; `last_activity_at` does not move and no audit log row is written).
+  - Saved details are kept until changed or cleared. Complete deletion of the account and its saved details is handled
+    in `delete_account`.
 - **Sessions:**
   - A session lasts **30 days** (fixed from sign-in time, not extended by use).
   - An expired session no longer identifies the person and its cookie is cleared.
