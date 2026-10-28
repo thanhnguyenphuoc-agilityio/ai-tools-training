@@ -134,7 +134,7 @@ export async function verifyGoogleIdToken(token: string, options: VerifyGoogleOp
 
     const payload = base64UrlDecodeJson<{
       iss?: string;
-      aud?: string;
+      aud?: string | string[];
       sub?: string;
       email?: string;
       name?: string;
@@ -145,7 +145,9 @@ export async function verifyGoogleIdToken(token: string, options: VerifyGoogleOp
     if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
       throw new ApiError(401, 'INVALID_GOOGLE_TOKEN', 'invalid issuer');
     }
-    if (payload.aud !== options.clientId) {
+    // Google sends `aud` as a string, or as an array when the token has more than one audience.
+    const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    if (!audiences.includes(options.clientId)) {
       throw new ApiError(401, 'INVALID_GOOGLE_TOKEN', 'audience mismatch');
     }
     if (payload.email_verified !== true) {

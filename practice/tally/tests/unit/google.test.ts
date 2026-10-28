@@ -86,6 +86,25 @@ describe('verifyGoogleIdToken (GS-10)', () => {
     expect(result.sub).toBe('google-sub-123');
   });
 
+  it('accepts the client id when aud is an array', async () => {
+    const token = await makeToken({}, { aud: [clientId] });
+    const result = await verifyGoogleIdToken(token, {
+      clientId,
+      getKey: (k) => (k === kid ? publicJwk : null),
+    });
+    expect(result.sub).toBe('google-sub-123');
+  });
+
+  it('refuses an array audience that does not contain the client id', async () => {
+    const token = await makeToken({}, { aud: ['other-client-id'] });
+    await expect(
+      verifyGoogleIdToken(token, {
+        clientId,
+        getKey: (k) => (k === kid ? publicJwk : null),
+      }),
+    ).rejects.toMatchObject({ status: 401, code: 'INVALID_GOOGLE_TOKEN' });
+  });
+
   it('refuses wrong audience', async () => {
     const token = await makeToken({}, { aud: 'other-client-id' });
     await expect(
