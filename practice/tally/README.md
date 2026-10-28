@@ -55,12 +55,12 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
   themselves.
 - **VietQR is VND only.** Groups in other currencies show the account details without a QR code.
 - **Privacy.** Groups contain bank account numbers, so codes are long and random, secrets are stored only as hashes,
-  and inactive groups are planned to be deleted automatically (`purge_inactive_groups`).
+  and inactive groups are deleted automatically after 10 days without changes (`purge_inactive_groups`).
 
 ### Not in the MVP
 
 Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): Google sign-in and a
-per-account group list, saved bank details, automatic deletion and locked groups, receipt photos, attendance-based
+per-account group list, saved bank details, locked groups, receipt photos, attendance-based
 splits, owner tools for other members, editing expenses, and currency conversion. `docs/design.md`
 holds a design for each of them; the rules agreed for `edit_expense` are in its ticket until the feature lands.
 

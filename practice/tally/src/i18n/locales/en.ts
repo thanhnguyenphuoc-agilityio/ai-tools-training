@@ -69,6 +69,10 @@ export const en = {
       settle: 'Settle up',
       members: 'Members',
     },
+    expiry: {
+      date: 'Deleted if nothing changes by {date}',
+      soon: 'Add an expense or a transfer to keep it.',
+    },
   },
   ownerKey: {
     title: 'Save your owner recovery link',
@@ -152,7 +156,8 @@ export const en = {
     messageTemplate: '{code} {from} to {to}',
     hint: 'Open your banking app and scan the code. Check the receiver name before you send.',
     noAccount: '{name} has not added a bank account yet. Remind them in the Members tab, or pay another way.',
-    noQrForCurrency: 'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
+    noQrForCurrency:
+      'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
     sent: 'I have sent it',
     renderError: 'The QR code could not be created. Use the account details below instead.',
   },
@@ -271,7 +276,8 @@ export const en = {
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
-    EXPENSE_HAS_REMOVED_MEMBER: 'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
+    EXPENSE_HAS_REMOVED_MEMBER:
+      'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
   } satisfies Record<ErrorCode, string>,
 };
 

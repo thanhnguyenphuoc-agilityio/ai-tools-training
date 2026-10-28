@@ -1,7 +1,7 @@
 // Joining a group, adding people by name, claiming a name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { audit, loadActiveMember, loadGroup, loadMembers, memberSettlement } from '../groupData';
+import { loadActiveMember, loadGroup, loadMembers, memberSettlement, recordChange } from '../groupData';
 import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv } from '../http';
 import { requireCanEditMember, requireCanRemoveMember, requireMember } from '../policy';
 
@@ -28,7 +28,7 @@ memberRoutes.post('/:code/members', async (c) => {
     .bind(id, group.code, name, token ? await sha256Hex(token) : null, now())
     .run();
   if (token) setGroupCookie(c, group.code, memberCookieName(group.code), `${id}.${token}`);
-  await audit(c.env.DB, group.code, me, 'member.add', id);
+  await recordChange(c.env.DB, group.code, me, 'member.add', id);
   return c.json({ id }, 201);
 });
 
@@ -47,7 +47,7 @@ memberRoutes.post('/:code/members/:id/claim', async (c) => {
     throw new ApiError(409, 'MEMBER_ALREADY_CLAIMED', 'this member is already used on another device');
   }
   setGroupCookie(c, group.code, memberCookieName(group.code), `${member.id}.${token}`);
-  await audit(c.env.DB, group.code, me, 'member.claim', member.id);
+  await recordChange(c.env.DB, group.code, me, 'member.claim', member.id);
   return c.json({ ok: true });
 });
 
@@ -72,7 +72,7 @@ memberRoutes.patch('/:code/members/:id', async (c) => {
   await c.env.DB.prepare('UPDATE members SET name = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ?')
     .bind(name, bank.bankBin, bank.accountNo, bank.accountName, member.id)
     .run();
-  await audit(c.env.DB, group.code, me, 'member.update', member.id);
+  await recordChange(c.env.DB, group.code, me, 'member.update', member.id);
   return c.json({ ok: true });
 });
 
@@ -117,6 +117,6 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
       .run();
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
   }
-  await audit(c.env.DB, group.code, me, 'member.remove', member.id);
+  await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
   return c.json({ ok: true });
 });

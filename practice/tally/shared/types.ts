@@ -70,6 +70,8 @@ export interface GroupDto {
   roundTo: number;
   createdAt: string;
   lastActivityAt: string;
+  /** ISO timestamp: lastActivityAt + INACTIVE_DAYS. Group is deleted at first daily run after this. */
+  expiresAt: string;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
   members: MemberDto[];

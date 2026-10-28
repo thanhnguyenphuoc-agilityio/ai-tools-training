@@ -32,7 +32,7 @@ export const api = {
     call<CreateGroupResponse>('POST', '/groups', input),
   getGroup: (code: string) => call<GroupDto>('GET', g(code)),
   updateGroup: (code: string, patch: { name?: string; currency?: string; roundTo?: number }) =>
-    call('PATCH', g(code), patch),
+    call<{ ok: true; changed: boolean }>('PATCH', g(code), patch),
   claimOwner: (code: string, ownerKey: string) => call('POST', `${g(code)}/owner/claim`, { ownerKey }),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),

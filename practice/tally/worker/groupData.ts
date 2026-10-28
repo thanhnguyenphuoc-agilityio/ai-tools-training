@@ -161,18 +161,26 @@ export const toMemberDto = (m: MemberRow): MemberDto => ({
   accountName: m.removed_at ? null : m.account_name,
 });
 
-/** Member activity pushes back the (future) auto-delete date. */
-export async function touch(db: D1Database, code: string): Promise<void> {
-  await db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(now(), code).run();
-}
-
-/** Records a change and counts it as activity. Call after every successful write. */
+/** Records an event in the audit log without changing last_activity_at. */
 export async function audit(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
+  await db
+    .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
+    .bind(code, actor, action, target, now())
+    .run();
+}
+
+/**
+ * Use for every change listed in `docs/business-rules.md`; use `audit()` alone for events that are not changes.
+ * Records the change in audit_log and pushes back the deletion date (last_activity_at) in one db.batch.
+ */
+export async function recordChange(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+  const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
+  const timestamp = now();
   await db.batch([
     db
       .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-      .bind(code, actor, action, target, now()),
-    db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(now(), code),
+      .bind(code, actor, action, target, timestamp),
+    db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(timestamp, code),
   ]);
 }

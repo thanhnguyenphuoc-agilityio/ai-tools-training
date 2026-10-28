@@ -1,7 +1,7 @@
 // Settling up: the payer says "I sent it", the receiver confirms it arrived.
 // Only confirmed transfers change balances (shared/settle.ts).
 import { Hono } from 'hono';
-import { audit, loadActiveMemberIds, loadGroup, noneRemovedSql } from '../groupData';
+import { loadActiveMemberIds, loadGroup, noneRemovedSql, recordChange } from '../groupData';
 import { amount, ApiError, now, readJson, text, type AppEnv } from '../http';
 import { requireCanConfirmTransfer, requireCanRecordTransfer, requireMember } from '../policy';
 
@@ -29,7 +29,7 @@ transferRoutes.post('/:code/transfers', async (c) => {
     .bind(id, group.code, fromId, toId, amount(body.amount), now(), JSON.stringify([fromId, toId]))
     .run();
   if (result.meta.changes === 0) throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'member is not in this group');
-  await audit(c.env.DB, group.code, me, 'transfer.add', id);
+  await recordChange(c.env.DB, group.code, me, 'transfer.add', id);
   return c.json({ id }, 201);
 });
 
@@ -46,6 +46,6 @@ transferRoutes.post('/:code/transfers/:id/confirm', async (c) => {
   await c.env.DB.prepare(`UPDATE transfers SET status = 'confirmed', confirmed_at = ? WHERE id = ?`)
     .bind(now(), id)
     .run();
-  await audit(c.env.DB, group.code, me, 'transfer.confirm', id);
+  await recordChange(c.env.DB, group.code, me, 'transfer.confirm', id);
   return c.json({ ok: true });
 });
