@@ -284,6 +284,48 @@ describe('lock_groups API', () => {
     expect(auditRows.results.map((r) => r.action)).toEqual(['group.link', 'group.lock']);
   });
 
+  // A link made before the limit check stays when the lock is refused (plan step 4).
+  it('LG-12: a lock refused at the limit still links an unlinked group', async () => {
+    const owner = new Browser(env.env);
+    await signIn(owner, 'full@example.com');
+
+    for (let i = 1; i <= 10; i++) {
+      const kept = await createGroup(owner, `Kept ${i}`);
+      const res = await owner.call<{ ok: true; changed: boolean }>('POST', `/groups/${kept.code}/lock`);
+      expect(res.status).toBe(200);
+    }
+
+    const extra = new Browser(env.env);
+    const unlinked = await createGroup(extra, 'Unlinked');
+    const { user } = await signIn(extra, 'full@example.com');
+
+    const refused = await extra.call<ErrorBody>('POST', `/groups/${unlinked.code}/lock`);
+    expect(refused.status).toBe(409);
+    expect(refused.json.code).toBe('LOCK_LIMIT_REACHED');
+
+    const groupRow = await env.env.DB.prepare('SELECT owner_user_id, locked_at FROM groups WHERE code = ?')
+      .bind(unlinked.code)
+      .first<{ owner_user_id: string | null; locked_at: string | null }>();
+    expect(groupRow?.owner_user_id).toBe(user.id);
+    expect(groupRow?.locked_at).toBeNull();
+
+    const ownerMember = await env.env.DB.prepare('SELECT user_id FROM members WHERE group_code = ? AND is_owner = 1')
+      .bind(unlinked.code)
+      .first<{ user_id: string | null }>();
+    expect(ownerMember?.user_id).toBe(user.id);
+
+    const links = await env.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM audit_log WHERE group_code = ? AND action = 'group.link'",
+    )
+      .bind(unlinked.code)
+      .first<{ count: number }>();
+    expect(links!.count).toBe(1);
+
+    const after = await extra.call<GroupDto>('GET', `/groups/${unlinked.code}`);
+    expect(after.json.canLinkAccount).toBe(false);
+    expect(after.json.locked).toBe(false);
+  }, 30_000);
+
   // LG-11: check order: guest signed out and member signed in both get 403 OWNER_ONLY; ACCOUNT_ALREADY_MEMBER
   it('LG-11: non-owner gets 403 OWNER_ONLY; account already a member gets 409 ACCOUNT_ALREADY_MEMBER', async () => {
     const owner = new Browser(env.env);
