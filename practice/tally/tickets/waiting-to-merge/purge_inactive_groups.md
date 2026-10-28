@@ -205,4 +205,33 @@ Branch `feat/purge_inactive_groups` off `develop`. Migration `0003_activity_rese
   - `recordChange` in `worker/groupData.ts` omits `details` column update since `0003_expense_edits` is not on develop.
   - Used pure state initialization for `now` in `GroupExpiry` to satisfy oxlint purity rule.
 
+## Review
+
+Reviewed by Sonnet (QA tester) against `develop` with the `review-checklist` skill.
+
+No defects found. Every acceptance criterion is covered by a test that fails without the code:
+
+- PG-1 keeps a group exactly 10 days old and deletes one 10 days and 1 minute old (`tests/api/purge.test.ts`).
+- PG-2 checks that members, expenses, shares, transfers and the audit log are gone while another group stays.
+- PG-3 checks that a member and a guest opening the group leave `last_activity_at` unchanged.
+- PG-4 checks each change from the answers (join, add by name, claim, edit, expense add and delete, transfer add and
+  confirm, remove, changed settings) and the non-changes (identical settings with no audit row, recovery link with an
+  `owner.claim` audit row). Releasing a member is not covered: that action is not built yet.
+- PG-5 checks `expiresAt` in the group DTO, and `tests/unit/rules.test.ts` checks the 72 hour boundary.
+- PG-6 and PG-7 run in `e2e/purge.spec.ts` on desktop and mobile.
+- PG-8 calls the exported `scheduled` handler, and PG-9 applies `0003_activity_reset.sql` between two seeded groups.
+
+Notes, none of them a change:
+
+- `README.md` "Not in the MVP" still names automatic deletion. The privacy line above it already states the rule, and
+  the same paragraph still lists features that are built, so it was left as it is.
+- The cron `0 19 * * *` is 02:00 in Vietnam only while Vietnam stays at UTC+7, which it does all year.
+
+Checks on this branch:
+
+- `npm run typecheck`: the only errors are the pre-existing missing `jsqr` and `pngjs` types in `e2e/settle-up.spec.ts`.
+- `npm run lint`: clean, oxlint and stylelint.
+- `npm test`: 28 files, 316 tests passed.
+- Playwright, full suite on port 5183: 62 tests passed (desktop and mobile).
+
 
