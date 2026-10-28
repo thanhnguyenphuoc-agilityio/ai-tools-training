@@ -5,6 +5,7 @@ import { copyText } from '../clipboard';
 import type { Navigate } from '../App';
 import { ExpenseForm } from '../components/ExpenseForm';
 import { ExpenseList } from '../components/ExpenseList';
+import { GroupExpiry } from '../components/GroupExpiry';
 import { GroupSummaryBar } from '../components/GroupSummaryBar';
 import { Icon, type IconName } from '../components/Icon';
 import { JoinPanel } from '../components/JoinPanel';
@@ -14,7 +15,7 @@ import { SettlePanel } from '../components/SettlePanel';
 import { todayLocal } from '../dates';
 import { downloadTextFile } from '../download';
 import { buildGroupCsv, csvFileName } from '../groupCsv';
-import { rememberGroup } from '../history';
+import { forgetGroup, rememberGroup } from '../history';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/types';
 import { useToast } from '../toast';
@@ -50,14 +51,26 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       setError(null);
       rememberGroup(g.code, g.name);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 404 ? t('group.notFound') : errorMessage(err));
+      if (err instanceof ApiError && err.status === 404) {
+        forgetGroup(code);
+        setError(t('group.notFound'));
+      } else {
+        setError(errorMessage(err));
+      }
     }
   }, [code, t, errorMessage]);
 
   useEffect(() => {
     const key = takeOwnerKeyFromHash();
     const claim = key
-      ? api.claimOwner(code, key).catch((err) => setError(t('group.badRecoveryLink', { message: errorMessage(err) })))
+      ? api.claimOwner(code, key).catch((err) => {
+          if (err instanceof ApiError && err.status === 404) {
+            forgetGroup(code);
+            setError(t('group.notFound'));
+          } else {
+            setError(t('group.badRecoveryLink', { message: errorMessage(err) }));
+          }
+        })
       : Promise.resolve();
     claim.then(reload);
     // Run once per group code (the owner key must be claimed only once), not
@@ -115,6 +128,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       </section>
 
       <GroupSummaryBar group={group} />
+      <GroupExpiry group={group} />
 
       {newOwnerKey && group.me.isOwner && (
         <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />

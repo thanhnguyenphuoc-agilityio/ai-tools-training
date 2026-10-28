@@ -192,13 +192,13 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.updateGroup(group.code, {
+      const res = await api.updateGroup(group.code, {
         name,
         currency: currency.code,
         roundTo: roundCoarse ? coarseUnit : currency.roundOptions[0],
       });
       setError(null);
-      notify('toast.settingsSaved');
+      if (res.changed) notify('toast.settingsSaved');
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -211,7 +211,13 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
       <form onSubmit={save} className="stack">
         <label className="field">
           <span className="field__label">{t('members.groupName')}</span>
-          <input className="field__control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+          <input
+            className="field__control"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={80}
+          />
         </label>
         <label className="field">
           <span className="field__label">{t('members.currency')}</span>

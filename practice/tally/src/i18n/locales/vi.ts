@@ -62,6 +62,10 @@ export const vi: Messages = {
       settle: 'Tất toán',
       members: 'Thành viên',
     },
+    expiry: {
+      date: 'Sẽ bị xóa nếu không có thay đổi trước {date}',
+      soon: 'Thêm chi tiêu hoặc chuyển khoản để giữ lại nhóm.',
+    },
   },
   ownerKey: {
     title: 'Lưu link khôi phục quyền trưởng nhóm',
@@ -143,7 +147,8 @@ export const vi: Messages = {
     messageTemplate: '{code} {from} trả {to}',
     hint: 'Mở app ngân hàng, quét mã. Kiểm tra lại tên người nhận trước khi chuyển.',
     noAccount: '{name} chưa nhập số tài khoản. Nhắc họ vào tab Thành viên để thêm, hoặc chuyển bằng cách khác.',
-    noQrForCurrency: 'VietQR chỉ dùng cho VND. Hãy chuyển {amount} theo thông tin bên dưới, quy đổi theo tỷ giá nhóm đã thống nhất.',
+    noQrForCurrency:
+      'VietQR chỉ dùng cho VND. Hãy chuyển {amount} theo thông tin bên dưới, quy đổi theo tỷ giá nhóm đã thống nhất.',
     sent: 'Tôi đã chuyển',
     renderError: 'Không tạo được mã QR. Hãy chuyển khoản theo thông tin bên dưới.',
   },
