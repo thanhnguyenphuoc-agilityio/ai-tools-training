@@ -119,6 +119,10 @@ npx playwright install chromium   # first run only
 npm run e2e        # Playwright, desktop and mobile
 ```
 
+`npm run e2e` starts its own server on port 5174 with the development sign-in enabled for that process only, and it
+never reuses a server already running (so a dev server started by hand on 5173 is left alone). The same command runs
+in CI without extra configuration.
+
 The suite passes on a fresh clone. A passing suite does not mean the app has no bugs; tests only cover the
 behaviour they check.
 
