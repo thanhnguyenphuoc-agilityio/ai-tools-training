@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { GroupDto } from '../../shared/types';
+import { useAccount } from '../account';
 import { api, ApiError } from '../api';
 import { copyText } from '../clipboard';
 import type { Navigate } from '../App';
@@ -43,6 +44,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const [tab, setTab] = useState<Tab>('expenses');
   const notify = useToast();
   const [newOwnerKey, setNewOwnerKey] = useState<string | null>(() => history.state?.ownerKey ?? null);
+  const { version } = useAccount();
 
   const reload = useCallback(async () => {
     try {
@@ -76,6 +78,20 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
     // Run once per group code (the owner key must be claimed only once), not
     // again when reload's identity changes with the locale.
   }, [code]);
+
+  useEffect(() => {
+    if (version > 0) reload();
+  }, [version, reload]);
+
+  const linkAccount = async () => {
+    try {
+      await api.linkAccount(code);
+      notify('toast.accountLinked');
+      await reload();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
 
   const dismissKey = () => {
     history.replaceState(null, '', location.pathname);
@@ -122,6 +138,12 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
             <button className="button button--ghost button--small" onClick={exportCsv}>
               <Icon name="download" />
               {t('csvExport.download')}
+            </button>
+          )}
+          {group.canLinkAccount && (
+            <button className="button button--ghost button--small" onClick={linkAccount}>
+              <Icon name="user" />
+              {t('account.link')}
             </button>
           )}
         </div>

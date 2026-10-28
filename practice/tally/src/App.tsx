@@ -1,6 +1,7 @@
 // Two pages, so a tiny router: "/" and "/g/:code".
 import { useEffect, useState } from 'react';
 import './App.scss';
+import { AccountMenu } from './components/AccountMenu';
 import { LanguagePicker } from './components/LanguagePicker';
 import { Icon } from './components/Icon';
 import { ThemePicker } from './components/ThemePicker';
@@ -44,11 +45,14 @@ export function App() {
           {t('app.title')}
         </a>
         <div className="app__controls">
+          <AccountMenu />
           <LanguagePicker />
           <ThemePicker />
         </div>
       </header>
-      <main>{match ? <GroupPage key={match[1]} code={match[1]} navigate={navigate} /> : <HomePage navigate={navigate} />}</main>
+      <main>
+        {match ? <GroupPage key={match[1]} code={match[1]} navigate={navigate} /> : <HomePage navigate={navigate} />}
+      </main>
     </div>
   );
 }

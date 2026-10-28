@@ -7,9 +7,25 @@ import { findBank, type BankDetails } from '../shared/types';
 
 export interface Env {
   DB: D1Database;
+  GOOGLE_CLIENT_ID?: string;
+  DEV_LOGIN?: string;
 }
 
-export type AppEnv = { Bindings: Env };
+export interface UserRow {
+  id: string;
+  google_sub: string;
+  email: string;
+  name: string;
+  bank_bin: string | null;
+  account_no: string | null;
+  account_name: string | null;
+  created_at: string;
+}
+
+export type AppEnv = {
+  Bindings: Env;
+  Variables: { user?: UserRow | null };
+};
 export type Ctx = Context<AppEnv>;
 
 export class ApiError extends Error {
@@ -24,6 +40,10 @@ export class ApiError extends Error {
 }
 
 export const now = () => new Date().toISOString();
+
+/** True for the error D1 throws when a UNIQUE index rejects a write. */
+export const isUniqueViolation = (err: unknown): boolean =>
+  err instanceof Error && err.message.includes('UNIQUE constraint failed');
 
 export function text(value: unknown, field: string, max: number): string {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -103,7 +123,11 @@ export function isoDate(value: unknown): string {
 export function bankDetails(body: Record<string, unknown>, current: BankDetails): BankDetails {
   const pick = (key: keyof BankDetails, max: number) =>
     body[key] === undefined ? current[key] : optionalText(body[key], key, max);
-  const result = { bankBin: pick('bankBin', 6), accountNo: pick('accountNo', 19), accountName: pick('accountName', 60) };
+  const result = {
+    bankBin: pick('bankBin', 6),
+    accountNo: pick('accountNo', 19),
+    accountName: pick('accountName', 60),
+  };
 
   if (!result.accountNo) return { bankBin: null, accountNo: null, accountName: null };
   if (!result.bankBin || !findBank(result.bankBin)) throw new ApiError(400, 'UNKNOWN_BANK', 'unknown bank');

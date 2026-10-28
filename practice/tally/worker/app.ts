@@ -3,8 +3,10 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { ErrorBody } from '../shared/errors';
 import { ApiError, type AppEnv } from './http';
+import { accountRoutes } from './routes/account';
 import { expenseRoutes } from './routes/expenses';
 import { groupRoutes } from './routes/groups';
+import { linkRoutes } from './routes/link';
 import { memberRoutes } from './routes/members';
 import { transferRoutes } from './routes/transfers';
 
@@ -34,10 +36,12 @@ export function createApp() {
 
   app.get('/health', (c) => c.json({ ok: true }));
 
+  app.route('/', accountRoutes);
   app.route('/groups', groupRoutes);
   app.route('/groups', memberRoutes);
   app.route('/groups', expenseRoutes);
   app.route('/groups', transferRoutes);
+  app.route('/groups', linkRoutes);
 
   app.all('*', (c) => c.json({ error: 'not found', code: 'NOT_FOUND' } satisfies ErrorBody, 404));
   return app;

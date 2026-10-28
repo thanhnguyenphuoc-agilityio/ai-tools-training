@@ -47,8 +47,9 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Constraints that shape the design
 
-- **No sign-up in the MVP.** Access is by link; identity is a device cookie (members) or the owner key. Google
-  sign-in is an optional, planned feature (`google_sign_in`).
+- **No sign-up required.** Access is by link; identity is a device cookie (members) or the owner key. Google
+  sign-in is optional and available (`google_sign_in`): an account restores access across devices, while guests can
+  view, join and pay without an account.
 - **Money is exact.** Amounts are integers in the smallest unit of the group currency; rounding remainders go to
   the payer. No floating point.
 - **The app never touches money.** It does not connect to banks and cannot see payments; people confirm transfers
@@ -59,8 +60,8 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Not in the MVP
 
-Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): Google sign-in and a
-per-account group list, saved bank details, locked groups, receipt photos, attendance-based
+Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): a per-account group
+list, saved bank details, locked groups, receipt photos, attendance-based
 splits, owner tools for other members, editing expenses, and currency conversion. `docs/design.md`
 holds a design for each of them; the rules agreed for `edit_expense` are in its ticket until the feature lands.
 
@@ -83,6 +84,23 @@ npm install
 npm run dev        # applies migrations to the local D1 database, then serves http://localhost:5173 (UI + API)
 ```
 
+To run with development sign-in enabled locally, set `TALLY_DEV_LOGIN` for the one command:
+
+```bash
+# bash
+TALLY_DEV_LOGIN=true npm run dev
+```
+
+```powershell
+# PowerShell
+$env:TALLY_DEV_LOGIN='true'; npm run dev
+```
+
+```bat
+:: cmd
+set TALLY_DEV_LOGIN=true && npm run dev
+```
+
 Demo data can be created from a second terminal while `dev` is running:
 
 ```bash
@@ -100,6 +118,10 @@ npm test           # unit (shared/) and API (worker/, in-memory D1 via Miniflare
 npx playwright install chromium   # first run only
 npm run e2e        # Playwright, desktop and mobile
 ```
+
+`npm run e2e` starts its own server on port 5174 with the development sign-in enabled for that process only, and it
+never reuses a server already running (so a dev server started by hand on 5173 is left alone). The same command runs
+in CI without extra configuration.
 
 The suite passes on a fresh clone. A passing suite does not mean the app has no bugs; tests only cover the
 behaviour they check.

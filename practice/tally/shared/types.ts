@@ -74,6 +74,7 @@ export interface GroupDto {
   expiresAt: string;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
+  canLinkAccount: boolean;
   members: MemberDto[];
   expenses: ExpenseDto[];
   transfers: TransferDto[];
@@ -84,6 +85,21 @@ export interface CreateGroupResponse {
   code: string;
   /** Shown once. The server only stores its hash. */
   ownerKey: string;
+}
+
+export interface UserDto {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface MeResponse {
+  user: UserDto | null;
+}
+
+export interface ConfigResponse {
+  googleClientId: string | null;
+  devLogin: boolean;
 }
 
 export interface NewExpense {

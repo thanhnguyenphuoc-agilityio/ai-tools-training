@@ -24,23 +24,26 @@
   }
 
   // 40px pills inside the 2px padding and border keep the control at 46px, a comfortable tap target. On
-  // phones the pills are 36px wide (still 40px tall) so the header fits on one row at 360px.
+  // phones the pills are 32px wide so the header with all controls fits on one row at 360px.
   &__option {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 40px;
+    width: 32px;
+    height: 36px;
 
     @include up(sm) {
       width: 40px;
+      height: 40px;
     }
 
     border-radius: $radius-pill;
     color: var(--color-muted);
     cursor: pointer;
-    transition: background-color $transition-fast, color $transition-fast;
+    transition:
+      background-color $transition-fast,
+      color $transition-fast;
 
     &:hover {
       color: var(--color-text);

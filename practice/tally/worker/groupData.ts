@@ -11,6 +11,7 @@ export interface GroupRow {
   currency: string;
   round_to: number;
   owner_key_hash: string;
+  owner_user_id: string | null;
   last_activity_at: string;
   created_at: string;
 }
@@ -22,6 +23,7 @@ export interface MemberRow {
   account_no: string | null;
   account_name: string | null;
   token_hash: string | null;
+  user_id: string | null;
   is_owner: number;
   created_at: string;
   removed_at: string | null;
@@ -152,7 +154,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => ({
   id: m.id,
   name: m.name,
   isOwner: m.is_owner === 1,
-  claimed: m.token_hash !== null,
+  claimed: m.token_hash !== null || m.user_id !== null,
   removed: m.removed_at !== null,
   removedReason: m.removed_reason,
   // A removed member cannot receive a transfer, so their bank details are no longer shown to the link holders.

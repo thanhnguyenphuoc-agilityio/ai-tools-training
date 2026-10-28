@@ -27,7 +27,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     because they stay in the history with their amounts in the original currency.
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
-  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, and saving group settings that differ from the current values.
+  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, and saving group settings that differ from the current values.
   - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, and signing in. None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings and signing in write nothing.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
@@ -36,9 +36,12 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 
 ## Members
 
-- A visitor can **join** by entering a name. That device receives a *device token* (HttpOnly cookie).
+- A visitor can **join** by entering a name. That device receives a _device token_ (HttpOnly cookie).
 - A member can **add other people by name** (people who do not use the app). Such a person can later open the link
   and click "I am <name>" to claim the name, if nobody has claimed it yet.
+- A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
+  or joining again. The rule extends to accounts: one account is at most one member per group; if the account already has
+  a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
   (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
@@ -169,11 +172,51 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   keeps its own choice.
 - Changing the language does not change any group data, including the currency of an existing group.
 
+## Accounts (optional sign-in)
+
+- Signing in is **optional**. Occasional members can view, join and pay without an account.
+- What an account restores:
+  - An owner who signed in can access and manage their group on another device without the recovery link.
+  - A member who signed in can act as their member on another device without claiming the name again.
+- Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
+  claiming a name while signed in links that member to the account (`members.user_id`).
+- **Link to my account:**
+  - The button is shown only when there is something to link: the signed-in person holds the owner key and the group
+    or the owner member is not linked to the account yet, or holds a device token of a member who is not linked to
+    any account. It is not shown when the group or the member belongs to another account, or when the account is
+    already another member of the group.
+  - An owner with access from a recovery link on this device can attach the group and the owner member to their account.
+    Both rows are updated or nothing changes.
+  - A member with access from a device token on this device can attach that member to their account.
+  - If the group belongs to another account, linking is refused (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`).
+  - If the member is linked to another account, linking is refused (`409 MEMBER_LINKED_ELSEWHERE`).
+  - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
+- Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
+  is **never returned in group data** or shown to other members.
+- **Sessions:**
+  - A session lasts **30 days** (fixed from sign-in time, not extended by use).
+  - An expired session no longer identifies the person and its cookie is cleared.
+  - Expired sessions are deleted by the daily cleanup job.
+- **Signing out:**
+  - Ends the account session only. Device tokens and recovery links on that device remain.
+- **Member removal:**
+  - When the owner removes a member, `user_id` is cleared; the account no longer resolves to it and may join the group
+    again as a new member.
+- **Activity:**
+  - Signing in does not move group activity (`last_activity_at`).
+  - Linking a group or a member is a change and updates group activity (audited as `group.link` or `member.link`,
+    with the linked member as target).
+- **Development sign-in:**
+  - Developers and automated tests can sign in with an email address without a Google account.
+  - It is available only when explicitly enabled for local development (`DEV_LOGIN=true`) and only on `localhost`. On any
+    other host or without the flag, the endpoint returns 404.
+
 ## Data and safety
 
 - Only **fake data** is used in development and tests. Fake account numbers: `0123456789`, `9876543210`.
-- Owner keys and device tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`, and are sent
-  only to the API path of their own group.
+- Owner keys, device tokens and session tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`.
+  Group cookies are sent only to the API path of their own group; session cookies are sent to `/api` and expire after
+  30 days.
 - Request bodies are limited to 16 KB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
 - OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)

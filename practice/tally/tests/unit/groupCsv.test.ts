@@ -104,6 +104,7 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
         createdAt: '2026-10-01T12:00:00.000Z',
       }),
     ],
+    canLinkAccount: false,
     me: { memberId: 'alex', isOwner: true },
     ...overrides,
   };
