@@ -106,3 +106,30 @@ Migration: the real `audit_log` has no `details` column. `migrations/0006_audit_
 - `tickets/README.md` Dependencies: `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details` and `lock_groups`.
 
 Commits: `docs(tickets): start delete_account with a plan`, `feat: add the audit details column`, `feat: delete the signed-in account`, `feat: delete account dialog`, `test: cover deleting an account`, `docs: describe account deletion`, `docs(tickets): move delete_account to waiting-to-merge`.
+
+## Merge request
+
+- Branch: `feat/delete_account` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- Summary of changes:
+  - `migrations/0006_audit_details.sql`: adds `audit_log.details` (`TEXT`, JSON, NULL when unused).
+  - `worker/accountDelete.ts`: `deleteAccount(db, userId, now)`, one `db.batch` of six statements (audit `group.unlock`
+    with details `{"reason":"account.delete"}`, unlock kept groups with `last_activity_at` = now, detach owned groups,
+    detach linked members, delete sessions, delete the user).
+  - `worker/routes/account.ts`: `DELETE /api/me` with `requireSignedIn(await resolveAccount(c))` and `clearSessionCookie(c)`.
+  - UI: `deleteMe()` in `src/api.ts`, `deleteAccount()` in `src/account.tsx`, "Delete account" item in `AccountMenu`,
+    new `DeleteAccountDialog` (`useDialog`, `errorMessage`, block `delete-account`).
+  - i18n: `account.deleteAccount` and the `deleteAccount` namespace in `en.ts` and `vi.ts`.
+  - Tests: `tests/api/delete-account.test.ts` (DA-1..DA-8), `e2e/delete-account.spec.ts` (DA-9).
+  - Docs: `docs/business-rules.md`, `docs/design.md` (migration numbers: `receipt_photos` moves to `0007`), `README.md`,
+    `tickets/README.md`.
+- What was adapted vs the draft:
+  - The real `audit_log` had no `details` column, so `0006_audit_details.sql` is new. A later `edit_expense` port must
+    not add `audit_log.details` again.
+  - `requireSignedIn` and `clearSessionCookie` already existed; `worker/auth.ts` and `worker/policy.ts` are unchanged.
+  - The dialog uses `useDialog` and `errorMessage(err)` instead of the draft's `message(UiMessage)`.
+  - No shared-group refusal and no new error code (those came later in the draft and are not part of this ticket).
+- Commands run and results:
+  - `npm run typecheck` and `npm run lint`: clean.
+  - `npm test`: 33 files, 381 tests passed. Failing-first: the 8 DA API tests answered `404` before the route existed.
+  - `npx playwright test --config playwright.local.config.ts e2e/delete-account.spec.ts` (port 5192): 8 passed.
