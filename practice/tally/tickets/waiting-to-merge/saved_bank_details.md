@@ -184,3 +184,32 @@ Branch `feat/saved_bank_details` from `develop`. No new migration: `users.bank_b
 
 - `docs/business-rules.md`: update Members and Accounts sections for receiving account precedence, saved bank details rules, immutability of group deletion dates.
 - `docs/design.md`: update `saved_bank_details` section marking it built, documenting DTO fields and precedence.
+
+## Merge request
+
+### Summary
+
+Implements `saved_bank_details` (TAL-15). Allows signed-in users to save receiving bank details in their account via `PATCH /api/me`. In groups, members linked to the account reuse these saved details whenever they have not entered a group-specific account.
+
+- Added `bankSource: 'group' | 'account' | null` to `MemberDto` and `accountLinked: boolean` to `Me`.
+- `loadMembers` performs `LEFT JOIN users` to resolve saved details.
+- `toMemberDto` gives priority to group details, then account saved details, while removed members receive `null`.
+- Account menu provides "My bank details" dialog with bank selection, account number, and account name.
+- In member panel, own member displays an informative note when using account details, allowing custom group details without copying until saved, and allowing returning to saved details.
+- Updated `docs/business-rules.md` and `docs/design.md`.
+
+### How tested
+
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (oxlint + stylelint).
+- `npm test`: 31 test files, 361 tests passed (including 9 API tests in `tests/api/saved-bank.test.ts`).
+- `npx playwright test`: 82 tests passed across desktop and mobile Chrome (including 6 tests in `e2e/saved-bank.spec.ts`).
+- `npm run test:hooks`: 29 hook tests passed.
+- `tests/unit/board-sync.test.ts`: 13 tests passed.
+
+### Adapted from draft vs left out
+
+- Used real develop's `requireSignedIn(account)` in `policy.ts` instead of draft's inline checks or `requireAccount` overloading.
+- Kept clean develop baseline: did not import draft changes belonging to other tickets (`joined_groups_list`, `lock_groups`, `delete_account`, `owner_member_tools`).
+- Used existing `0004_accounts.sql` migration; no new migration required.
+- Aligned error handling with `errorMessage` in `SavedBankDialog` and `MembersPanel` matching real develop patterns.
