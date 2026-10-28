@@ -81,6 +81,8 @@ draft item without `--repo` (existing drafts are converted to issues once a repo
 source of truth: the script prints a plan by default and changes the board only with `--apply`, overwrites edits
 made on GitHub to the title, body, state and those fields, leaves comments alone, never deletes items, and never
 moves tickets here. It needs `GITHUB_TOKEN` with the `project` scope, plus `repo` (or `public_repo`) with `--repo`.
+From PowerShell, `npm run` drops the `--` separator and takes `--repo` as its own option; the script then stops with
+an error, so run `node scripts/sync-board.mjs <project url> --repo <owner>/<name>` instead.
 
 ## Dependencies
 

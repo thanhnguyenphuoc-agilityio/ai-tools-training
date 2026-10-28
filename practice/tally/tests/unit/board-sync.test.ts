@@ -126,13 +126,25 @@ describe('parseArgs', () => {
 
   it('reads --repo and --apply in any order', () => {
     expect(parseArgs([url, '--repo', 'a/b'], {})).toEqual({ url, repo: 'a/b', apply: false });
-    expect(parseArgs(['--repo', 'https://github.com/a/b/', url, '--apply'], {})).toEqual({ url, repo: 'a/b', apply: true });
+    expect(parseArgs(['--repo', 'https://github.com/a/b/', url, '--apply'], {})).toEqual({
+      url,
+      repo: 'a/b',
+      apply: true,
+    });
     expect(parseArgs(['--apply', url], {})).toEqual({ url, repo: undefined, apply: true });
   });
 
   it('falls back to TALLY_BOARD_URL and TALLY_BOARD_REPO', () => {
-    expect(parseArgs([], { TALLY_BOARD_URL: url, TALLY_BOARD_REPO: 'a/b' })).toEqual({ url, repo: 'a/b', apply: false });
+    expect(parseArgs([], { TALLY_BOARD_URL: url, TALLY_BOARD_REPO: 'a/b' })).toEqual({
+      url,
+      repo: 'a/b',
+      apply: false,
+    });
     expect(parseArgs([url, '--repo', 'c/d'], { TALLY_BOARD_URL: 'x', TALLY_BOARD_REPO: 'a/b' }).repo).toBe('c/d');
+  });
+
+  it('stops when npm took --repo as its own option', () => {
+    expect(() => parseArgs([url, 'a/b'], { npm_config_repo: 'true' })).toThrow('node scripts/sync-board.mjs');
   });
 
   it('rejects --repo without a value', () => {

@@ -31,6 +31,13 @@ const idOf = (title) => title.match(/^TAL-\d+\b/)?.[0];
 
 // Command line: <project url> [--repo <owner>/<name>] [--apply], in any order, with env fallbacks.
 export function parseArgs(argv, env) {
+  // From PowerShell, npm drops the "--" separator and keeps --repo as its own config: the script then gets the
+  // repository as a bare argument and npm_config_repo=true, and would quietly make draft items instead of issues.
+  if (env.npm_config_repo !== undefined)
+    throw new Error(
+      'npm took --repo as its own option. Run "node scripts/sync-board.mjs <url> --repo <owner>/<name>", ' +
+        'or "npm run board:sync -- -- <url> --repo <owner>/<name>" from PowerShell',
+    );
   const repoFlag = argv.indexOf('--repo');
   const repoValue = repoFlag >= 0 ? argv[repoFlag + 1] : undefined;
   if (repoFlag >= 0 && (!repoValue || repoValue.startsWith('--'))) throw new Error('--repo takes <owner>/<name>');
