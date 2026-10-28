@@ -1,8 +1,19 @@
 // Every "who may do what" rule lives here. Routes call these instead of
-// comparing ids inline, so a new rule (e.g. a locked group becomes read-only)
+// comparing ids inline, so a new rule (e.g. a closed group becomes read-only)
 // is a change in one file. Keep in sync with docs/business-rules.md.
 import type { Identity } from './auth';
 import { ApiError } from './http';
+
+export function requireAccount(me: Identity): string {
+  if (!me.userId) throw new ApiError(401, 'SIGN_IN_REQUIRED', 'sign in first');
+  return me.userId;
+}
+
+/** A route outside a group (`/me`, `/me/groups`) that needs a signed-in account; there is no group identity to resolve. */
+export function requireSignedIn(account: { id: string } | null): string {
+  if (!account) throw new ApiError(401, 'SIGN_IN_REQUIRED', 'sign in first');
+  return account.id;
+}
 
 export function requireMember(me: Identity): string {
   if (!me.memberId) throw new ApiError(401, 'JOIN_FIRST', 'join the group first');
@@ -11,6 +22,62 @@ export function requireMember(me: Identity): string {
 
 export function requireOwner(me: Identity): void {
   if (!me.isOwner) throw new ApiError(403, 'OWNER_ONLY', 'only the group owner can do this');
+}
+
+export function requireOwnerAccount(me: Identity): string {
+  requireOwner(me);
+  return requireAccount(me);
+}
+
+/**
+ * Checks that neither the signed-in account nor the device is already a member.
+ * The account check comes first so an account gets ACCOUNT_ALREADY_MEMBER.
+ */
+export function requireNotMember(me: Identity): void {
+  if (me.accountMemberId) {
+    throw new ApiError(409, 'ACCOUNT_ALREADY_MEMBER', 'your account is already a member of this group');
+  }
+  if (me.memberId) {
+    throw new ApiError(409, 'ALREADY_MEMBER', 'this device is already a member of the group');
+  }
+}
+
+export function requireGroupNotOwnedByOther(me: Identity, group: { owner_user_id: string | null }): void {
+  if (group.owner_user_id !== null && group.owner_user_id !== me.userId) {
+    throw new ApiError(403, 'GROUP_OWNED_BY_OTHER_ACCOUNT', 'group belongs to another account');
+  }
+}
+
+export function requireMemberLinkable(me: Identity, member: { id: string; user_id: string | null }): void {
+  if (member.user_id !== null && member.user_id !== me.userId) {
+    throw new ApiError(409, 'MEMBER_LINKED_ELSEWHERE', 'member linked to another account');
+  }
+  if (me.accountMemberId !== null && me.accountMemberId !== member.id) {
+    throw new ApiError(409, 'ACCOUNT_ALREADY_MEMBER', 'your account is already a member of this group');
+  }
+}
+
+/**
+ * Whether "Link to my account" has something to link: a signed-in person whose access on this device is not linked
+ * yet. It mirrors the checks of `linkToAccount` (`worker/accountLink.ts`) without throwing, so the button is shown
+ * only when the request can succeed. The owner key is tried first, as in `linkToAccount`.
+ */
+export function canLinkToAccount(
+  me: Identity,
+  group: { owner_user_id: string | null },
+  ownerMember: { id: string; user_id: string | null } | null,
+  deviceMember: { id: string; user_id: string | null } | null,
+): boolean {
+  if (!me.userId) return false;
+  if (me.hasOwnerKey) {
+    if (!ownerMember) return false;
+    if (group.owner_user_id !== null && group.owner_user_id !== me.userId) return false;
+    if (ownerMember.user_id !== null && ownerMember.user_id !== me.userId) return false;
+    if (me.accountMemberId !== null && me.accountMemberId !== ownerMember.id) return false;
+    return group.owner_user_id === null || ownerMember.user_id === null;
+  }
+  // A member linked to any account is not linkable. An account that already has another member in the group is refused.
+  return deviceMember !== null && deviceMember.user_id === null && me.accountMemberId === null;
 }
 
 /** Name and bank details: the member themself or the owner. */

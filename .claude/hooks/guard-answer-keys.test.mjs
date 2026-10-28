@@ -85,6 +85,17 @@ test('checks the first word of each shell segment', () => {
   blocked('PowerShell', { command: '@"\n$(Get-Content ..\\tally-seeded-answers.md)\n"@' });
 });
 
+test('ignores variable names but checks the text around them', () => {
+  allowed('PowerShell', {
+    command: "$env:TALLY_BOARD_URL=[Environment]::GetEnvironmentVariable('TALLY_BOARD_URL','User'); node x.mjs",
+  });
+  allowed('PowerShell', { command: 'node x.mjs "$env:TALLY_BOARD_URL" | Select-Object -Last 3' });
+  allowed('Bash', { command: 'TALLY_BOARD_REPO=a/b node x.mjs "${TALLY_BOARD_URL}"' });
+  blocked('PowerShell', { command: 'Get-Content ..\\tally-$name-answers.md' });
+  blocked('Bash', { command: 'cat ../tally-${X}*.md' });
+  blocked('Bash', { command: 'cat "$HOME/tally-review-answers.md"' });
+});
+
 test('treats -e and --regexp as the pattern of a recursive search', () => {
   blocked('Bash', { command: 'grep -r -ebug ..' });
   blocked('Bash', { command: 'grep -r --regexp=bug ..' });

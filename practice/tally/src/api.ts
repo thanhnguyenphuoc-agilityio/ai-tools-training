@@ -1,7 +1,16 @@
 // Typed client for the Worker API. Cookies (owner key, device token) are
 // HttpOnly and sent by the browser automatically.
 import type { ErrorBody, ErrorCode, ErrorParams } from '../shared/errors';
-import type { BankDetails, CreateGroupResponse, GroupDto, NewExpense } from '../shared/types';
+import type {
+  BankDetails,
+  ConfigResponse,
+  CreateGroupResponse,
+  GroupDto,
+  MeResponse,
+  MyGroupsResponse,
+  NewExpense,
+  UserDto,
+} from '../shared/types';
 
 export class ApiError extends Error {
   constructor(
@@ -32,7 +41,9 @@ export const api = {
     call<CreateGroupResponse>('POST', '/groups', input),
   getGroup: (code: string) => call<GroupDto>('GET', g(code)),
   updateGroup: (code: string, patch: { name?: string; currency?: string; roundTo?: number }) =>
-    call('PATCH', g(code), patch),
+    call<{ ok: true; changed: boolean }>('PATCH', g(code), patch),
+  lockGroup: (code: string) => call<{ ok: true; changed: boolean }>('POST', `${g(code)}/lock`),
+  unlockGroup: (code: string) => call<{ ok: true; changed: boolean }>('DELETE', `${g(code)}/lock`),
   claimOwner: (code: string, ownerKey: string) => call('POST', `${g(code)}/owner/claim`, { ownerKey }),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),
@@ -49,4 +60,14 @@ export const api = {
   recordTransfer: (code: string, toId: string, amount: number) =>
     call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount }),
   confirmTransfer: (code: string, id: string) => call('POST', `${g(code)}/transfers/${id}/confirm`),
+
+  getConfig: () => call<ConfigResponse>('GET', '/config'),
+  getMe: () => call<MeResponse>('GET', '/me'),
+  updateMe: (patch: BankDetails) => call<{ user: UserDto }>('PATCH', '/me', patch),
+  deleteMe: () => call<{ ok: true }>('DELETE', '/me'),
+  signInGoogle: (credential: string) => call<{ user: UserDto }>('POST', '/auth/google', { credential }),
+  signInDev: (email: string, name?: string) => call<{ user: UserDto }>('POST', '/auth/dev', { email, name }),
+  signOut: () => call<{ ok: true }>('POST', '/auth/logout'),
+  linkAccount: (code: string) => call<{ ok: true; changed: boolean }>('POST', `${g(code)}/link`),
+  getMyGroups: () => call<MyGroupsResponse>('GET', '/me/groups'),
 };

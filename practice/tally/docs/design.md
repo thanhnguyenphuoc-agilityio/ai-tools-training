@@ -32,7 +32,7 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 | `worker/routes/*.ts` | One file per resource | Add a new file rather than growing an existing one |
 | `worker/auth.ts` | **The only place** that answers "who is calling" | Add identity sources (for example a Google session) |
 | `worker/policy.ts` | **The only place** that answers "may they do this" | Add new permission rules |
-| `worker/groupData.ts` | Reads groups and members, `touch`, `audit` | Add columns to DTOs |
+| `worker/groupData.ts` | Reads groups and members, `audit`, `recordChange` | Add columns to DTOs |
 | `worker/http.ts` | `Env`, `ApiError`, input validation | Add new bindings to `Env` |
 | `migrations/NNNN_*.sql` | Schema, numbered in order | **One new migration per feature**; existing migrations are never edited |
 | `src/api.ts` | Typed client for every endpoint | Add a function per new endpoint |
@@ -49,11 +49,11 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 |---|---|---|---|
 | Owner key | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash` | `isOwner` |
 | Device token | cookie `tally_member_<code>` = `<memberId>.<token>` | `members.token_hash` | `memberId` |
-| *(`google_sign_in`)* Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
+| Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
-A future rule such as "a closed group is read-only" (not planned; `lock_groups` does not do this) only needs
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
+A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
 ## 4. Data
@@ -65,7 +65,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
 - No `CHECK (x IN (...))` for extensible enum-like values, because SQLite has to rebuild the table to change one.
   Values are validated in code.
-- `last_activity_at` has been maintained since v1 (`audit()` and member GETs), so `purge_inactive_groups` has data to work with.
+- `last_activity_at` tracks the time of the last change (through `recordChange` in `worker/groupData.ts`). Viewing does not move it. Used by `purge_inactive_groups`.
 
 ## 5. Language, currency and interface
 
@@ -157,82 +157,138 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
-### google_sign_in, joined_groups_list, saved_bank_details
+### google_sign_in (built), joined_groups_list (built), saved_bank_details
 
 - **Migration `0004_accounts.sql`:**
   - Table `users(id, google_sub UNIQUE, email, name, bank_bin, account_no, account_name, created_at)`.
   - Table `sessions(token_hash PK, user_id, created_at, expires_at)`. Expired sessions are deleted by the daily
-    cleanup job (`purgeInactiveGroups` from `purge_inactive_groups`, or a job of its own if that ticket is not done yet).
+    cleanup job (`runDailyJobs` from `worker/cleanup.ts`).
   - Column `members.user_id`, with a unique index on `(group_code, user_id) WHERE user_id IS NOT NULL`.
   - Column `groups.owner_user_id`.
 - **Sign-in:**
-  - The client uses *Google Identity Services* (the "Sign in with Google" button) to obtain an ID token (JWT).
-  - The token is sent to `POST /api/auth/google`. The Worker verifies it with `jose` (`createRemoteJWKSet` with
-    `https://www.googleapis.com/oauth2/v3/certs`, Google's `issuer`, `audience` = `GOOGLE_CLIENT_ID`, and
-    `email_verified` required), upserts `users` and opens a session.
+  - The client uses _Google Identity Services_ to obtain an ID token (JWT).
+  - The token is sent to `POST /api/auth/google`. The Worker verifies it with WebCrypto in `worker/google.ts`
+    instead of a JWT library: it adds no dependency and the Workers runtime already provides WebCrypto. It verifies
+    the RS256 signature using Google's public JWKS (`https://www.googleapis.com/oauth2/v3/certs`, cached in module
+    scope per `Cache-Control`), checks issuer, `audience` (a string or an array) contains `GOOGLE_CLIENT_ID`,
+    `email_verified` and expiry, upserts
+    `users` in one `INSERT ... ON CONFLICT(google_sub) DO UPDATE` and opens a 30-day session (`tally_session`).
+    `POST /api/auth/dev` shares the same upsert.
+  - A token whose `kid` is not in the cached keys refetches the keys at most once per 60 seconds
+    (`MIN_REFETCH_MS`): the endpoint is open to anyone, so forged tokens with random key ids must not cause one
+    outbound request each.
   - Only the `openid email profile` scopes are needed. No client secret is required.
 - **Configuration:**
-  - `GOOGLE_CLIENT_ID` (public value, in `vars` of `wrangler.jsonc`).
-  - A *Web* OAuth client ID in Google Cloud Console, with origins `http://localhost:5173` and the deployed domain.
+  - `GOOGLE_CLIENT_ID` (public value, in `vars` of `wrangler.jsonc`; empty string disables Google button).
+  - A _Web_ OAuth client ID in Google Cloud Console, with origins `http://localhost:5173` and the deployed domain.
 - **Development and tests:**
-  - `POST /api/auth/dev {email}`, enabled only when `DEV_LOGIN=true` (in `.dev.vars`, which is git-ignored)
-    **and** the hostname is `localhost`.
-  - API and e2e tests use this endpoint. A test must show that it returns 404 when either condition is missing.
-- **`resolveIdentity` gains a source:**
+  - `POST /api/auth/dev {email, name?}`, enabled only when `DEV_LOGIN=true` **and** the hostname is `localhost`.
+  - API and e2e tests use this endpoint. It returns 404 when either condition is missing.
+  - `TALLY_PORT` and `TALLY_DEV_LOGIN` allow running development and Playwright on separate ports (e2e on port 5174,
+    `reuseExistingServer: false`, so it never reuses a dev server started by hand on 5173).
+- **`resolveIdentity`:**
   - `Identity.userId`.
   - `isOwner` is also true when `groups.owner_user_id = userId`.
-  - `memberId` comes from `members.user_id` when there is no device cookie.
-- **Account linking:**
+  - `memberId` comes from device token if present, else from `members.user_id`.
+- **Account linking (`worker/accountLink.ts`, reused by `lock_groups`):**
   - Creating, joining or claiming while signed in sets `user_id` automatically.
-  - `POST /groups/:code/link` attaches a group used through cookies to the account: for the owner, the group and
-    the owner's member (`group.link`); for another member, that member only (`member.link`); otherwise
-    `401 JOIN_FIRST`.
-- **`joined_groups_list`:** `GET /api/me` returns `{ user, groups[] }`: existing groups where `owner_user_id = me` or a member has
-  `user_id = me`. The home page merges this list with the localStorage history.
-- **`saved_bank_details`:**
-  - `PATCH /api/me` stores bank details in `users`.
-  - A member with a `user_id` but no account of their own gets the profile's details in the DTO
+  - `POST /groups/:code/link` attaches a group used through cookies to the account. It records `group.link` (target:
+    the owner member) or `member.link` (target: the linked member) with `recordChange`, so linking moves
+    `last_activity_at`.
+  - "Both or nothing" for an owner: each of the two `UPDATE`s in the `db.batch` also requires the other row to be free
+    for this account (`EXISTS` subquery), so a request that lost a race changes neither `groups.owner_user_id` nor
+    `members.user_id`, and the route then answers the matching 403 or 409.
+  - `canLinkAccount` in `GET /groups/:code` comes from `canLinkToAccount` in `policy.ts`, which mirrors those checks
+    without throwing: the button is offered only when the request can succeed (nothing is linked yet, or the owner key
+    is held and only one of the two rows is linked to this account).
+  - A unique-index violation (`idx_members_group_user`) from two simultaneous joins, claims or links of one account
+    answers `409 ACCOUNT_ALREADY_MEMBER`, never `500`.
+  - Points (1) and (2) settled:
+    (1) `requireNotMember(me)` checks `me.accountMemberId` first (`409 ACCOUNT_ALREADY_MEMBER`), then `me.memberId`
+    (`409 ALREADY_MEMBER`).
+    (2) Both member removal and member release (`POST .../members/:id/release`) clear `members.user_id`, so released
+    and removed members no longer resolve to the account.
+- **`joined_groups_list`:** built; see "joined_groups_list (built)" below. `GET /api/me` returns `{ user }`.
+- **`saved_bank_details` (built):**
+  - The bank columns on `users` are already added in `0004_accounts.sql`.
+  - `PATCH /api/me` stores bank details in `users` (validated with `bankDetails`, 401 `SIGN_IN_REQUIRED` without session).
+  - A member with a `user_id` but no account entered in the group gets the profile's details in the DTO
     (`LEFT JOIN users` in `loadMembers`, chosen in `toMemberDto`).
+  - `toMemberDto` assigns `bankSource`: `'group'` if `account_no` entered in group, else `'account'` if saved details exist on linked user, else `null`. Removed members always receive `null` and `bankSource: null`.
+  - `GET /groups/:code` returns `me.accountLinked: boolean` (true when caller's member is linked to their account).
   - An account entered in the group always takes precedence over the profile.
+  - In `MembersPanel`, the own member form shows a note when `bankSource === 'account'` and reveals an empty form only on "Use different details in this group"; forms prefill only when `bankSource === 'group'`, preventing accidental copies of saved details into the group.
 - **Files:**
-  - New: `worker/google.ts`, `worker/routes/account.ts`, `src/components/AccountMenu.tsx`.
-  - Changed: `auth.ts`, `groupData.ts`, `http.ts` (`Env`, Hono `user` variable), `shared/types.ts` (`UserDto`,
-    `MeResponse`, `ConfigResponse`).
+  - New: `worker/google.ts`, `worker/routes/account.ts`, `worker/accountLink.ts`, `worker/routes/link.ts`,
+    `src/account.tsx`, `src/components/AccountMenu.tsx` (+ `.scss`).
+  - Changed: `auth.ts`, `policy.ts`, `groupData.ts`, `http.ts`, `shared/types.ts`, `shared/errors.ts`, `locales/*.ts`.
+
+### delete_account (built)
+
+- **Rules:** `docs/business-rules.md`, "Deleting the account (`delete_account`)".
+- **Migration:** `0006_audit_details.sql` adds `audit_log.details` (`TEXT`, JSON, NULL when an entry records only its target). `audit()` and `recordChange()` keep their signatures.
+- **Batch deletion (`worker/accountDelete.ts`):** `deleteAccount(db, userId, now)` runs one atomic `db.batch` with six explicit statements, in this order:
+  1. `INSERT` into `audit_log` with action `group.unlock`, actor `owner` and details `{"reason":"account.delete"}`, for kept groups owned by the account.
+  2. `UPDATE groups SET locked_at = NULL, last_activity_at = now` for the same kept groups. Statement 1 must run first because it selects on `locked_at IS NOT NULL`.
+  3. Clear `groups.owner_user_id` for groups owned by the account (non-kept groups do not touch `last_activity_at`).
+  4. Clear `members.user_id` for members linked to the account.
+  5. `DELETE FROM sessions` for the account.
+  6. `DELETE FROM users` for the account.
+  Explicit statements instead of relying on the foreign key actions of `0004_accounts.sql`.
+- **API (`worker/routes/account.ts`):** `DELETE /api/me` uses `requireSignedIn(await resolveAccount(c))` (`worker/policy.ts`, 401 `SIGN_IN_REQUIRED` without a session), calls `deleteAccount(c.env.DB, userId, now())`, clears the cookie with `clearSessionCookie(c)` (`worker/auth.ts`, already present) and returns `{ ok: true }`.
+- **UI:**
+  - `src/api.ts`: `deleteMe()`.
+  - `src/account.tsx`: `deleteAccount()` in the context (calls `deleteMe`, sets `user` to `null`, bumps `version`).
+  - `AccountMenu`: "Delete account" menu item opens `DeleteAccountDialog` (`DeleteAccountDialog.tsx`, `.scss`, block `delete-account`). The dialog uses `useDialog(onClose, { canClose: !deleting })` from `src/hooks/useDialog.ts`, shows errors through `errorMessage(err)`, and notifies `deleteAccount.done` on success.
+- **Lock interaction:** kept groups owned by the account stop being kept, so a group cannot be kept indefinitely with no owner account able to stop keeping it.
+- **Tests:** `tests/api/delete-account.test.ts` (DA-1..DA-8), `e2e/delete-account.spec.ts` (DA-9).
 
 ### purge_inactive_groups
 
+Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
+
 - **Rules:** `shared/rules.ts` with `INACTIVE_DAYS = 10`, `expiresAt(lastActivityAt)` and `inactiveBefore(now)`.
-- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)`, running
-  `DELETE FROM groups WHERE last_activity_at < ?`.
-  Child tables are removed by `ON DELETE CASCADE`, declared since v1. This ticket does not depend on accounts or locks;
-  `lock_groups` and `google_sign_in` extend the same function later.
+- **Code:** `worker/cleanup.ts` with `purgeInactiveGroups(db, now)` and `runDailyJobs(env, now)`, running
+  `DELETE FROM groups WHERE last_activity_at < ? AND locked_at IS NULL RETURNING code`. `google_sign_in` adds expired-session deletion to
+  the same job, which returns both counts.
+  Child tables are removed by `ON DELETE CASCADE`, declared since v1.
 - **Schedule:**
-  - `worker/index.ts` also exports `scheduled()`.
-  - `wrangler.jsonc` gains `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time).
+  - `worker/index.ts` exports `scheduled()`.
+  - `wrangler.jsonc` has `"triggers": { "crons": ["0 19 * * *"] }` (02:00 Vietnam time).
   - Tests call `purgeInactiveGroups` directly with a fake `now`.
 - **Migration:** `0003_activity_reset.sql` sets `last_activity_at` of every existing group to the migration time,
-  so that no group is deleted by the first run (decided in the ticket).
-- **Activity:** only changes move `last_activity_at` (list in the ticket); viewing no longer does. Planned
-  migrations are numbered in build order: `0003` this ticket, `0004` accounts, `0005` lock, `0006` attachments.
-- **UI:** shows the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours.
+  so that no group is deleted by the first run.
+- **Activity:** only changes move `last_activity_at` (through `recordChange` in `worker/groupData.ts`); viewing and recovery links no longer do.
+- **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
+- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). The claim is audited with `audit()` only.
+  - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
+- **Migration numbers:** `0006_audit_details.sql` (`delete_account`) is now the newest migration, after `0005_group_lock.sql` (`lock_groups`) and `0004_accounts.sql` (`google_sign_in`). `0007` is reserved for `receipt_photos` (`0007_attachments.sql`). A future `edit_expense` migration must not add `audit_log.details` again. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
+- **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
-### lock_groups
+### lock_groups (built)
 
-- **Migration:** `0005_group_lock.sql` adds `groups.locked_at`.
+- **Migration:** `0005_group_lock.sql` adds `groups.locked_at` (`TEXT`, NULL = not locked). No new index: the count uses the existing `idx_groups_owner_user`.
 - **Purge:** `purgeInactiveGroups` gains `AND locked_at IS NULL`.
-- **Endpoints:** `POST` and `DELETE /groups/:code/lock`.
-  - Require both `isOwner` and `userId`, because the limit is counted per person.
-  - If `owner_user_id` is empty, it is set to the current account. If the group belongs to another account, 403.
-  - Count `locked_at IS NOT NULL AND owner_user_id = ?`. When the count is >= `MAX_LOCKED_GROUPS`, 409.
-  - Unlocking calls `touch`, so the expiry restarts from the moment of unlocking.
+- **Endpoints:**
+  - `POST /groups/:code/lock`: answers `{ ok: true, changed: boolean }`.
+  - `DELETE /groups/:code/lock`: answers `{ ok: true, changed: boolean }`.
+  - `GET /groups/:code`: returns `GroupDto` with `locked: boolean` and `expiresAt: string | null` (`null` while kept).
+  - Require both `isOwner` and `userId` (`requireOwnerAccount(me)` in `policy.ts`), because the limit is counted per person.
+  - Check order (round 3, answer 2): `403 OWNER_ONLY` comes first, whether the visitor is signed in or not; then `401 SIGN_IN_REQUIRED` for an owner without an account session.
+  - A group with no account yet is linked exactly like "Link to my account": the route calls `linkToAccount` (`worker/accountLink.ts`) before it locks, so the group and the owner member are linked together, all or nothing. Its refusals apply: `403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`. After that `canLinkAccount` is false for the group. Setting `groups.owner_user_id` alone would leave the owner member unlinked and `canLinkAccount` still true.
+  - Count `SELECT COUNT(*) FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL`. When the count is >= `MAX_LOCKED_GROUPS` (10), answers `409 LOCK_LIMIT_REACHED` with params `{ max: 10 }`.
+  - Repeat lock or repeat unlock returns `{ ok: true, changed: false }` and writes nothing.
+  - Unlocking is a change (`recordChange`), so `last_activity_at` is set to the unlock time and the expiry restarts from the moment of unlocking (unlock + 10 days).
 - **Permissions:** `requireOwnerAccount(me)` in `policy.ts`.
-- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep
-  this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
+- **UI:** `<KeepGroup>` component rendered at the end of `OwnerSettings` in `MembersPanel.tsx`. `<GroupExpiry>` renders `t('group.expiry.kept')` without warning colors when locked.
+- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
+- **Tests:** `tests/api/lock-groups.test.ts`, `e2e/lock-groups.spec.ts`.
 
 ### receipt_photos
 
 - **Storage:** R2 binding `RECEIPTS`.
-- **Migration:** `0006_attachments.sql` creates
+- **Migration:** `0007_attachments.sql` creates
   `expense_attachments(id, expense_id, r2_key, content_type, size, created_by, created_at)`.
 - **Client side:** resize to at most 1600px and encode as WebP through `<canvas>`. Re-encoding **removes EXIF/GPS**.
   The compressed size must be at most 1 MB.
@@ -298,6 +354,19 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
   through Playwright's download event.
 - A date range filter, if requested later, only needs a filter on the rows in `buildGroupCsv`.
 
+### joined_groups_list (built)
+
+- **Rules:** `docs/business-rules.md`, Accounts > Groups list.
+- **Endpoint:** `GET /api/me/groups` (`worker/routes/myGroups.ts`, mounted on `/` after `accountRoutes`).
+- **Auth:** `resolveAccount(c)` in `worker/auth.ts`, then `requireSignedIn(account)` in `worker/policy.ts`; requests
+  without a session answer `401 SIGN_IN_REQUIRED`.
+- **Query:** selects groups owned by the account or having an active (non-removed) member linked to the account:
+  `SELECT g.code, g.name, g.currency, g.last_activity_at, (g.owner_user_id = ?1) AS is_owner FROM groups g WHERE g.owner_user_id = ?1 OR EXISTS (SELECT 1 FROM members m WHERE m.group_code = g.code AND m.user_id = ?1 AND m.removed_at IS NULL) ORDER BY g.last_activity_at DESC, g.code`.
+- **No visit tracking:** viewing a group writes nothing. Groups are ordered by latest change (`last_activity_at` DESC, `code` ASC).
+- **Home page merge:** when signed in, `HomePage` fetches `GET /api/me/groups` and renders the "Your groups" card above the device history card; device history entries whose group code is already in the account list are filtered out.
+- **DTO:** `MyGroupDto { code, name, currency, isOwner, lastActivityAt }` and `MyGroupsResponse { groups: MyGroupDto[] }` in `shared/types.ts`.
+- **Tests:** `tests/api/joined-groups.test.ts` (JG-1 to JG-6) and `e2e/joined-groups.spec.ts` (JG-7, JG-8).
+
 ### language_picker, theme_picker
 
 - Each picker is its own component inside `.app__controls` in `.app__header`: the header is a flex row with the
@@ -312,6 +381,7 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 ### lint_conventions
 
 Built. Project conventions are checked automatically by `npm run lint`:
+
 - **JavaScript/TypeScript:** `oxlint` parses TypeScript 7.x directly without needing `typescript-eslint` peer dependencies. A custom JS plugin (`practice/tally/lint/tally-plugin.mjs`, rule `tally/no-literal-ui-text`) ensures all user-facing JSX text and attributes (`aria-label`, `title`, `placeholder`, `alt`) come from `t()`/`tp()` in `src/i18n/locales`. The rule inspects bare JSX text, string literals in JSX expression containers (`{'...'}`), template literals, and conditional/logical expression branches, while allowing whitespace-only layout literals (`{' '}`) and non-target attributes (`className`, `key`, `href`). Built-in plugins `typescript` and `react` provide correctness checks and React hooks validation (`exhaustive-deps`).
 - **Styles:** `stylelint` with `stylelint-config-standard-scss` enforces BEM class selectors (`selector-class-pattern`) and forbids raw hex and named colors outside `src/styles/base/_themes.scss` (`color-no-hex`, `color-named`). Stylistic and layout rules managed by Prettier are turned off in `stylelint.config.mjs`.
 

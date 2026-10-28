@@ -467,6 +467,27 @@ Open before the next day:
 - [ ] Day 13: build the capstone tickets in dependency order, starting with `google_sign_in`
 - [ ] Course: finish the AI-native SDLC playbook
 
+## Day 13: 2026-10-28
+
+Goal: build the capstone tickets in dependency order and ship the tested ones.
+Left over from the previous day: none.
+Shipped (merge requests, artifacts, screenshots):
+- Merged into `develop`, each through review by the AI team lead: `purge_inactive_groups` (`TAL-12`),
+  `google_sign_in` (`TAL-6`), `saved_bank_details` (`TAL-15`), `lock_groups` (`TAL-10`), `joined_groups_list`
+  (`TAL-8`) and `delete_account` (`TAL-40`), with migrations `0003` to `0006`.
+- `release/2026-10-28`: the human tested the six tickets and `board_sync_url_argument` (`TAL-43`) on the Cloudflare
+  deploy of `develop` and confirmed them; the tickets moved to `done/`.
+Observations (positive / negative):
+- A browser pass by a subagent on the deployed app confirmed what was visible, but most checks needed writes, a
+  second person or a fake clock, so the human's own test remained the real confirmation.
+- The group page does not refresh when another person joins or adds an expense; a live update design is noted for
+  a future ticket.
+For the retro:
+- A browser test that may not write data covers presence, not behaviour.
+Open before the next day:
+- [ ] Push `develop`, `main` and the tag
+- [ ] Day 14: port `owner_link_binds_account`, `transfer_ownership`, `join_as_account` and `member_email_invite`
+
 ## For the retro
 
 -

@@ -50,6 +50,11 @@ export const en = {
       title: 'Groups opened on this device',
       remove: 'Remove {name} from history',
     },
+    accountGroups: {
+      title: 'Your groups',
+      hint: 'Groups you joined or own with this account, on every device.',
+      empty: 'No groups linked to your account yet.',
+    },
   },
   group: {
     notFound: 'Group not found.',
@@ -68,6 +73,11 @@ export const en = {
       expenses: 'Expenses',
       settle: 'Settle up',
       members: 'Members',
+    },
+    expiry: {
+      date: 'Deleted if nothing changes by {date}',
+      soon: 'Add an expense or a transfer to keep it.',
+      kept: 'Kept until the owner stops keeping it',
     },
   },
   ownerKey: {
@@ -152,7 +162,8 @@ export const en = {
     messageTemplate: '{code} {from} to {to}',
     hint: 'Open your banking app and scan the code. Check the receiver name before you send.',
     noAccount: '{name} has not added a bank account yet. Remind them in the Members tab, or pay another way.',
-    noQrForCurrency: 'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
+    noQrForCurrency:
+      'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
     sent: 'I have sent it',
     renderError: 'The QR code could not be created. Use the account details below instead.',
   },
@@ -182,6 +193,15 @@ export const en = {
     removeReason: 'Reason (optional)',
     removed: 'removed',
   },
+  keepGroup: {
+    title: 'Keep this group',
+    label: 'Keep this group',
+    hint: 'A kept group is not deleted after inactivity. You can keep up to 10 groups.',
+    signInNote: 'Sign in to keep this group',
+    signIn: 'Sign in',
+    kept: 'This group is kept.',
+    released: 'This group is no longer kept. It is deleted after 10 days without changes.',
+  },
   theme: {
     /** Name of the light/dark control in the header, for screen readers. */
     label: 'Theme',
@@ -205,6 +225,41 @@ export const en = {
     inviteCopied: 'Invite link copied.',
     recoveryCopied: 'Recovery link copied.',
     joined: 'You joined the group.',
+    signedIn: 'Signed in.',
+    signedOut: 'Signed out.',
+    accountLinked: 'Linked to your account.',
+  },
+  account: {
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    menuLabel: 'Account: {name}',
+    devTitle: 'Development sign-in',
+    devEmail: 'Email',
+    devEmailPlaceholder: 'alex@example.com',
+    devSubmit: 'Sign in',
+    link: 'Link to my account',
+    bankDetails: 'My bank details',
+    deleteAccount: 'Delete account',
+  },
+  savedBank: {
+    title: 'My bank details',
+    hint: 'Used in every group where you are a member and have not entered an account in the group. Anyone with those group links can see it.',
+    save: 'Save',
+    clear: 'Clear',
+    saved: 'Bank details saved in your account.',
+    cleared: 'Bank details removed from your account.',
+    usingSaved: 'Using the bank details saved in your account',
+    useDifferent: 'Use different details in this group',
+    useSaved: 'Use my saved bank details',
+    usingSavedNow: 'Using your saved bank details.',
+  },
+  deleteAccount: {
+    title: 'Delete account',
+    deleted: 'Your sign-in details, saved bank details and sessions on every device are deleted.',
+    kept: 'Groups and their data stay. Groups you keep from deletion are deleted after 10 days without changes.',
+    ownerWarning: 'You keep owner access only on devices that hold the owner key or through the recovery link.',
+    confirm: 'Delete my account',
+    done: 'Your account was deleted.',
   },
   csvExport: {
     download: 'Download CSV',
@@ -271,7 +326,15 @@ export const en = {
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
-    EXPENSE_HAS_REMOVED_MEMBER: 'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
+    EXPENSE_HAS_REMOVED_MEMBER:
+      'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
+    ALREADY_MEMBER: 'This device is already a member of the group.',
+    SIGN_IN_REQUIRED: 'Sign in first.',
+    INVALID_GOOGLE_TOKEN: 'The Google sign-in could not be verified.',
+    GROUP_OWNED_BY_OTHER_ACCOUNT: 'This group already belongs to another account.',
+    ACCOUNT_ALREADY_MEMBER: 'Your account is already a member of this group.',
+    MEMBER_LINKED_ELSEWHERE: 'This member is already linked to another account.',
+    LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
   } satisfies Record<ErrorCode, string>,
 };
 

@@ -49,7 +49,9 @@ export function detectLocale(): Locale {
 }
 
 function lookup(bundle: LocaleBundle, key: string): unknown {
-  return key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], bundle.messages);
+  return key
+    .split('.')
+    .reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], bundle.messages);
 }
 
 function interpolate(template: string, vars?: Vars): string {
@@ -59,7 +61,13 @@ function interpolate(template: string, vars?: Vars): string {
 export function createTranslator(locale: Locale) {
   const bundle: LocaleBundle = LOCALES[locale];
   const plural = new Intl.PluralRules(bundle.intl);
-  const dayFormat = new Intl.DateTimeFormat(bundle.intl, { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dayFormat = new Intl.DateTimeFormat(bundle.intl, {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const localDateFormat = new Intl.DateTimeFormat(bundle.intl, { day: '2-digit', month: '2-digit', year: 'numeric' });
   const dateTimeFormat = new Intl.DateTimeFormat(bundle.intl, { dateStyle: 'short', timeStyle: 'short' });
   const currencyNames = new Intl.DisplayNames(bundle.intl, { type: 'currency' });
 
@@ -105,6 +113,7 @@ export function createTranslator(locale: Locale) {
       const [y, m, d] = isoDay.split('-').map(Number);
       return dayFormat.format(Date.UTC(y, m - 1, d));
     },
+    localDate: (iso: string) => localDateFormat.format(new Date(iso)),
     dateTime: (iso: string) => dateTimeFormat.format(new Date(iso)),
   };
 }

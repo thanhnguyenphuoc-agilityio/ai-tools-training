@@ -3,9 +3,17 @@
   "name": "tally",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
+  "vars": {
+    // Public OAuth client id of the Web client (not a secret). Its authorized JavaScript origins must list every
+    // origin that serves the app; an empty string hides the Google button.
+    "GOOGLE_CLIENT_ID": "108612065622-26l3rjji9ogsnh62781gul0028rme9ve.apps.googleusercontent.com"
+  },
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
+  },
+  "triggers": {
+    "crons": ["0 19 * * *"]
   },
   "d1_databases": [
     {

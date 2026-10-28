@@ -11,10 +11,11 @@
     display: inline-flex;
     align-items: center;
     gap: space(1);
-    min-height: 46px;
-    padding: 0 space(2) 0 space(3);
+    min-height: 40px;
+    padding: 0 space(1) 0 space(2);
 
     @include up(sm) {
+      min-height: 46px;
       gap: space(2);
       padding: 0 space(3);
     }

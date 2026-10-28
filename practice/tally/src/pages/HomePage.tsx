@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CURRENCIES } from '../../shared/currency';
 import { normalizeGroupCode } from '../../shared/groupCode';
+import type { MyGroupDto } from '../../shared/types';
+import { useAccount } from '../account';
 import { api } from '../api';
 import type { Navigate } from '../App';
 import { useI18n } from '../i18n';
@@ -9,6 +11,8 @@ import './HomePage.scss';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
   const { t, errorMessage, money, currencyName, dateTime, defaultCurrency } = useI18n();
+  const { user, version } = useAccount();
+  const [accountGroups, setAccountGroups] = useState<MyGroupDto[] | null>(null);
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
@@ -17,6 +21,25 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState(readHistory);
+
+  useEffect(() => {
+    // Cleared first so a list fetched for a previous account or session is never shown for the new one.
+    setAccountGroups(null);
+    if (!user) return;
+    let active = true;
+    api
+      .getMyGroups()
+      .then((res) => {
+        if (active) setAccountGroups(res.groups);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [user, version]);
+
+  const visibleHistory =
+    user && accountGroups ? history.filter((h) => !accountGroups.some((g) => g.code === h.code)) : history;
 
   const currency = CURRENCIES[currencyCode];
   const coarseUnit = currency.roundOptions[currency.roundOptions.length - 1];
@@ -117,11 +140,42 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
 
         {error && <p className="text text--error">{error}</p>}
 
-        {history.length > 0 && (
+        {user && (
+          <section className="card home-page__account-groups">
+            <h2 className="card__title">{t('home.accountGroups.title')}</h2>
+            <p className="text text--muted home-page__hint">{t('home.accountGroups.hint')}</p>
+            {accountGroups === null ? null : accountGroups.length === 0 ? (
+              <p className="text text--muted">{t('home.accountGroups.empty')}</p>
+            ) : (
+              <ul className="list list--divided">
+                {accountGroups.map((g) => (
+                  <li key={g.code} className="list__item cluster cluster--between">
+                    <a
+                      href={`/g/${g.code}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/g/${g.code}`);
+                      }}
+                    >
+                      <span className="text text--strong">{g.name}</span>{' '}
+                      <span className="text text--muted text--mono">{g.code}</span>
+                    </a>
+                    <span className="cluster">
+                      {g.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
+                      <span className="text text--muted text--small">{g.currency}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {visibleHistory.length > 0 && (
           <section className="card">
             <h2 className="card__title">{t('home.history.title')}</h2>
             <ul className="list list--divided">
-              {history.map((h) => (
+              {visibleHistory.map((h) => (
                 <li key={h.code} className="list__item cluster cluster--between">
                   <a
                     href={`/g/${h.code}`}

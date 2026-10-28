@@ -13,6 +13,7 @@ const member = (id: string, extra: Partial<MemberDto> = {}): MemberDto => ({
   bankBin: null,
   accountNo: null,
   accountName: null,
+  bankSource: null,
   ...extra,
 });
 
@@ -48,7 +49,7 @@ const group = (memberId: string | null, transfers: TransferDto[] = []) => ({
   members,
   expenses: [dinner],
   transfers,
-  me: { memberId, isOwner: memberId === 'alex' },
+  me: { memberId, isOwner: memberId === 'alex', accountLinked: false },
 });
 
 describe('group summary', () => {

@@ -34,7 +34,7 @@ moving to another folder (`git mv`).
 
 - **ID** is `TAL-<n>`: the next number after the highest ID on the board, assigned when the ticket is created and
   never reused or changed. Commit messages, merge requests and other tickets may cite the ID next to the file name
-  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-43`.
+  (for example `TAL-9 language_picker`); branch names keep the ticket name. The next free ID is `TAL-44`.
 - **Labels** follow GitLab scoped labels:
   - `type::` feature, bug, question or improvement. One `type::` label per ticket; a vague request stays
     `type::question` until it is clarified.
@@ -70,8 +70,22 @@ moving to another folder (`git mv`).
   The exceptions (the Day 0 bootstrap commit, bug seeding with Prompt A and the conflict exercise) are listed in the
   repository `CLAUDE.md`.
 
+## GitHub board
+
+`npm run board:sync -- <project url> [--repo <owner>/<name>]` mirrors this board onto a GitHub Projects board, and
+the `/sync-board` command in Claude Code wraps it. Each ticket becomes an item titled `TAL-<n> <title>`: an issue
+in the `--repo` repository, which people can comment on and which is closed while the ticket is in `done/`, or a
+draft item without `--repo` (existing drafts are converted to issues once a repository is given). Its folder and its
+`type::`, `priority::` and `area::` labels fill the Status, Ticket type, Priority and Area fields (GitHub reserves
+"Type"; `ready-to-review` also matches "In review", and high, medium, low match P0, P1, P2). The repository stays the
+source of truth: the script prints a plan by default and changes the board only with `--apply`, overwrites edits
+made on GitHub to the title, body, state and those fields, leaves comments alone, never deletes items, and never
+moves tickets here. It needs `GITHUB_TOKEN` with the `project` scope, plus `repo` (or `public_repo`) with `--repo`.
+From PowerShell, `npm run` drops the `--` separator and takes `--repo` as its own option; the script then stops with
+an error, so run `node scripts/sync-board.mjs <project url> --repo <owner>/<name>` instead.
+
 ## Dependencies
 
 - `joined_groups_list`, `saved_bank_details`, `lock_groups` and `delete_account` need `google_sign_in`.
-- `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details`.
+- `lock_groups` also needs `purge_inactive_groups`; `delete_account` also needs `saved_bank_details` and `lock_groups`.
 - `owner_member_tools` is interface work on top of existing API endpoints.

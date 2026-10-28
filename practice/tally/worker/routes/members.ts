@@ -1,13 +1,22 @@
 // Joining a group, adding people by name, claiming a name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { audit, loadActiveMember, loadGroup, loadMembers, memberSettlement } from '../groupData';
-import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv } from '../http';
-import { requireCanEditMember, requireCanRemoveMember, requireMember } from '../policy';
+import { loadActiveMember, loadGroup, loadMembers, memberSettlement, recordChange } from '../groupData';
+import { ApiError, bankDetails, isUniqueViolation, now, optionalText, readJson, text, type AppEnv } from '../http';
+import {
+  requireCanEditMember,
+  requireCanRemoveMember,
+  requireMember,
+  requireMemberLinkable,
+  requireNotMember,
+} from '../policy';
 
 export const memberRoutes = new Hono<AppEnv>();
 
 const sameName = (a: string, b: string) => a.toLocaleLowerCase('vi') === b.toLocaleLowerCase('vi');
+
+const alreadyMember = () =>
+  new ApiError(409, 'ACCOUNT_ALREADY_MEMBER', 'your account is already a member of this group');
 
 // claim=true: "this is me", anyone with the link joins and gets a device token.
 // claim=false: an existing member adds someone else by name (claimable later).
@@ -16,7 +25,11 @@ memberRoutes.post('/:code/members', async (c) => {
   const body = await readJson(c);
   const name = text(body.name, 'name', 40);
   const claim = body.claim === true;
-  if (!claim) requireMember(me);
+  if (!claim) {
+    requireMember(me);
+  } else {
+    requireNotMember(me);
+  }
 
   const members = await loadMembers(c.env.DB, group.code);
   if (members.some((m) => sameName(m.name, name)))
@@ -24,30 +37,50 @@ memberRoutes.post('/:code/members', async (c) => {
 
   const id = crypto.randomUUID();
   const token = claim ? randomToken() : null;
-  await c.env.DB.prepare('INSERT INTO members (id, group_code, name, token_hash, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(id, group.code, name, token ? await sha256Hex(token) : null, now())
-    .run();
+  const userId = claim ? me.userId : null;
+  try {
+    await c.env.DB.prepare(
+      'INSERT INTO members (id, group_code, name, token_hash, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+      .bind(id, group.code, name, token ? await sha256Hex(token) : null, userId, now())
+      .run();
+  } catch (err) {
+    // Two simultaneous joins from one account both pass requireNotMember; the unique index stops the second.
+    if (userId !== null && isUniqueViolation(err)) throw alreadyMember();
+    throw err;
+  }
   if (token) setGroupCookie(c, group.code, memberCookieName(group.code), `${id}.${token}`);
-  await audit(c.env.DB, group.code, me, 'member.add', id);
+  await recordChange(c.env.DB, group.code, me, 'member.add', id);
   return c.json({ id }, 201);
 });
 
 // "I am this person": take over a member someone added by name.
 memberRoutes.post('/:code/members/:id/claim', async (c) => {
   const { group, me } = await loadGroup(c);
+  requireNotMember(me);
   const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
+  requireMemberLinkable(me, member);
   if (member.token_hash)
     throw new ApiError(409, 'MEMBER_ALREADY_CLAIMED', 'this member is already used on another device');
   const token = randomToken();
   // The guard is repeated in the UPDATE so that two simultaneous claims cannot both win.
-  const result = await c.env.DB.prepare('UPDATE members SET token_hash = ? WHERE id = ? AND token_hash IS NULL')
-    .bind(await sha256Hex(token), member.id)
-    .run();
+  let result: D1Result;
+  try {
+    result = await c.env.DB.prepare(
+      'UPDATE members SET token_hash = ?, user_id = COALESCE(?, user_id) WHERE id = ? AND token_hash IS NULL',
+    )
+      .bind(await sha256Hex(token), me.userId, member.id)
+      .run();
+  } catch (err) {
+    // Two simultaneous claims from one account for different names: the unique index stops the second.
+    if (me.userId !== null && isUniqueViolation(err)) throw alreadyMember();
+    throw err;
+  }
   if (result.meta.changes === 0) {
     throw new ApiError(409, 'MEMBER_ALREADY_CLAIMED', 'this member is already used on another device');
   }
   setGroupCookie(c, group.code, memberCookieName(group.code), `${member.id}.${token}`);
-  await audit(c.env.DB, group.code, me, 'member.claim', member.id);
+  await recordChange(c.env.DB, group.code, { ...me, memberId: member.id }, 'member.claim', member.id);
   return c.json({ ok: true });
 });
 
@@ -72,7 +105,7 @@ memberRoutes.patch('/:code/members/:id', async (c) => {
   await c.env.DB.prepare('UPDATE members SET name = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ?')
     .bind(name, bank.bankBin, bank.accountNo, bank.accountName, member.id)
     .run();
-  await audit(c.env.DB, group.code, me, 'member.update', member.id);
+  await recordChange(c.env.DB, group.code, me, 'member.update', member.id);
   return c.json({ ok: true });
 });
 
@@ -96,9 +129,10 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   }
 
   // The guard is repeated in the UPDATE so that two simultaneous removals cannot both win.
+  // user_id is cleared so the account can join again as a new member.
   const removedAt = now();
   const result = await c.env.DB.prepare(
-    'UPDATE members SET removed_at = ?, removed_reason = ? WHERE id = ? AND removed_at IS NULL',
+    'UPDATE members SET removed_at = ?, removed_reason = ?, user_id = NULL WHERE id = ? AND removed_at IS NULL',
   )
     .bind(removedAt, reason, member.id)
     .run();
@@ -111,12 +145,12 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   const after = await memberSettlement(c.env.DB, group.code, member.id);
   if (after.balance !== 0 || after.pending) {
     await c.env.DB.prepare(
-      'UPDATE members SET removed_at = NULL, removed_reason = NULL WHERE id = ? AND removed_at = ?',
+      'UPDATE members SET removed_at = NULL, removed_reason = NULL, user_id = ? WHERE id = ? AND removed_at = ?',
     )
-      .bind(member.id, removedAt)
+      .bind(member.user_id, member.id, removedAt)
       .run();
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
   }
-  await audit(c.env.DB, group.code, me, 'member.remove', member.id);
+  await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
   return c.json({ ok: true });
 });

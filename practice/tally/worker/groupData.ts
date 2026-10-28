@@ -11,6 +11,8 @@ export interface GroupRow {
   currency: string;
   round_to: number;
   owner_key_hash: string;
+  owner_user_id: string | null;
+  locked_at: string | null;
   last_activity_at: string;
   created_at: string;
 }
@@ -21,7 +23,11 @@ export interface MemberRow {
   bank_bin: string | null;
   account_no: string | null;
   account_name: string | null;
+  user_bank_bin?: string | null;
+  user_account_no?: string | null;
+  user_account_name?: string | null;
   token_hash: string | null;
+  user_id: string | null;
   is_owner: number;
   created_at: string;
   removed_at: string | null;
@@ -40,7 +46,12 @@ export async function loadGroup(c: Ctx): Promise<{ group: GroupRow; me: Identity
 
 export async function loadMembers(db: D1Database, code: string): Promise<MemberRow[]> {
   const { results } = await db
-    .prepare('SELECT * FROM members WHERE group_code = ? ORDER BY created_at, id')
+    .prepare(
+      `SELECT m.*, u.bank_bin AS user_bank_bin, u.account_no AS user_account_no, u.account_name AS user_account_name
+       FROM members m LEFT JOIN users u ON u.id = m.user_id
+       WHERE m.group_code = ?
+       ORDER BY m.created_at, m.id`,
+    )
     .bind(code)
     .all<MemberRow>();
   return results;
@@ -148,31 +159,73 @@ export async function memberSettlement(
   };
 }
 
-export const toMemberDto = (m: MemberRow): MemberDto => ({
-  id: m.id,
-  name: m.name,
-  isOwner: m.is_owner === 1,
-  claimed: m.token_hash !== null,
-  removed: m.removed_at !== null,
-  removedReason: m.removed_reason,
-  // A removed member cannot receive a transfer, so their bank details are no longer shown to the link holders.
-  bankBin: m.removed_at ? null : m.bank_bin,
-  accountNo: m.removed_at ? null : m.account_no,
-  accountName: m.removed_at ? null : m.account_name,
-});
+export const toMemberDto = (m: MemberRow): MemberDto => {
+  if (m.removed_at) {
+    return {
+      id: m.id,
+      name: m.name,
+      isOwner: m.is_owner === 1,
+      claimed: m.token_hash !== null || m.user_id !== null,
+      removed: true,
+      removedReason: m.removed_reason,
+      bankBin: null,
+      accountNo: null,
+      accountName: null,
+      bankSource: null,
+    };
+  }
 
-/** Member activity pushes back the (future) auto-delete date. */
-export async function touch(db: D1Database, code: string): Promise<void> {
-  await db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(now(), code).run();
-}
+  let bankBin: string | null = null;
+  let accountNo: string | null = null;
+  let accountName: string | null = null;
+  let bankSource: 'group' | 'account' | null = null;
 
-/** Records a change and counts it as activity. Call after every successful write. */
+  if (m.account_no) {
+    bankBin = m.bank_bin;
+    accountNo = m.account_no;
+    accountName = m.account_name;
+    bankSource = 'group';
+  } else if (m.user_account_no) {
+    bankBin = m.user_bank_bin ?? null;
+    accountNo = m.user_account_no;
+    accountName = m.user_account_name ?? null;
+    bankSource = 'account';
+  }
+
+  return {
+    id: m.id,
+    name: m.name,
+    isOwner: m.is_owner === 1,
+    claimed: m.token_hash !== null || m.user_id !== null,
+    removed: false,
+    removedReason: m.removed_reason,
+    bankBin,
+    accountNo,
+    accountName,
+    bankSource,
+  };
+};
+
+/** Records an event in the audit log without changing last_activity_at. */
 export async function audit(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
+  await db
+    .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
+    .bind(code, actor, action, target, now())
+    .run();
+}
+
+/**
+ * Use for every change listed in `docs/business-rules.md`; use `audit()` alone for events that are not changes.
+ * Records the change in audit_log and pushes back the deletion date (last_activity_at) in one db.batch.
+ */
+export async function recordChange(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+  const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
+  const timestamp = now();
   await db.batch([
     db
       .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-      .bind(code, actor, action, target, now()),
-    db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(now(), code),
+      .bind(code, actor, action, target, timestamp),
+    db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(timestamp, code),
   ]);
 }

@@ -2,11 +2,13 @@
 import { Hono } from 'hono';
 import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
+import { expiresAt, MAX_LOCKED_GROUPS } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
-import { memberCookieName, ownerCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { audit, loadGroup, loadLedger, loadMembers, toMemberDto, touch } from '../groupData';
+import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
+import { linkToAccount } from '../accountLink';
+import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { requireOwner } from '../policy';
+import { canLinkToAccount, requireGroupNotOwnedByOther, requireOwner, requireOwnerAccount } from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -29,6 +31,9 @@ groupRoutes.post('/', async (c) => {
   const groupCurrency = currency(body.currency ?? DEFAULT_CURRENCY);
   const rounding = roundTo(body.roundTo, groupCurrency);
 
+  const account = await resolveAccount(c);
+  const userId = account?.id ?? null;
+
   const code = generateGroupCode();
   const ownerKey = randomToken();
   const memberId = crypto.randomUUID();
@@ -37,11 +42,11 @@ groupRoutes.post('/', async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), at, at),
+      'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, owner_user_id, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), userId, at, at),
     c.env.DB.prepare(
-      'INSERT INTO members (id, group_code, name, token_hash, is_owner, created_at) VALUES (?, ?, ?, ?, 1, ?)',
-    ).bind(memberId, code, ownerName, await sha256Hex(memberToken), at),
+      'INSERT INTO members (id, group_code, name, token_hash, user_id, is_owner, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
+    ).bind(memberId, code, ownerName, await sha256Hex(memberToken), userId, at),
   ]);
 
   setGroupCookie(c, code, ownerCookieName(code), ownerKey);
@@ -54,11 +59,15 @@ groupRoutes.get('/:code', async (c) => {
   const { group, me } = await loadGroup(c);
   const db = c.env.DB;
 
-  const [members, { expenses, transfers }] = await Promise.all([loadMembers(db, group.code), loadLedger(db, group.code)]);
+  const [members, { expenses, transfers }] = await Promise.all([
+    loadMembers(db, group.code),
+    loadLedger(db, group.code),
+  ]);
+  const ownerMember = members.find((m) => m.is_owner === 1 && !m.removed_at) ?? null;
+  const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
+  const canLinkAccount = canLinkToAccount(me, group, ownerMember, deviceMember);
 
-  // A member opening the group counts as activity; an anonymous visitor does not.
-  if (me.memberId) await touch(db, group.code);
-
+  const locked = group.locked_at !== null;
   const dto: GroupDto = {
     code: group.code,
     name: group.name,
@@ -66,11 +75,18 @@ groupRoutes.get('/:code', async (c) => {
     roundTo: group.round_to,
     createdAt: group.created_at,
     lastActivityAt: group.last_activity_at,
+    expiresAt: locked ? null : expiresAt(group.last_activity_at),
+    locked,
     currencyLocked: await isCurrencyLocked(db, group.code),
+    canLinkAccount,
     members: members.map(toMemberDto),
     expenses,
     transfers,
-    me,
+    me: {
+      memberId: me.memberId,
+      isOwner: me.isOwner,
+      accountLinked: me.accountMemberId !== null && me.accountMemberId === me.memberId,
+    },
   };
   return c.json(dto);
 });
@@ -98,20 +114,79 @@ groupRoutes.patch('/:code', async (c) => {
         ? group.round_to
         : next.roundOptions[0];
 
+  if (name === group.name && next.code === group.currency && rounding === group.round_to) {
+    return c.json({ ok: true, changed: false });
+  }
+
   await c.env.DB.prepare('UPDATE groups SET name = ?, currency = ?, round_to = ? WHERE code = ?')
     .bind(name, next.code, rounding, group.code)
     .run();
-  await audit(c.env.DB, group.code, me, 'group.update', null);
-  return c.json({ ok: true });
+  await recordChange(c.env.DB, group.code, me, 'group.update', null);
+  return c.json({ ok: true, changed: true });
 });
 
 // Recover owner access on a new device with the owner key.
 groupRoutes.post('/:code/owner/claim', async (c) => {
-  const { group, me } = await loadGroup(c);
+  // The body is read first: answering 404 for a deleted group before the request body is consumed makes the
+  // Vite dev proxy fail with "fetch failed", and the recovery link of a deleted group must end in a plain 404.
+  // This lowers the chance of the dev-proxy failure; it does not remove it (dev only, see docs/design.md).
   const body = await readJson(c);
+  const { group, me } = await loadGroup(c);
   const key = text(body.ownerKey, 'ownerKey', 200);
   if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
   await audit(c.env.DB, group.code, { ...me, isOwner: true }, 'owner.claim', null);
   return c.json({ ok: true });
+});
+
+// Lock a group: exempt it from inactivity deletion.
+groupRoutes.post('/:code/lock', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireOwnerAccount(me);
+
+  if (group.owner_user_id !== me.userId) {
+    requireGroupNotOwnedByOther(me, group);
+    const { changed, memberId } = await linkToAccount(c.env.DB, group, me);
+    if (changed) {
+      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+    }
+  }
+
+  if (group.locked_at !== null) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  const countRow = await c.env.DB.prepare(
+    'SELECT COUNT(*) AS total FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL',
+  )
+    .bind(me.userId)
+    .first<{ total: number }>();
+  if ((countRow?.total ?? 0) >= MAX_LOCKED_GROUPS) {
+    throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
+  }
+
+  const updateRes = await c.env.DB.prepare('UPDATE groups SET locked_at = ? WHERE code = ? AND locked_at IS NULL')
+    .bind(now(), group.code)
+    .run();
+  if ((updateRes.meta.changes ?? 0) === 0) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  await recordChange(c.env.DB, group.code, me, 'group.lock', null);
+  return c.json({ ok: true, changed: true });
+});
+
+// Unlock a group: restarts inactivity timer.
+groupRoutes.delete('/:code/lock', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireOwnerAccount(me);
+  requireGroupNotOwnedByOther(me, group);
+
+  if (group.locked_at === null) {
+    return c.json({ ok: true, changed: false });
+  }
+
+  await c.env.DB.prepare('UPDATE groups SET locked_at = NULL WHERE code = ?').bind(group.code).run();
+  await recordChange(c.env.DB, group.code, me, 'group.unlock', null);
+  return c.json({ ok: true, changed: true });
 });

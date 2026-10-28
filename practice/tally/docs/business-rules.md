@@ -25,18 +25,36 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Supported: VND, USD, EUR, GBP, AUD, SGD, THB, CNY, JPY, KRW.
   - The currency can be changed only while the group has **no expenses and no transfers**. Deleted expenses count too,
     because they stay in the history with their amounts in the original currency.
-- Every change is recorded in `audit_log` and counts as group **activity** (`last_activity_at`).
-  A member viewing the group also counts as activity (current behaviour). A guest (not joined) viewing it does not.
-  OPEN QUESTION: once inactive groups are deleted, should viewing still count as activity? (`purge_inactive_groups`)
+- **Automatic deletion (`purge_inactive_groups`):**
+  - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
+  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
+  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings, signing in and saving account bank details write nothing.
+  - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
+  - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
+  - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
+  - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
+  - **Kept groups (`lock_groups`):**
+    - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
+    - If the group does not belong to an account yet, keeping it links the group and the owner member to the owner's account with the same checks and refusals as "Link to my account" (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
+    - Kept groups are exempt from the daily purge (`locked_at IS NULL`).
+    - Unlocking restarts the 10 days: `last_activity_at` is set to the unlock time, so the expiry is 10 days after the unlock.
+    - Keeping and unlocking are changes audited in `audit_log` as `group.lock` and `group.unlock`.
+    - A kept group stays fully editable: expenses, transfers, and members can still be added or changed.
+    - Everyone who views the group sees "Kept until the owner stops keeping it" instead of the deletion date line, without warning colors. Members and guests see no keep control.
+    - Deleting the owner account (`delete_account`) stops keeping: the group is unlocked, audited as `group.unlock` with details `{"reason":"account.delete"}`, and its 10 days restart from the deletion time.
 
 ## Members
 
-- A visitor can **join** by entering a name. That device receives a *device token* (HttpOnly cookie).
+- A visitor can **join** by entering a name. That device receives a _device token_ (HttpOnly cookie).
 - A member can **add other people by name** (people who do not use the app). Such a person can later open the link
   and click "I am <name>" to claim the name, if nobody has claimed it yet.
+- A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
+  or joining again. The rule extends to accounts: one account is at most one member per group; if the account already has
+  a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
-  (4-19 letters or digits) and account holder name. The owner can edit it on their behalf (API only in the MVP; the interface is
+  (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
+  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf (API only in the MVP; the interface is
   `owner_member_tools`). Clearing the account
   number clears all three fields.
 - **Removing a member** (`remove_member`):
@@ -164,11 +182,77 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   keeps its own choice.
 - Changing the language does not change any group data, including the currency of an existing group.
 
+## Accounts (optional sign-in)
+
+- Signing in is **optional**. Occasional members can view, join and pay without an account.
+- What an account restores:
+  - An owner who signed in can access and manage their group on another device without the recovery link.
+  - A member who signed in can act as their member on another device without claiming the name again.
+  - **Groups list (`joined_groups_list`):**
+    - A signed-in person sees a list of all groups they joined or own on any device.
+    - Groups opened only as a guest do not appear in the list.
+    - Groups from which the member was removed or released leave the list.
+    - The list is ordered by the latest change in the group (`last_activity_at`, newest first), then by code.
+    - On the home page, groups in the account list are omitted from the device history list.
+- Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
+  claiming a name while signed in links that member to the account (`members.user_id`).
+- **Link to my account:**
+  - The button is shown only when there is something to link: the signed-in person holds the owner key and the group
+    or the owner member is not linked to the account yet, or holds a device token of a member who is not linked to
+    any account. It is not shown when the group or the member belongs to another account, or when the account is
+    already another member of the group.
+  - An owner with access from a recovery link on this device can attach the group and the owner member to their account.
+    Both rows are updated or nothing changes.
+  - A member with access from a device token on this device can attach that member to their account.
+  - If the group belongs to another account, linking is refused (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`).
+  - If the member is linked to another account, linking is refused (`409 MEMBER_LINKED_ELSEWHERE`).
+  - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
+- Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
+  is **never returned in group data** or shown to other members.
+- **Saved bank details (`saved_bank_details`):**
+  - A signed-in person can save one set of bank details in their account (`PATCH /api/me`, returning 401
+    `SIGN_IN_REQUIRED` without a session).
+  - Saved details are read each time a group is viewed: they apply to every group where a member is linked to the
+    account and has no account entered in the group.
+  - In those groups, anyone with the group link can see them, because VietQR transfers require them. They are never
+    shown in a group where the person is not a member.
+  - Changing or clearing saved details updates every group that uses them, with nothing to resync and without touching
+    groups (not a group change; `last_activity_at` does not move and no audit log row is written).
+  - Saved details are kept until changed or cleared. They are also deleted with the account (see "Deleting the account").
+- **Sessions:**
+  - A session lasts **30 days** (fixed from sign-in time, not extended by use).
+  - An expired session no longer identifies the person and its cookie is cleared.
+  - Expired sessions are deleted by the daily cleanup job.
+- **Signing out:**
+  - Ends the account session only. Device tokens and recovery links on that device remain.
+- **Deleting the account (`delete_account`):**
+  - A signed-in person can delete their account from the account menu ("Delete account", `DELETE /api/me`, returning 401 `SIGN_IN_REQUIRED` without a session).
+  - Deletion confirms through a dialog explaining what is deleted and what stays, with no typed confirmation.
+  - **Deleted:** the `users` row (Google account id, email, display name, saved bank details) and all sessions across every device. The session cookie is cleared and the interface signs out.
+  - **Stays:** groups and everything inside them (members, expenses, transfers, bank details entered in a group, audit log). Group data is purged by the inactivity rule or cleared in the group.
+  - **Owned groups:** detached (`owner_user_id` set to NULL) and keep working. Owner access remains on devices holding the owner key or through the recovery link.
+  - **Kept groups:** stop being kept. Each kept group owned by the account is unlocked (`locked_at` cleared), audited as `group.unlock` (actor `owner`, details `{"reason":"account.delete"}`), and its `last_activity_at` moves to the deletion time (giving 10 full days).
+  - **Linked members:** detached (`members.user_id` set to NULL). The member name, expenses, and history stay; devices with a device token keep acting as that member. Members who used the saved bank details no longer show bank details (`bankSource: null`).
+  - **Not a group change:** detaching owners and members is not a change and does not move `last_activity_at` on non-kept groups.
+  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding the owner key or a device token).
+- **Member removal:**
+  - When the owner removes a member, `user_id` is cleared; the account no longer resolves to it and may join the group
+    again as a new member.
+- **Activity:**
+  - Signing in does not move group activity (`last_activity_at`).
+  - Linking a group or a member is a change and updates group activity (audited as `group.link` or `member.link`,
+    with the linked member as target).
+- **Development sign-in:**
+  - Developers and automated tests can sign in with an email address without a Google account.
+  - It is available only when explicitly enabled for local development (`DEV_LOGIN=true`) and only on `localhost`. On any
+    other host or without the flag, the endpoint returns 404.
+
 ## Data and safety
 
 - Only **fake data** is used in development and tests. Fake account numbers: `0123456789`, `9876543210`.
-- Owner keys and device tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`, and are sent
-  only to the API path of their own group.
+- Owner keys, device tokens and session tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`.
+  Group cookies are sent only to the API path of their own group; session cookies are sent to `/api` and expire after
+  30 days.
 - Request bodies are limited to 16 KB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
 - OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
@@ -186,10 +270,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
   the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
   shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
-  that caused them and stay until the next attempt.
-- **Group summary:** above the tabs, the group page shows the total spent, the number of current members and, for
+  that caused them and stay until the next attempt. Saving group settings that are identical to the stored ones changes
+  nothing, so it shows no message.
+- **Group summary and deletion date:** above the tabs, the group page shows the total spent, the number of current members and, for
   a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
-  count, as in the balances. A visitor who has not joined sees no personal balance.
+  count, as in the balances. A visitor who has not joined sees no personal balance. Directly below the summary bar, the deletion date line shows when the group will be deleted if no changes are made, highlighted during the last 72 hours.
 - **Phones:** below 768px wide, the group tabs are a bar at the bottom of the screen.
 
 ## Planned (in the backlog)

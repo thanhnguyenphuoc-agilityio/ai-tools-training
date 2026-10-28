@@ -28,6 +28,7 @@ export interface MemberDto extends BankDetails {
   /** Removed by the owner (remove_member). Kept so that past expenses and transfers still show the name. */
   removed: boolean;
   removedReason: string | null;
+  bankSource: 'group' | 'account' | null;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */
@@ -59,6 +60,7 @@ export interface TransferDto {
 export interface Me {
   memberId: string | null;
   isOwner: boolean;
+  accountLinked: boolean;
 }
 
 export interface GroupDto {
@@ -70,8 +72,13 @@ export interface GroupDto {
   roundTo: number;
   createdAt: string;
   lastActivityAt: string;
+  /** last change + INACTIVE_DAYS; null when the group is kept */
+  expiresAt: string | null;
+  /** A kept group is exempt from inactivity deletion (lock_groups). */
+  locked: boolean;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
+  canLinkAccount: boolean;
   members: MemberDto[];
   expenses: ExpenseDto[];
   transfers: TransferDto[];
@@ -84,6 +91,21 @@ export interface CreateGroupResponse {
   ownerKey: string;
 }
 
+export interface UserDto extends BankDetails {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface MeResponse {
+  user: UserDto | null;
+}
+
+export interface ConfigResponse {
+  googleClientId: string | null;
+  devLogin: boolean;
+}
+
 export interface NewExpense {
   payerId: string;
   amount: number;
@@ -92,4 +114,16 @@ export interface NewExpense {
   splitMode: SplitMode;
   /** `weight` is read in weight mode; `amount` (minor units, zero allowed) in exact mode. */
   participants: { memberId: string; weight?: number; amount?: number }[];
+}
+
+export interface MyGroupDto {
+  code: string;
+  name: string;
+  currency: string;
+  isOwner: boolean;
+  lastActivityAt: string;
+}
+
+export interface MyGroupsResponse {
+  groups: MyGroupDto[];
 }

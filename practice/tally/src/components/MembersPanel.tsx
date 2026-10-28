@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { CURRENCIES, getCurrency } from '../../shared/currency';
 import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
+import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { KeepGroup } from './KeepGroup';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
@@ -27,7 +29,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       .catch((err) => setError(errorMessage(err)));
   return (
     <div className="stack">
-      {me && <BankForm key={me.id} code={group.code} member={me} onSaved={onChanged} />}
+      {me && (
+        <BankForm
+          key={`${me.id}-${me.bankSource}`}
+          code={group.code}
+          member={me}
+          accountLinked={group.me.accountLinked}
+          onSaved={onChanged}
+        />
+      )}
 
       <section className="card stack">
         <h2 className="card__title">{t('members.listTitle', { count: active.length })}</h2>
@@ -113,11 +123,24 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   );
 }
 
-function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; onSaved: () => void }) {
+function BankForm({
+  code,
+  member,
+  accountLinked,
+  onSaved,
+}: {
+  code: string;
+  member: MemberDto;
+  accountLinked?: boolean;
+  onSaved: () => void;
+}) {
   const { t, errorMessage } = useI18n();
-  const [bankBin, setBankBin] = useState(member.bankBin ?? '');
-  const [accountNo, setAccountNo] = useState(member.accountNo ?? '');
-  const [accountName, setAccountName] = useState(member.accountName ?? '');
+  const { user } = useAccount();
+  const isGroup = member.bankSource === 'group';
+  const [useDifferent, setUseDifferent] = useState(false);
+  const [bankBin, setBankBin] = useState(isGroup ? (member.bankBin ?? '') : '');
+  const [accountNo, setAccountNo] = useState(isGroup ? (member.accountNo ?? '') : '');
+  const [accountName, setAccountName] = useState(isGroup ? (member.accountName ?? '') : '');
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
 
@@ -131,6 +154,33 @@ function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; 
     } catch (err) {
       setError(errorMessage(err));
     }
+  }
+
+  async function handleUseSaved() {
+    try {
+      await api.updateMember(code, member.id, { bankBin: '', accountNo: '', accountName: '' });
+      setError(null);
+      setUseDifferent(false);
+      notify('savedBank.usingSavedNow');
+      onSaved();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  if (member.bankSource === 'account' && !useDifferent) {
+    return (
+      <section className="card stack">
+        <h2 className="card__title">{t('members.bankTitle')}</h2>
+        <p className="text text--muted text--small">{t('members.bankHint')}</p>
+        <p className="text">{t('savedBank.usingSaved')}</p>
+        <div className="cluster">
+          <button type="button" className="button" onClick={() => setUseDifferent(true)}>
+            {t('savedBank.useDifferent')}
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -172,7 +222,14 @@ function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; 
           </label>
         </div>
         {error && <p className="text text--error">{error}</p>}
-        <button className="button button--block-mobile">{t('common.save')}</button>
+        <div className="cluster">
+          <button className="button button--block-mobile">{t('common.save')}</button>
+          {member.bankSource === 'group' && accountLinked && !!user?.accountNo && (
+            <button type="button" className="button button--ghost" onClick={handleUseSaved}>
+              {t('savedBank.useSaved')}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );
@@ -192,13 +249,13 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.updateGroup(group.code, {
+      const res = await api.updateGroup(group.code, {
         name,
         currency: currency.code,
         roundTo: roundCoarse ? coarseUnit : currency.roundOptions[0],
       });
       setError(null);
-      notify('toast.settingsSaved');
+      if (res.changed) notify('toast.settingsSaved');
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -211,7 +268,13 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
       <form onSubmit={save} className="stack">
         <label className="field">
           <span className="field__label">{t('members.groupName')}</span>
-          <input className="field__control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+          <input
+            className="field__control"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={80}
+          />
         </label>
         <label className="field">
           <span className="field__label">{t('members.currency')}</span>
@@ -238,6 +301,7 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
         {error && <p className="text text--error">{error}</p>}
         <button className="button button--block-mobile">{t('common.save')}</button>
       </form>
+      <KeepGroup group={group} onSaved={onSaved} />
     </section>
   );
 }
