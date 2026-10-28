@@ -463,9 +463,9 @@ For the retro:
 - A rule about who reports a ticket should be written as a criterion (feature or technical), not as a list of
   names.
 Open before the next day:
-- [ ] Push `develop` and confirm the `e2e` job is green and takes about 2 to 3 minutes in the Playwright image
+- [x] Push `develop` and confirm the `e2e` job is green and takes about 2 to 3 minutes in the Playwright image
 - [x] Day 13: build the capstone tickets in dependency order, starting with `google_sign_in`
-- [ ] Course: finish the AI-native SDLC playbook
+- [x] Course: finish the AI-native SDLC playbook
 
 ## Day 13: 2026-10-28
 
@@ -485,7 +485,7 @@ Observations (positive / negative):
 For the retro:
 - A browser test that may not write data covers presence, not behaviour.
 Open before the next day:
-- [ ] Push `develop`, `main` and the tag
+- [x] Push `develop`, `main` and the tag
 - [ ] Day 14: port `owner_link_binds_account`, `transfer_ownership`, `join_as_account` and `member_email_invite`
 
 ## For the retro
