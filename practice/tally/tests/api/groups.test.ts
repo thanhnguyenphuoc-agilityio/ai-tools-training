@@ -34,7 +34,7 @@ describe('groups', () => {
   it('lets anyone with the link view, but not as a member', async () => {
     const guest = new Browser(env.env);
     const group = await getGroup(guest);
-    expect(group.me).toEqual({ memberId: null, isOwner: false });
+    expect(group.me).toEqual({ memberId: null, isOwner: false, accountLinked: false });
   });
 
   it('returns 404 for unknown or malformed codes', async () => {
@@ -72,7 +72,7 @@ describe('members', () => {
     const sam = new Browser(env.env);
     const { status, json } = await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
     expect(status).toBe(201);
-    expect((await getGroup(sam)).me).toEqual({ memberId: json.id, isOwner: false });
+    expect((await getGroup(sam)).me).toEqual({ memberId: json.id, isOwner: false, accountLinked: false });
   });
 
   it('lets a member add someone by name, who can claim it once', async () => {

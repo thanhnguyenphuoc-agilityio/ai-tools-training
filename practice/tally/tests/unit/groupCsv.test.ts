@@ -25,6 +25,7 @@ const member = (id: string, name: string): MemberDto => ({
   bankBin: null,
   accountNo: null,
   accountName: null,
+  bankSource: null,
 });
 
 const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'amount' | 'shares'>): ExpenseDto => ({
@@ -105,7 +106,7 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
       }),
     ],
     canLinkAccount: false,
-    me: { memberId: 'alex', isOwner: true },
+    me: { memberId: 'alex', isOwner: true, accountLinked: false },
     ...overrides,
   };
 }
