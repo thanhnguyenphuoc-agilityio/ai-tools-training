@@ -242,3 +242,8 @@ Findings:
 - [nit] `playwright.config.ts` serves e2e on port 5174 with `TALLY_DEV_LOGIN` and `reuseExistingServer: false`. Acceptable: CI runs `npx playwright test` with no fixed port, and a dev server started by hand on 5173 is left alone. Noted in the README.
 
 Checks after the fixes: `npm run typecheck` clean, `npm run lint` clean (oxlint and stylelint), `npm test` 30 files and 352 tests passing, `npm run e2e` 76 tests passing.
+
+Follow-up by Opus (AI team lead), before the merge:
+
+- `docs/business-rules.md` lists linking the group or a member to an account among the changes that move
+  `last_activity_at`, as answer 7 states and `worker/routes/link.ts` now does.
