@@ -80,3 +80,35 @@ Branch `feat/joined_groups_list` from `develop`. No migration, no new error code
 - Tests (fail before the route exists: 404): `tests/api/joined-groups.test.ts` covers JG-1 to JG-6 with the helpers in `tests/api/helpers.ts`. `e2e/joined-groups.spec.ts` covers JG-7 and JG-8 (two browser contexts, dev sign-in through `.account-menu__button`, both themes, 375px and 1366px).
 - Docs (same branch): `docs/business-rules.md`, Accounts: "Groups list (`joined_groups_list`)" sub-list as the last bullet group under "What an account restores". `docs/design.md`: heading of the roadmap section marks `joined_groups_list (built)`, the `joined_groups_list` bullet points to its own section, and a `### joined_groups_list (built)` subsection sits before `### language_picker, theme_picker`. The "Signing out", "Kept groups" and saved-details lines and `README.md` are not touched.
 - Commits: `docs(tickets): start joined_groups_list with a plan`, `feat: list the groups of the signed-in account`, `feat: show account groups on the home page`, `test: cover the account groups list`, `docs: describe the account groups list`, `docs(tickets): move joined_groups_list to waiting-to-merge`.
+
+## Merge request
+
+- Branch: `feat/joined_groups_list` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- Summary of changes:
+  - New `worker/routes/myGroups.ts` with `GET /api/me/groups`: `requireSignedIn(await resolveAccount(c))`, one query
+    over `groups` (owned by the account, or an active member linked to it), ordered by `last_activity_at` DESC, then
+    `code`. Writes nothing.
+  - Mounted in `worker/app.ts` right after `accountRoutes`.
+  - `worker/policy.ts`: `requireSignedIn` doc comment now names `/me/groups`. No rule change.
+  - `shared/types.ts`: `MyGroupDto` and `MyGroupsResponse` appended at the end.
+  - `src/api.ts`: `getMyGroups()` added after `linkAccount`.
+  - `src/pages/HomePage.tsx` and `HomePage.scss`: "Your groups" card above the device history card. The account list
+    is cleared on every user or version change; device entries already in the account list are hidden.
+  - `src/i18n/locales/en.ts` and `vi.ts`: `home.accountGroups` (`title`, `hint`, `empty`).
+  - Tests: `tests/api/joined-groups.test.ts` (JG-1 to JG-6) and `e2e/joined-groups.spec.ts` (JG-7, JG-8).
+  - Docs: `docs/business-rules.md` (Groups list sub-list) and `docs/design.md` (`joined_groups_list (built)` section,
+    roadmap heading and bullet updated).
+- What was adapted vs the draft:
+  - No migration. `requireSignedIn` already existed on develop; only its doc comment changed.
+  - `HomePage` keeps the existing `errorMessage(err)` handling instead of the draft's `message(UiMessage)`.
+  - JG-3 covers removal only. The draft also tested member release through `POST /groups/:code/members/:id/release`;
+    that endpoint is not on develop (it came from a draft commit that was not ported), so the release half of JG-3
+    is not in this branch.
+- Commands run and results:
+  - `npm run typecheck`: passed with no errors.
+  - `npm run lint`: passed (oxlint and stylelint).
+  - `npm test`: 33 files, 379 tests passed (6 of them are this ticket's API tests).
+  - `npx playwright test --config playwright.local.config.ts`: 102 tests passed (desktop and mobile, port 5191); 10
+    of them are this ticket's e2e tests.
+  - Failing-first: before the route was mounted, all 6 API tests failed with `404` (`expected 404 to be 200`).
