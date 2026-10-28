@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CURRENCIES, getCurrency } from '../../shared/currency';
 import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
+import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../toast';
@@ -27,7 +28,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       .catch((err) => setError(errorMessage(err)));
   return (
     <div className="stack">
-      {me && <BankForm key={me.id} code={group.code} member={me} onSaved={onChanged} />}
+      {me && (
+        <BankForm
+          key={`${me.id}-${me.bankSource}`}
+          code={group.code}
+          member={me}
+          accountLinked={group.me.accountLinked}
+          onSaved={onChanged}
+        />
+      )}
 
       <section className="card stack">
         <h2 className="card__title">{t('members.listTitle', { count: active.length })}</h2>
@@ -113,11 +122,24 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   );
 }
 
-function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; onSaved: () => void }) {
+function BankForm({
+  code,
+  member,
+  accountLinked,
+  onSaved,
+}: {
+  code: string;
+  member: MemberDto;
+  accountLinked?: boolean;
+  onSaved: () => void;
+}) {
   const { t, errorMessage } = useI18n();
-  const [bankBin, setBankBin] = useState(member.bankBin ?? '');
-  const [accountNo, setAccountNo] = useState(member.accountNo ?? '');
-  const [accountName, setAccountName] = useState(member.accountName ?? '');
+  const { user } = useAccount();
+  const isGroup = member.bankSource === 'group';
+  const [useDifferent, setUseDifferent] = useState(false);
+  const [bankBin, setBankBin] = useState(isGroup ? (member.bankBin ?? '') : '');
+  const [accountNo, setAccountNo] = useState(isGroup ? (member.accountNo ?? '') : '');
+  const [accountName, setAccountName] = useState(isGroup ? (member.accountName ?? '') : '');
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
 
@@ -131,6 +153,33 @@ function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; 
     } catch (err) {
       setError(errorMessage(err));
     }
+  }
+
+  async function handleUseSaved() {
+    try {
+      await api.updateMember(code, member.id, { bankBin: '', accountNo: '', accountName: '' });
+      setError(null);
+      setUseDifferent(false);
+      notify('savedBank.usingSavedNow');
+      onSaved();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  if (member.bankSource === 'account' && !useDifferent) {
+    return (
+      <section className="card stack">
+        <h2 className="card__title">{t('members.bankTitle')}</h2>
+        <p className="text text--muted text--small">{t('members.bankHint')}</p>
+        <p className="text">{t('savedBank.usingSaved')}</p>
+        <div className="cluster">
+          <button type="button" className="button" onClick={() => setUseDifferent(true)}>
+            {t('savedBank.useDifferent')}
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -172,7 +221,14 @@ function BankForm({ code, member, onSaved }: { code: string; member: MemberDto; 
           </label>
         </div>
         {error && <p className="text text--error">{error}</p>}
-        <button className="button button--block-mobile">{t('common.save')}</button>
+        <div className="cluster">
+          <button className="button button--block-mobile">{t('common.save')}</button>
+          {member.bankSource === 'group' && accountLinked && !!user?.accountNo && (
+            <button type="button" className="button button--ghost" onClick={handleUseSaved}>
+              {t('savedBank.useSaved')}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );
