@@ -223,6 +223,26 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
     `src/account.tsx`, `src/components/AccountMenu.tsx` (+ `.scss`).
   - Changed: `auth.ts`, `policy.ts`, `groupData.ts`, `http.ts`, `shared/types.ts`, `shared/errors.ts`, `locales/*.ts`.
 
+### delete_account (built)
+
+- **Rules:** `docs/business-rules.md`, "Deleting the account (`delete_account`)".
+- **Migration:** `0006_audit_details.sql` adds `audit_log.details` (`TEXT`, JSON, NULL when an entry records only its target). `audit()` and `recordChange()` keep their signatures.
+- **Batch deletion (`worker/accountDelete.ts`):** `deleteAccount(db, userId, now)` runs one atomic `db.batch` with six explicit statements, in this order:
+  1. `INSERT` into `audit_log` with action `group.unlock`, actor `owner` and details `{"reason":"account.delete"}`, for kept groups owned by the account.
+  2. `UPDATE groups SET locked_at = NULL, last_activity_at = now` for the same kept groups. Statement 1 must run first because it selects on `locked_at IS NOT NULL`.
+  3. Clear `groups.owner_user_id` for groups owned by the account (non-kept groups do not touch `last_activity_at`).
+  4. Clear `members.user_id` for members linked to the account.
+  5. `DELETE FROM sessions` for the account.
+  6. `DELETE FROM users` for the account.
+  Explicit statements instead of relying on the foreign key actions of `0004_accounts.sql`.
+- **API (`worker/routes/account.ts`):** `DELETE /api/me` uses `requireSignedIn(await resolveAccount(c))` (`worker/policy.ts`, 401 `SIGN_IN_REQUIRED` without a session), calls `deleteAccount(c.env.DB, userId, now())`, clears the cookie with `clearSessionCookie(c)` (`worker/auth.ts`, already present) and returns `{ ok: true }`.
+- **UI:**
+  - `src/api.ts`: `deleteMe()`.
+  - `src/account.tsx`: `deleteAccount()` in the context (calls `deleteMe`, sets `user` to `null`, bumps `version`).
+  - `AccountMenu`: "Delete account" menu item opens `DeleteAccountDialog` (`DeleteAccountDialog.tsx`, `.scss`, block `delete-account`). The dialog uses `useDialog(onClose, { canClose: !deleting })` from `src/hooks/useDialog.ts`, shows errors through `errorMessage(err)`, and notifies `deleteAccount.done` on success.
+- **Lock interaction:** kept groups owned by the account stop being kept, so a group cannot be kept indefinitely with no owner account able to stop keeping it.
+- **Tests:** `tests/api/delete-account.test.ts` (DA-1..DA-8), `e2e/delete-account.spec.ts` (DA-9).
+
 ### purge_inactive_groups
 
 Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
@@ -242,7 +262,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). The claim is audited with `audit()` only.
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0005_group_lock.sql` (`lock_groups`) is now the newest migration, after `0004_accounts.sql` (`google_sign_in`). `0006` stays reserved for `receipt_photos` (`0006_attachments.sql`). They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0006_audit_details.sql` (`delete_account`) is now the newest migration, after `0005_group_lock.sql` (`lock_groups`) and `0004_accounts.sql` (`google_sign_in`). `0007` is reserved for `receipt_photos` (`0007_attachments.sql`). A future `edit_expense` migration must not add `audit_log.details` again. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -268,7 +288,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 ### receipt_photos
 
 - **Storage:** R2 binding `RECEIPTS`.
-- **Migration:** `0006_attachments.sql` creates
+- **Migration:** `0007_attachments.sql` creates
   `expense_attachments(id, expense_id, r2_key, content_type, size, created_by, created_at)`.
 - **Client side:** resize to at most 1600px and encode as WebP through `<canvas>`. Re-encoding **removes EXIF/GPS**.
   The compressed size must be at most 1 MB.

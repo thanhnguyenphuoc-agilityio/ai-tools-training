@@ -41,6 +41,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     - Keeping and unlocking are changes audited in `audit_log` as `group.lock` and `group.unlock`.
     - A kept group stays fully editable: expenses, transfers, and members can still be added or changed.
     - Everyone who views the group sees "Kept until the owner stops keeping it" instead of the deletion date line, without warning colors. Members and guests see no keep control.
+    - Deleting the owner account (`delete_account`) stops keeping: the group is unlocked, audited as `group.unlock` with details `{"reason":"account.delete"}`, and its 10 days restart from the deletion time.
 
 ## Members
 
@@ -211,14 +212,23 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     shown in a group where the person is not a member.
   - Changing or clearing saved details updates every group that uses them, with nothing to resync and without touching
     groups (not a group change; `last_activity_at` does not move and no audit log row is written).
-  - Saved details are kept until changed or cleared. Complete deletion of the account and its saved details is handled
-    in `delete_account`.
+  - Saved details are kept until changed or cleared. They are also deleted with the account (see "Deleting the account").
 - **Sessions:**
   - A session lasts **30 days** (fixed from sign-in time, not extended by use).
   - An expired session no longer identifies the person and its cookie is cleared.
   - Expired sessions are deleted by the daily cleanup job.
 - **Signing out:**
   - Ends the account session only. Device tokens and recovery links on that device remain.
+- **Deleting the account (`delete_account`):**
+  - A signed-in person can delete their account from the account menu ("Delete account", `DELETE /api/me`, returning 401 `SIGN_IN_REQUIRED` without a session).
+  - Deletion confirms through a dialog explaining what is deleted and what stays, with no typed confirmation.
+  - **Deleted:** the `users` row (Google account id, email, display name, saved bank details) and all sessions across every device. The session cookie is cleared and the interface signs out.
+  - **Stays:** groups and everything inside them (members, expenses, transfers, bank details entered in a group, audit log). Group data is purged by the inactivity rule or cleared in the group.
+  - **Owned groups:** detached (`owner_user_id` set to NULL) and keep working. Owner access remains on devices holding the owner key or through the recovery link.
+  - **Kept groups:** stop being kept. Each kept group owned by the account is unlocked (`locked_at` cleared), audited as `group.unlock` (actor `owner`, details `{"reason":"account.delete"}`), and its `last_activity_at` moves to the deletion time (giving 10 full days).
+  - **Linked members:** detached (`members.user_id` set to NULL). The member name, expenses, and history stay; devices with a device token keep acting as that member. Members who used the saved bank details no longer show bank details (`bankSource: null`).
+  - **Not a group change:** detaching owners and members is not a change and does not move `last_activity_at` on non-kept groups.
+  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding the owner key or a device token).
 - **Member removal:**
   - When the owner removes a member, `user_id` is cleared; the account no longer resolves to it and may join the group
     again as a new member.
