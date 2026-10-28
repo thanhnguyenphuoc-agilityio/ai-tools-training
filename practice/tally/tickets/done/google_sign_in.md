@@ -247,3 +247,5 @@ Follow-up by Opus (AI team lead), before the merge:
 
 - `docs/business-rules.md` lists linking the group or a member to an account among the changes that move
   `last_activity_at`, as answer 7 states and `worker/routes/link.ts` now does.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.

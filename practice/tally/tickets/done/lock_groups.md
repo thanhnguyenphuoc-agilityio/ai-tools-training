@@ -228,3 +228,5 @@ Checked and found sound, so not listed as findings: `0005_group_lock.sql` is one
 Approve with nits. The feature matches the answers: owner only, signed in, limit of 10 per account, linking on the first keep, repeat lock and unlock return `changed: false`, a kept group stays editable, and the DTO returns `locked: true` with `expiresAt: null`.
 
 Could I review this from the MR description alone? Yes. The description names the migration, the purge exemption, the check order, the endpoints, the UI and what was adapted from the draft. It does not mention the activity-list gap, which the diff shows.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.

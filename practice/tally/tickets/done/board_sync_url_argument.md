@@ -55,3 +55,5 @@ Reviewed by Opus (AI team lead).
 - Checks: `npm run lint` passes, `npm test` 303 passed. `npm run typecheck` reports only the existing missing
   `jsqr`/`pngjs` types in `e2e/settle-up.spec.ts`. Without a token, the URL-only command now stops at the missing
   token instead of the missing URL. No e2e run: the change is limited to a Node script.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.
