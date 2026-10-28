@@ -9,6 +9,7 @@ interface AccountContextValue {
   user: UserDto | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   version: number;
   requestSignIn: () => void;
   signInRequest: number;
@@ -53,8 +54,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     notify('toast.signedOut');
   };
 
+  const deleteAccount = async () => {
+    await api.deleteMe();
+    setUser(null);
+    setVersion((v) => v + 1);
+  };
+
   return (
-    <AccountContext.Provider value={{ config, user, refresh, signOut, version, requestSignIn, signInRequest }}>
+    <AccountContext.Provider
+      value={{ config, user, refresh, signOut, deleteAccount, version, requestSignIn, signInRequest }}
+    >
       {children}
     </AccountContext.Provider>
   );

@@ -222,6 +222,7 @@ export const vi: Messages = {
     devSubmit: 'Đăng nhập',
     link: 'Liên kết với tài khoản của tôi',
     bankDetails: 'Thông tin tài khoản ngân hàng',
+    deleteAccount: 'Xoá tài khoản',
   },
   savedBank: {
     title: 'Thông tin tài khoản ngân hàng',
@@ -234,6 +235,14 @@ export const vi: Messages = {
     useDifferent: 'Dùng thông tin khác cho nhóm này',
     useSaved: 'Dùng thông tin đã lưu trong tài khoản',
     usingSavedNow: 'Đang dùng thông tin ngân hàng lưu trong tài khoản.',
+  },
+  deleteAccount: {
+    title: 'Xoá tài khoản',
+    deleted: 'Thông tin đăng nhập, thông tin ngân hàng đã lưu và phiên đăng nhập trên mọi thiết bị sẽ bị xoá.',
+    kept: 'Các nhóm và dữ liệu nhóm vẫn giữ nguyên. Các nhóm bạn giữ không bị xoá sẽ bị xoá sau 10 ngày không có thay đổi.',
+    ownerWarning: 'Bạn chỉ giữ quyền trưởng nhóm trên các thiết bị còn lưu khóa trưởng nhóm hoặc qua liên kết khôi phục.',
+    confirm: 'Xoá tài khoản của tôi',
+    done: 'Tài khoản của bạn đã được xoá.',
   },
   csvExport: {
     download: 'Tải file CSV',
