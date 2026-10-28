@@ -5,6 +5,7 @@ import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { SavedBankDialog } from './SavedBankDialog';
 import './AccountMenu.scss';
 
 declare global {
@@ -25,6 +26,7 @@ export function AccountMenu() {
   const { t, errorMessage } = useI18n();
   const notify = useToast();
   const [open, setOpen] = useState(false);
+  const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -135,11 +137,23 @@ export function AccountMenu() {
           </button>
           {open && (
             <div className="account-menu__menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu__item"
+                onClick={() => {
+                  close(false);
+                  setBankDetailsOpen(true);
+                }}
+              >
+                {t('account.bankDetails')}
+              </button>
               <button type="button" role="menuitem" className="account-menu__item" onClick={handleSignOut}>
                 {t('account.signOut')}
               </button>
             </div>
           )}
+          {bankDetailsOpen && <SavedBankDialog onClose={() => setBankDetailsOpen(false)} />}
         </>
       ) : (
         <>

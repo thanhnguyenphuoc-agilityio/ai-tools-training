@@ -79,7 +79,11 @@ groupRoutes.get('/:code', async (c) => {
     members: members.map(toMemberDto),
     expenses,
     transfers,
-    me: { memberId: me.memberId, isOwner: me.isOwner },
+    me: {
+      memberId: me.memberId,
+      isOwner: me.isOwner,
+      accountLinked: me.accountMemberId !== null && me.accountMemberId === me.memberId,
+    },
   };
   return c.json(dto);
 });

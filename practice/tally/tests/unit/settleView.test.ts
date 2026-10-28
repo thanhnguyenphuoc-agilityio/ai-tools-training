@@ -12,6 +12,7 @@ const member = (id: string, removed = false): MemberDto => ({
   accountName: null,
   removed,
   removedReason: removed ? 'Moved out' : null,
+  bankSource: null,
 });
 const expense = (payerId: string, shares: Record<string, number>): ExpenseDto => ({
   id: crypto.randomUUID(),

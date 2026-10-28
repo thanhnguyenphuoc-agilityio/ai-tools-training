@@ -86,7 +86,7 @@ describe('removing a member', () => {
 
   it('turns the removed member device into a guest', async () => {
     expect((await remove(owner, ids.sam)).status).toBe(200);
-    expect((await getGroup(sam)).me).toEqual({ memberId: null, isOwner: false });
+    expect((await getGroup(sam)).me).toEqual({ memberId: null, isOwner: false, accountLinked: false });
     expect((await addExpense(sam, ids.sam, 10_000, [ids.sam])).status).toBe(401);
   });
 

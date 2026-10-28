@@ -60,6 +60,7 @@ export const api = {
 
   getConfig: () => call<ConfigResponse>('GET', '/config'),
   getMe: () => call<MeResponse>('GET', '/me'),
+  updateMe: (patch: BankDetails) => call<{ user: UserDto }>('PATCH', '/me', patch),
   signInGoogle: (credential: string) => call<{ user: UserDto }>('POST', '/auth/google', { credential }),
   signInDev: (email: string, name?: string) => call<{ user: UserDto }>('POST', '/auth/dev', { email, name }),
   signOut: () => call<{ ok: true }>('POST', '/auth/logout'),
