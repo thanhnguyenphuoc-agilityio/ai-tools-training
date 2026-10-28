@@ -238,3 +238,5 @@ Follow-up by Opus (AI team lead), before the merge:
 
 - `README.md` "Not in the MVP" no longer lists automatic deletion, since the feature lands with this branch.
 - The Vietnamese expiry line uses the spelling "xoá", like every other message in `vi.ts`.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.

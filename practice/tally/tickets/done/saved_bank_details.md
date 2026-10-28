@@ -241,3 +241,5 @@ Checks after the fixes: `npm run typecheck` clean, `npm run lint` clean (oxlint 
 **Verdict:** approve with nits. Both findings are fixed on this branch.
 
 **Could I review this from the MR description alone?** No. The summary lists the behaviour but not the activity decision (no `recordChange`, no audit row) and not who sees the saved details, both of which the rules settle and the diff has to show.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.

@@ -134,3 +134,5 @@ Findings:
 Checks on this branch (worktree): `npm run typecheck` and `npm run lint` clean; `npm test` 33 files, 379 passed;
 `npx playwright test --config playwright.local.config.ts` (port 5191) 101 passed and 1 flaky failure, then 24 of 24 on
 rerun.
+
+Confirmed by the human on the Cloudflare deploy of `develop`. Released in release/2026-10-28.
