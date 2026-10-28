@@ -24,6 +24,10 @@ export function norm(s: unknown): string;
 export function displayName(s: string): string;
 export function fieldName(key: string): string;
 export function findOption<T extends { name?: string }>(options: T[], value: string): T | undefined;
+export function parseArgs(
+  argv: string[],
+  env: Record<string, string | undefined>,
+): { url?: string; repo?: string; apply: boolean };
 export function parseTicket(text: string, name: string, status: string): Ticket;
 export function readTickets(dir: string): Ticket[];
 export function planSync(

@@ -29,6 +29,16 @@ const clean = (s) =>
     .trim();
 const idOf = (title) => title.match(/^TAL-\d+\b/)?.[0];
 
+// Command line: <project url> [--repo <owner>/<name>] [--apply], in any order, with env fallbacks.
+export function parseArgs(argv, env) {
+  const repoFlag = argv.indexOf('--repo');
+  const repoValue = repoFlag >= 0 ? argv[repoFlag + 1] : undefined;
+  if (repoFlag >= 0 && (!repoValue || repoValue.startsWith('--'))) throw new Error('--repo takes <owner>/<name>');
+  const url = argv.find((a, i) => !a.startsWith('--') && (repoFlag < 0 || i !== repoFlag + 1)) ?? env.TALLY_BOARD_URL;
+  const repo = (repoValue ?? env.TALLY_BOARD_REPO)?.replace(/^https:\/\/github\.com\/|\/$/g, '');
+  return { url, repo, apply: argv.includes('--apply') };
+}
+
 export function parseTicket(text, name, status) {
   const lines = text.split(/\r?\n/);
   const h1 = lines.findIndex((l) => l.startsWith('# '));
