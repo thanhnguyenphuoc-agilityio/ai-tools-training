@@ -27,7 +27,15 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="dialog" role="dialog" aria-modal="true" aria-label={t('deleteAccount.title')} onClick={onClose}>
+    <div
+      className="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('deleteAccount.title')}
+      onClick={() => {
+        if (!deleting) onClose();
+      }}
+    >
       <div
         ref={panel}
         tabIndex={-1}
