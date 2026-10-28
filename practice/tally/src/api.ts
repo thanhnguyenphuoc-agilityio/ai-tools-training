@@ -7,6 +7,7 @@ import type {
   CreateGroupResponse,
   GroupDto,
   MeResponse,
+  MyGroupsResponse,
   NewExpense,
   UserDto,
 } from '../shared/types';
@@ -67,4 +68,5 @@ export const api = {
   signInDev: (email: string, name?: string) => call<{ user: UserDto }>('POST', '/auth/dev', { email, name }),
   signOut: () => call<{ ok: true }>('POST', '/auth/logout'),
   linkAccount: (code: string) => call<{ ok: true; changed: boolean }>('POST', `${g(code)}/link`),
+  getMyGroups: () => call<MyGroupsResponse>('GET', '/me/groups'),
 };

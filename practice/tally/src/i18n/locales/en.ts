@@ -50,6 +50,11 @@ export const en = {
       title: 'Groups opened on this device',
       remove: 'Remove {name} from history',
     },
+    accountGroups: {
+      title: 'Your groups',
+      hint: 'Groups you joined or own with this account, on every device.',
+      empty: 'No groups linked to your account yet.',
+    },
   },
   group: {
     notFound: 'Group not found.',

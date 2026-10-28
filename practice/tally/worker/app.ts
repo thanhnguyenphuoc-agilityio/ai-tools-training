@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ErrorBody } from '../shared/errors';
 import { ApiError, type AppEnv } from './http';
 import { accountRoutes } from './routes/account';
+import { myGroupRoutes } from './routes/myGroups';
 import { expenseRoutes } from './routes/expenses';
 import { groupRoutes } from './routes/groups';
 import { linkRoutes } from './routes/link';
@@ -37,6 +38,7 @@ export function createApp() {
   app.get('/health', (c) => c.json({ ok: true }));
 
   app.route('/', accountRoutes);
+  app.route('/', myGroupRoutes);
   app.route('/groups', groupRoutes);
   app.route('/groups', memberRoutes);
   app.route('/groups', expenseRoutes);

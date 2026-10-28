@@ -157,7 +157,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 
-### google_sign_in (built), joined_groups_list, saved_bank_details
+### google_sign_in (built), joined_groups_list (built), saved_bank_details
 
 - **Migration `0004_accounts.sql`:**
   - Table `users(id, google_sub UNIQUE, email, name, bank_bin, account_no, account_name, created_at)`.
@@ -208,7 +208,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
     (`409 ALREADY_MEMBER`).
     (2) Both member removal and member release (`POST .../members/:id/release`) clear `members.user_id`, so released
     and removed members no longer resolve to the account.
-- **`joined_groups_list`:** `GET /api/me` returns `{ user }`.
+- **`joined_groups_list`:** built; see "joined_groups_list (built)" below. `GET /api/me` returns `{ user }`.
 - **`saved_bank_details` (built):**
   - The bank columns on `users` are already added in `0004_accounts.sql`.
   - `PATCH /api/me` stores bank details in `users` (validated with `bankDetails`, 401 `SIGN_IN_REQUIRED` without session).
@@ -333,6 +333,19 @@ Built. Rules in `docs/business-rules.md` (Spreadsheet export).
 - Text comes from `csvExport.*` in the locales. The e2e test `e2e/csv-export.spec.ts` reads the downloaded file
   through Playwright's download event.
 - A date range filter, if requested later, only needs a filter on the rows in `buildGroupCsv`.
+
+### joined_groups_list (built)
+
+- **Rules:** `docs/business-rules.md`, Accounts > Groups list.
+- **Endpoint:** `GET /api/me/groups` (`worker/routes/myGroups.ts`, mounted on `/` after `accountRoutes`).
+- **Auth:** `resolveAccount(c)` in `worker/auth.ts`, then `requireSignedIn(account)` in `worker/policy.ts`; requests
+  without a session answer `401 SIGN_IN_REQUIRED`.
+- **Query:** selects groups owned by the account or having an active (non-removed) member linked to the account:
+  `SELECT g.code, g.name, g.currency, g.last_activity_at, (g.owner_user_id = ?1) AS is_owner FROM groups g WHERE g.owner_user_id = ?1 OR EXISTS (SELECT 1 FROM members m WHERE m.group_code = g.code AND m.user_id = ?1 AND m.removed_at IS NULL) ORDER BY g.last_activity_at DESC, g.code`.
+- **No visit tracking:** viewing a group writes nothing. Groups are ordered by latest change (`last_activity_at` DESC, `code` ASC).
+- **Home page merge:** when signed in, `HomePage` fetches `GET /api/me/groups` and renders the "Your groups" card above the device history card; device history entries whose group code is already in the account list are filtered out.
+- **DTO:** `MyGroupDto { code, name, currency, isOwner, lastActivityAt }` and `MyGroupsResponse { groups: MyGroupDto[] }` in `shared/types.ts`.
+- **Tests:** `tests/api/joined-groups.test.ts` (JG-1 to JG-6) and `e2e/joined-groups.spec.ts` (JG-7, JG-8).
 
 ### language_picker, theme_picker
 
