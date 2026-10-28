@@ -157,12 +157,10 @@ export function AccountMenu() {
           </button>
           {open && (
             <div className="account-menu__panel">
-              {config?.googleClientId ? (
-                <>
-                  <div ref={googleBtnRef} />
-                  {error && <p className="text text--error">{error}</p>}
-                </>
-              ) : config?.devLogin ? (
+              {/* Local development with DEV_LOGIN shows both, so e2e can sign in while a client id is set. */}
+              {config?.googleClientId && <div ref={googleBtnRef} />}
+              {config?.googleClientId && !config.devLogin && error && <p className="text text--error">{error}</p>}
+              {config?.devLogin ? (
                 <form onSubmit={handleDevSubmit} className="account-menu__form">
                   <p className="account-menu__dev-title">{t('account.devTitle')}</p>
                   <label className="field">
