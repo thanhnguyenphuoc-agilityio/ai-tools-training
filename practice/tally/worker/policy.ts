@@ -1,5 +1,5 @@
 // Every "who may do what" rule lives here. Routes call these instead of
-// comparing ids inline, so a new rule (e.g. a locked group becomes read-only)
+// comparing ids inline, so a new rule (e.g. a closed group becomes read-only)
 // is a change in one file. Keep in sync with docs/business-rules.md.
 import type { Identity } from './auth';
 import { ApiError } from './http';
@@ -22,6 +22,11 @@ export function requireMember(me: Identity): string {
 
 export function requireOwner(me: Identity): void {
   if (!me.isOwner) throw new ApiError(403, 'OWNER_ONLY', 'only the group owner can do this');
+}
+
+export function requireOwnerAccount(me: Identity): string {
+  requireOwner(me);
+  return requireAccount(me);
 }
 
 /**

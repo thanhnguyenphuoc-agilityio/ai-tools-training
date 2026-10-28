@@ -72,8 +72,10 @@ export interface GroupDto {
   roundTo: number;
   createdAt: string;
   lastActivityAt: string;
-  /** ISO timestamp: lastActivityAt + INACTIVE_DAYS. Group is deleted at first daily run after this. */
-  expiresAt: string;
+  /** last change + INACTIVE_DAYS; null when the group is kept */
+  expiresAt: string | null;
+  /** A kept group is exempt from inactivity deletion (lock_groups). */
+  locked: boolean;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
   canLinkAccount: boolean;
