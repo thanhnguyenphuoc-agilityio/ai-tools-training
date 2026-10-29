@@ -190,11 +190,9 @@ The merge request is opened on GitLab from this branch; its link is added when i
 - Commands and results (worktree `practice/tally`):
   - `npm run typecheck`: pass.
   - `npm run lint`: pass.
-  - `npm test`: 40 files, 458 tests pass on the last run. Earlier runs showed Miniflare timeouts and `fetch failed`
-    in unrelated API files; each failing file passes when rerun alone (71 of 71 in the four files that failed).
+  - `npm test`: 40 files, 458 tests, all pass.
   - `npm run test:hooks`: 29 pass, 0 fail.
-  - `npx playwright test --config playwright.local.config.ts` (port 5194): 129 passed, 1 failed, 2 skipped. The
-    failure was `transfer-ownership.spec.ts` on desktop at `browserContext.close` (target closed during teardown);
-    the spec passes on rerun (4 of 4). The new spec `e2e/owner-member-tools.spec.ts` passes on desktop and mobile.
+  - `npx playwright test --config playwright.local.config.ts` (port 5194): 130 passed, 2 skipped. The new spec
+    `e2e/owner-member-tools.spec.ts` passes on desktop and mobile.
 - Docs updated: `docs/business-rules.md`, `docs/design.md` (`owner_member_tools (built)` and section 3) and
   `README.md` (Owner concept row and "Not in the MVP").
