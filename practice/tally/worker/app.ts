@@ -9,6 +9,7 @@ import { expenseRoutes } from './routes/expenses';
 import { groupRoutes } from './routes/groups';
 import { linkRoutes } from './routes/link';
 import { memberRoutes } from './routes/members';
+import { sessionRoutes } from './routes/sessions';
 import { transferRoutes } from './routes/transfers';
 
 export type { Env } from './http';
@@ -42,6 +43,7 @@ export function createApp() {
   app.route('/groups', groupRoutes);
   app.route('/groups', memberRoutes);
   app.route('/groups', expenseRoutes);
+  app.route('/groups', sessionRoutes);
   app.route('/groups', transferRoutes);
   app.route('/groups', linkRoutes);
 

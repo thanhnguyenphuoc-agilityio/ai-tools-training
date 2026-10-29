@@ -156,6 +156,11 @@ export function requireCanTransferOwnership(me: Identity): void {
   requireOwner(me);
 }
 
+/** Sessions and their attendance (attendance_split): the owner only. Costs added to a session are ordinary expenses. */
+export function requireCanManageSessions(me: Identity): void {
+  requireOwner(me);
+}
+
 /**
  * The member who receives ownership (transfer_ownership): not the current owner, and linked to an account, because
  * owner access is tied to an account. Removed members are refused earlier by `loadActiveMember`.

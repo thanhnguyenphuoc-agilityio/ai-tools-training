@@ -23,6 +23,7 @@ import {
   loadLedger,
   loadMember,
   loadMembers,
+  loadSessions,
   recordChange,
   toMemberDto,
 } from '../groupData';
@@ -103,9 +104,10 @@ groupRoutes.get('/:code', async (c) => {
     }
   }
 
-  const [members, { expenses, transfers }] = await Promise.all([
+  const [members, { expenses, transfers }, sessions] = await Promise.all([
     loadMembers(db, group.code),
     loadLedger(db, group.code),
+    loadSessions(db, group.code),
   ]);
   const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
   const canLinkAccount = canLinkToAccount(me, deviceMember);
@@ -126,6 +128,7 @@ groupRoutes.get('/:code', async (c) => {
     members: members.map(toMemberDto),
     expenses,
     transfers,
+    sessions,
     me: {
       memberId: me.memberId,
       isOwner: me.isOwner,
