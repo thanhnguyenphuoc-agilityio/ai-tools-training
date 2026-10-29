@@ -165,3 +165,19 @@ Branch: `fix/stale_language_messages` from `develop`. Assignee set; ticket moved
 3. `fix: re-translate stored messages when the language changes`
 4. `docs: document stored messages re-translating on language change`
 5. `docs(tickets): move stale_language_messages to waiting-to-merge`
+
+## Merge request
+
+- Branch: `fix/stale_language_messages` into `develop`.
+- Summary of changes:
+  - No new i18n key, no API change, no migration. `src/i18n/types.ts` adds `MessageVar`, `MessageVars` and the `UiMessage` union. `createTranslator()` adds `message()`, re-exported from `src/i18n/index.tsx`.
+  - Every stored error is a `UiMessage` (`{ key, vars? }` or `{ error }`) and is rendered with `message()`, so it follows the active language. A raw server text without a code stays as received.
+  - `ExpenseForm` stores the invalid-amount examples as a nested `MessageVar`. `QrDialog` reads the helper as `message: formatMessage` so the VietQR transfer text keeps its local name. `GroupPage` keeps the refusal set after reload, now as `{ key: 'group.badRecoveryLink', error }`, and `reload` depends only on `[code]`.
+  - Tests: `tests/unit/uiMessage.test.ts` and three cases in `e2e/language-picker.spec.ts` (invalid group code, `DUPLICATE_NAME` on the members tab, invalid amount with examples).
+  - Docs: `docs/business-rules.md` (Interface language) and `docs/design.md` (section 2 `message`, section 5 `UiMessage`, `ui_redesign` points at section 5).
+- Commands run and results (port 5192 for Playwright):
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean.
+  - `npm test`: 41 files, 452 tests passed.
+  - `npm run test:hooks`: 29 of 29 passed.
+  - `npx playwright test --config playwright.local.config.ts`: 134 passed, 2 skipped (the existing saved-bank keyboard test and the existing My name Escape test, both on the mobile project).
