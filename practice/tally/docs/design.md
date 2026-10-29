@@ -47,12 +47,12 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 
 | Source | Client storage | Server storage | Provides |
 |---|---|---|---|
-| Owner key | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash` | `isOwner` |
+| Owner key | cookie `tally_owner_<code>` (HttpOnly, path `/api/groups/<code>`) | `groups.owner_key_hash` (`'revoked'` once the group is tied to an account) | `isOwner` |
 | Device token | cookie `tally_member_<code>` = `<memberId>.<token>` | `members.token_hash` | `memberId` |
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
@@ -193,15 +193,19 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - `memberId` comes from device token if present, else from `members.user_id`.
 - **Account linking (`worker/accountLink.ts`, reused by `lock_groups`):**
   - Creating, joining or claiming while signed in sets `user_id` automatically.
-  - `POST /groups/:code/link` attaches a group used through cookies to the account. It records `group.link` (target:
-    the owner member) or `member.link` (target: the linked member) with `recordChange`, so linking moves
-    `last_activity_at`.
+  - `POST /groups/:code/link` attaches a device member to the account (`linkToAccount`). It records `member.link`
+    (target: the linked member) with `recordChange`, so linking moves `last_activity_at`. The owner branch was removed
+    in `owner_link_binds_account`: an owner member is refused with `403 OWNER_ONLY`.
+  - The owner is attached by `attachOwnerGroup`, which is used by `POST /groups/:code/owner/claim` (signed in, valid key),
+    `POST /groups/:code/owner/attach` (`tryAttachOwnerGroup`, the known refusals answer `attached: false`) and the lock route.
+    It records `group.link` (target: the owner member) with `recordChange`.
   - "Both or nothing" for an owner: each of the two `UPDATE`s in the `db.batch` also requires the other row to be free
     for this account (`EXISTS` subquery), so a request that lost a race changes neither `groups.owner_user_id` nor
-    `members.user_id`, and the route then answers the matching 403 or 409.
-  - `canLinkAccount` in `GET /groups/:code` comes from `canLinkToAccount` in `policy.ts`, which mirrors those checks
-    without throwing: the button is offered only when the request can succeed (nothing is linked yet, or the owner key
-    is held and only one of the two rows is linked to this account).
+    `members.user_id`, and the route then answers the matching 403 or 409. The groups `UPDATE` also sets
+    `owner_key_hash` to the sentinel in the same statement.
+  - `canLinkAccount` in `GET /groups/:code` comes from `canLinkToAccount` in `policy.ts`, which mirrors the device
+    member checks without throwing: the button is offered only to a non-owner device member that is not linked to any
+    account, when the account has no other member in the group.
   - A unique-index violation (`idx_members_group_user`) from two simultaneous joins, claims or links of one account
     answers `409 ACCOUNT_ALREADY_MEMBER`, never `500`.
   - Points (1) and (2) settled:
@@ -236,7 +240,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   5. `DELETE FROM sessions` for the account.
   6. `DELETE FROM users` for the account.
   Explicit statements instead of relying on the foreign key actions of `0004_accounts.sql`.
-- **API (`worker/routes/account.ts`):** `DELETE /api/me` uses `requireSignedIn(await resolveAccount(c))` (`worker/policy.ts`, 401 `SIGN_IN_REQUIRED` without a session), calls `deleteAccount(c.env.DB, userId, now())`, clears the cookie with `clearSessionCookie(c)` (`worker/auth.ts`, already present) and returns `{ ok: true }`.
+- **API (`worker/routes/account.ts`):** `DELETE /api/me` uses `requireSignedIn(await resolveAccount(c))` (`worker/policy.ts`, 401 `SIGN_IN_REQUIRED` without a session), counts the shared owned groups with `countSharedOwnedGroups` (`worker/accountDelete.ts`) and calls `requireNoSharedOwnedGroups(count)` (409 `ACCOUNT_OWNS_SHARED_GROUP` with `{ count }`), then calls `deleteAccount(c.env.DB, userId, now())`, clears the cookie with `clearSessionCookie(c)` (`worker/auth.ts`, already present) and returns `{ ok: true }`.
+  - Known limit: the count and the `deleteAccount` batch are two statements, not one transaction. A member that becomes active in that window is detached with the group, as with any owned group. The window is small, and the refusal is a guard for the common case, not a lock.
 - **UI:**
   - `src/api.ts`: `deleteMe()`.
   - `src/account.tsx`: `deleteAccount()` in the context (calls `deleteMe`, sets `user` to `null`, bumps `version`).
@@ -261,9 +266,9 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
   so that no group is deleted by the first run.
 - **Activity:** only changes move `last_activity_at` (through `recordChange` in `worker/groupData.ts`); viewing and recovery links no longer do.
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
-- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). The claim is audited with `audit()` only.
+- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0006_audit_details.sql` (`delete_account`) is now the newest migration, after `0005_group_lock.sql` (`lock_groups`) and `0004_accounts.sql` (`google_sign_in`). `0007` is reserved for `receipt_photos` (`0007_attachments.sql`). A future `edit_expense` migration must not add `audit_log.details` again. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0006_audit_details.sql` (`delete_account`) is now the newest migration, after `0005_group_lock.sql` (`lock_groups`) and `0004_accounts.sql` (`google_sign_in`). `0007_owner_key_revoke.sql` (`owner_link_binds_account`) is the next migration; `receipt_photos` takes a later number. A future `edit_expense` migration must not add `audit_log.details` again. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -277,7 +282,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
   - `GET /groups/:code`: returns `GroupDto` with `locked: boolean` and `expiresAt: string | null` (`null` while kept).
   - Require both `isOwner` and `userId` (`requireOwnerAccount(me)` in `policy.ts`), because the limit is counted per person.
   - Check order (round 3, answer 2): `403 OWNER_ONLY` comes first, whether the visitor is signed in or not; then `401 SIGN_IN_REQUIRED` for an owner without an account session.
-  - A group with no account yet is linked exactly like "Link to my account": the route calls `linkToAccount` (`worker/accountLink.ts`) before it locks, so the group and the owner member are linked together, all or nothing. Its refusals apply: `403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`. After that `canLinkAccount` is false for the group. Setting `groups.owner_user_id` alone would leave the owner member unlinked and `canLinkAccount` still true.
+  - A group with no account yet is attached through `attachOwnerGroup` (`worker/accountLink.ts`) before it locks, so the group and the owner member are linked together, all or nothing, and the owner key is revoked. Its refusals apply: `403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`. After that `canLinkAccount` is false for the group. Setting `groups.owner_user_id` alone would leave the owner member unlinked.
   - Count `SELECT COUNT(*) FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL`. When the count is >= `MAX_LOCKED_GROUPS` (10), answers `409 LOCK_LIMIT_REACHED` with params `{ max: 10 }`. The same count is repeated inside the `UPDATE` (`... AND (SELECT COUNT(*) ...) < 10`), so two simultaneous locks cannot both pass it; when the `UPDATE` changes no row, the route reads the group again and answers `changed: false` if it is already locked, otherwise `LOCK_LIMIT_REACHED`. The unlock `UPDATE` carries `AND locked_at IS NOT NULL`, so two simultaneous unlocks write one `group.unlock` row.
   - Repeat lock or repeat unlock returns `{ ok: true, changed: false }` and writes nothing.
   - Unlocking is a change (`recordChange`), so `last_activity_at` is set to the unlock time and the expiry restarts from the moment of unlocking (unlock + 10 days).
@@ -469,6 +474,33 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   StrictMode the effect cleanup focuses the opener before the effect runs again.
 - Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
+
+### owner_link_binds_account (built)
+
+- **Sentinel decision:** `groups.owner_key_hash` holds `'revoked'` (constant `REVOKED_OWNER_KEY` in `worker/auth.ts`)
+  once the owner access is tied to an account. A SHA-256 hex digest is 64 characters, so the 7-character sentinel never
+  equals a real hash; `resolveIdentity` also checks the sentinel explicitly, so `hasOwnerKey` is false for a revoked group.
+- **No table rebuild:** D1 enforces foreign keys and ignores `PRAGMA foreign_keys=OFF` inside migrations, and the implicit
+  delete of `DROP TABLE groups` would fire `ON DELETE CASCADE` on every child table, even with `defer_foreign_keys`. The
+  sentinel is a single reversible `UPDATE`, so the column stays `NOT NULL` and no schema changes.
+- **Migration `0007_owner_key_revoke.sql`:** `UPDATE groups SET owner_key_hash = 'revoked' WHERE owner_user_id IS NOT NULL`
+  revokes every group that already has an account owner. It does not touch anonymous groups.
+- **Creation while signed in:** `POST /groups` stores the sentinel, sets no owner cookie and answers `ownerKey: null`.
+  The page shows `OwnerAccessNote` instead of the recovery banner; `HomePage` passes `created: true` in the navigate state.
+- **Attach and claim:** `attachOwnerGroup` (`worker/accountLink.ts`) sets `owner_user_id`, `owner_key_hash` and the owner
+  member's `user_id` in one `db.batch`, with the same `EXISTS` guards as before, then reads back to choose the refusal.
+  `tryAttachOwnerGroup` maps `GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE` and `ACCOUNT_ALREADY_MEMBER` to
+  `attached: false`. The claim route answers `attached: true` when it attached, `OWNER_KEY_REVOKED` for a revoked key with no account, and `GROUP_OWNED_BY_OTHER_ACCOUNT` for a revoked key held by another account.
+- **Device history:** after sign-in, `afterSignIn()` (`src/account.tsx`) runs `attachDeviceGroups` (`src/ownerAttach.ts`) over
+  the device history: one `POST /groups/:code/owner/attach` per group, sequential, failures ignored, then `refresh()`.
+- **Lock:** `POST /groups/:code/lock` keeps `requireOwnerAccount` first, then `requireGroupNotOwnedByOther`, then attaches
+  through `attachOwnerGroup` and clears the owner cookie; the `lock_limit_race` update is unchanged.
+- **Account deletion:** `countSharedOwnedGroups` and `requireNoSharedOwnedGroups` refuse `DELETE /api/me` while an owned group
+  has another active member. A solo owned group is detached and stays revoked, so it has no owner left.
+- **Tests:** `tests/api/owner-link-binds-account.test.ts` (OL-1 to OL-9, including the migration), `tests/unit/ownerAttach.test.ts`,
+  `e2e/owner-link-binds-account.spec.ts`. Updated: `tests/api/account.test.ts`, `tests/api/delete-account.test.ts`,
+  `tests/api/joined-groups.test.ts`, `tests/api/lock-groups.test.ts` (LG-4, LG-10, LG-12), `tests/unit/groupCsv.test.ts`,
+  `e2e/account.spec.ts`.
 
 ## 7. Ticket workflow
 
