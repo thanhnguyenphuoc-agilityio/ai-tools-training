@@ -52,7 +52,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanEditExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanEditExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`, `requireCanManageSessions`.
 The interface mirror of these rules for showing controls only is in `src/ownerTools.ts` (`canEditAccount`, `payAction`, `canReleaseMember`); the server enforces them.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
@@ -65,6 +65,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - Timestamps: ISO-8601 UTC strings (`created_at`...). Expense dates: `YYYY-MM-DD` without a time zone.
 - Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts`.
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
+  One exception removes rows directly: a session without live costs, with its attendance (`attendance_split`).
 - No `CHECK (x IN (...))` for extensible enum-like values, because SQLite has to rebuild the table to change one.
   Values are validated in code.
 - `last_activity_at` tracks the time of the last change (through `recordChange` in `worker/groupData.ts`). Viewing does not move it. Used by `purge_inactive_groups`.
@@ -313,14 +314,35 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Deletion:** deleting an expense keeps its photos until the group is purged. Purging a group must also delete
   its R2 objects, because D1 cascades do not reach R2.
 
-### attendance_split
+### attendance_split (built)
 
-- **Migration:** table `group_sessions(id, group_code, day, starts_at, ends_at, note)` and table
-  `attendance(session_id, member_id)`.
-- **Session costs:** ordinary `expenses` with an extra `session_id` column. Default participants are the members
-  marked present. The core money and settlement logic **does not change**.
-- **Time:** start and end times are stored as `HH:mm` in the group's local time. Sessions that end after midnight
-  (for example 21:00-00:30) must be handled explicitly.
+Built. Rules in `docs/business-rules.md`, "Sessions and attendance".
+
+- **Migration:** `0012_sessions.sql` creates `group_sessions(id, group_code, day, starts_at, ends_at, note, created_at)`
+  with an index on `(group_code, day)`, and `attendance(session_id, member_id)` with both foreign keys cascading.
+  `expenses.session_id` references `group_sessions` and is set to NULL when the session is deleted.
+- **Endpoints** (`worker/routes/sessions.ts`, the owner only through `requireCanManageSessions`, which delegates to
+  `requireOwner`):
+  - `POST /groups/:code/sessions` creates a session with its attendance in one batch. Present ids are deduplicated and
+    must be strings naming active members; anything else is `PARTICIPANT_NOT_IN_GROUP`.
+  - `PATCH /groups/:code/sessions/:id` edits the fields and replaces the attendance. A removed member who is already
+    present stays present; one who was not present is refused. A request that repeats the stored values answers
+    `changed: false` and writes nothing. A real change records `session.update` with `details { previous }`.
+  - `DELETE /groups/:code/sessions/:id` removes the session and its attendance only while no live expense references it,
+    in one statement. Zero rows changed is re-read: a missing session is `SESSION_NOT_FOUND`, one with live costs is
+    `SESSION_HAS_EXPENSES`.
+- **Time** (`shared/sessions.ts`): `starts_at` and `ends_at` are `HH:mm` strings in the group's local time, with no Date
+  object and no time zone. A session belongs to the day it starts. When `ends_at` is earlier than `starts_at` it ends
+  the next day (21:00-00:30 is 3 h 30 min). Equal times are rejected with `INVALID_SESSION_TIME`.
+- **Session costs:** ordinary expenses with `session_id`. `parseExpense` accepts an optional `sessionId` (null, empty or
+  absent means none) and checks it belongs to the group; a session removed between the check and the write answers
+  `SESSION_NOT_FOUND`, never 500. `sessionId` is a field of `expenseFieldsChanged`, so a session-only change sets
+  `edited_at` and records `expense.edit` but keeps the stored shares. The split modes are unchanged.
+- **Comparison:** `attendanceMatches` in `shared/sessions.ts` compares the member ids of the stored shares with the
+  members present. A removed member who is present but takes no part in the cost is ignored, because a new cost can
+  only include active members. The session view flags a cost that differs and offers the edit action to its author or
+  the owner, hidden when the cost involves a removed member.
+- **GET** `/groups/:code` returns `GroupDto.sessions` from `loadSessions`, sorted by day then start time, newest first.
 
 ### exact_amount_split
 
@@ -421,7 +443,9 @@ Built. Rules in `docs/business-rules.md`, "Editing an expense".
   or owes a share of `EXPENSE_HAS_REMOVED_MEMBER`.
 - Shares: `shared/expenseEdit.ts` decides whether the stored shares are stale (`splitChanged`, weights compared in
   hundredths, participants matched by member id) and whether a stored field changed (`expenseFieldsChanged`, the one
-  place a later item adds a field such as a session). Only a stale split recomputes, through `splitAmount` with the
+  place a later item adds a field). `sessionId` is now one of those fields (`attendance_split`): a session-only change
+  sets `edited_at` and records `expense.edit`, but `splitChanged` stays false, so the stored shares are kept. Only a
+  stale split recomputes, through `splitAmount` with the
   group's current `round_to`, or `splitExact` for exact mode (no rounding). A date or description edit keeps the
   stored shares. A request that repeats the stored values answers `changed: false` and writes nothing.
 - A real edit sets `edited_at` and records `expense.edit` through `recordChange`, whose optional details are stored as
