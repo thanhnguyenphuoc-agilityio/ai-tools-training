@@ -196,3 +196,23 @@ The merge request is opened on GitLab from this branch; its link is added when i
     `e2e/owner-member-tools.spec.ts` passes on desktop and mobile.
 - Docs updated: `docs/business-rules.md`, `docs/design.md` (`owner_member_tools (built)` and section 3) and
   `README.md` (Owner concept row and "Not in the MVP").
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- "Edit account" (`canEditAccount`) shows for the owner on every active member except the owner's own member and opens
+  `BankForm` under that row with Save and Cancel and no rename field; one form is open at a time. "Record payment"
+  (`payAction`) opens `QrDialog` for the debtor, and `recordSent` sends `fromId` only when the owner records for
+  someone else. This matches answers 1 to 6. The server rules in `worker/policy.ts` are unchanged.
+- The API cases in `tests/api/groups.test.ts` lock existing behaviour; the interface is covered by
+  `tests/unit/ownerTools.test.ts` and `e2e/owner-member-tools.spec.ts`.
+- Finding: the branch predates `stale_language_messages` and `wrong_name_claim`, which change the same member row,
+  `SettlePanel`, `QrDialog`, `ownerTools.ts` and the locales. Fix: `develop` merged into the branch with both sides kept:
+  the row offers Edit account, Make owner, Set email, Release and Remove; every error state is a `UiMessage`; the
+  `ownerTools` mirror and its tests hold `canEditAccount`, `payAction` and `canReleaseMember`; README and design.md
+  keep both texts.
+- Not done in this ticket: the screenshots listed in the plan. The Reproduce section is a code-path reading.
+- Checks after the fix: typecheck and lint clean, 483 unit and API tests, e2e `owner-member-tools`, `claim-member`,
+  `member-invite`, `transfer-ownership`, `language-picker`, `remove-member`, `settle-up` and `saved-bank` 51 passed and
+  1 skipped.
