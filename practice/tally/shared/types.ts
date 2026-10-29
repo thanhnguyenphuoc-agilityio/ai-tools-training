@@ -29,6 +29,8 @@ export interface MemberDto extends BankDetails {
   removed: boolean;
   removedReason: string | null;
   bankSource: 'group' | 'account' | null;
+  /** Linked to a signed-in account (boolean only; the account itself is never returned). */
+  hasAccount: boolean;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */

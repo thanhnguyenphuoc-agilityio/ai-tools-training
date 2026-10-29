@@ -120,3 +120,19 @@ export function requireCanConfirmTransfer(me: Identity, transfer: { to_id: strin
     throw new ApiError(403, 'CONFIRM_RECEIVER_ONLY', 'only the receiver can confirm');
   }
 }
+
+/** Handing the group over (transfer_ownership): the current owner only. */
+export function requireCanTransferOwnership(me: Identity): void {
+  requireOwner(me);
+}
+
+/**
+ * The member who receives ownership (transfer_ownership): not the current owner, and linked to an account, because
+ * owner access is tied to an account. Removed members are refused earlier by `loadActiveMember`.
+ */
+export function requireTransferTarget(member: { is_owner: number; user_id: string | null }): void {
+  if (member.is_owner === 1) throw new ApiError(409, 'OWNER_TRANSFER_SELF', 'the owner already has owner access');
+  if (member.user_id === null) {
+    throw new ApiError(409, 'OWNER_TRANSFER_NOT_LINKED', 'the member needs an account to receive ownership');
+  }
+}
