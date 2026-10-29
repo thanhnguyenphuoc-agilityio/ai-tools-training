@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { Settlement } from '../../shared/settle';
 import type { Me, MemberDto } from '../../shared/types';
-import { canEditAccount, canSetInviteEmail, canTransferTo } from '../../src/ownerTools';
+import { canEditAccount, canSetInviteEmail, canTransferTo, payAction } from '../../src/ownerTools';
 
 describe('canTransferTo', () => {
   const ownerMe: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
@@ -110,5 +111,28 @@ describe('canEditAccount (owner_member_tools)', () => {
   it('a plain member may edit nobody', () => {
     expect(canEditAccount(plain, member({ id: 'm-sam' }))).toBe(false);
     expect(canEditAccount(plain, member())).toBe(false);
+  });
+});
+
+describe('payAction (owner_member_tools)', () => {
+  const owner: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
+  const plain: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+  const debt = (fromId: string, toId: string): Settlement => ({ fromId, toId, amount: 50_000 });
+
+  it('pay when the current member is the payer', () => {
+    expect(payAction(plain, debt('m-sam', 'm-alex'))).toBe('pay');
+    expect(payAction(owner, debt('m-alex', 'm-jamie'))).toBe('pay');
+  });
+
+  it('recordFor for the owner on a debt between two other members', () => {
+    expect(payAction(owner, debt('m-sam', 'm-jamie'))).toBe('recordFor');
+  });
+
+  it('recordFor for the owner on a debt to the owner', () => {
+    expect(payAction(owner, debt('m-sam', 'm-alex'))).toBe('recordFor');
+  });
+
+  it('null for a plain member on a debt that is not their own', () => {
+    expect(payAction(plain, debt('m-jamie', 'm-alex'))).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n } from '../i18n';
+import { payAction } from '../ownerTools';
 import { settleView } from '../settleView';
 import { useToast } from '../toast';
 import { QrDialog } from './QrDialog';
@@ -55,18 +56,30 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
         <h2 className="card__title">{t('settle.planTitle')}</h2>
         {plan.length === 0 && <p className="text text--muted">{t('settle.allEven')}</p>}
         <ul className="list">
-          {plan.map((s) => (
-            <li key={`${s.fromId}-${s.toId}`} className="list__item cluster cluster--between">
-              <span className="text text--strong">
-                {t('settle.transferLine', { from: nameOf(s.fromId), to: nameOf(s.toId), amount: money(s.amount) })}
-              </span>
-              {s.fromId === group.me.memberId && (
-                <button className="button" onClick={() => setPaying(s)}>
-                  {t('settle.pay')}
-                </button>
-              )}
-            </li>
-          ))}
+          {plan.map((s) => {
+            const action = payAction(group.me, s);
+            return (
+              <li key={`${s.fromId}-${s.toId}`} className="list__item cluster cluster--between">
+                <span className="text text--strong">
+                  {t('settle.transferLine', { from: nameOf(s.fromId), to: nameOf(s.toId), amount: money(s.amount) })}
+                </span>
+                {action === 'pay' && (
+                  <button className="button" onClick={() => setPaying(s)}>
+                    {t('settle.pay')}
+                  </button>
+                )}
+                {action === 'recordFor' && (
+                  <button
+                    className="button button--ghost"
+                    onClick={() => setPaying(s)}
+                    aria-label={t('settle.recordForLabel', { from: nameOf(s.fromId), to: nameOf(s.toId) })}
+                  >
+                    {t('settle.recordFor')}
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
         {pending.length > 0 && <p className="text text--muted text--small">{t('settle.pendingNote')}</p>}
         {removedWithBalance.map((m) => (

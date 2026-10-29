@@ -1,4 +1,5 @@
 // Interface mirror of the owner rules in worker/policy.ts. Only for showing or hiding controls: the server enforces them.
+import type { Settlement } from '../shared/settle';
 import type { Me, MemberDto } from '../shared/types';
 
 /** Handing the group over (transfer_ownership): the owner, to an active non-owner member who has an account. */
@@ -14,4 +15,13 @@ export function canSetInviteEmail(me: Me, member: MemberDto): boolean {
 /** The owner may edit the receiving account of any active member other than their own member (owner_member_tools). */
 export function canEditAccount(me: Me, member: MemberDto): boolean {
   return me.isOwner && !member.removed && member.id !== me.memberId;
+}
+
+/** Which action a suggested transfer offers: the payer pays; the owner may record it for someone else. */
+export type PayAction = 'pay' | 'recordFor' | null;
+
+export function payAction(me: Me, s: Settlement): PayAction {
+  if (s.fromId === me.memberId) return 'pay';
+  if (me.isOwner) return 'recordFor';
+  return null;
 }

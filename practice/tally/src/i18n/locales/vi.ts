@@ -143,6 +143,8 @@ export const vi: Messages = {
     confirm: 'Xác nhận đã nhận',
     doneTitle: 'Đã thanh toán',
     removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
+    recordFor: 'Ghi nhận chuyển khoản',
+    recordForLabel: 'Ghi nhận chuyển khoản: {from} trả {to}',
   },
   qr: {
     title: 'Trả {name} {amount}',
@@ -161,6 +163,8 @@ export const vi: Messages = {
       'VietQR chỉ dùng cho VND. Hãy chuyển {amount} theo thông tin bên dưới, quy đổi theo tỷ giá nhóm đã thống nhất.',
     sent: 'Tôi đã chuyển',
     renderError: 'Không tạo được mã QR. Hãy chuyển khoản theo thông tin bên dưới.',
+    titleFor: 'Chuyển khoản từ {from}: trả {name} {amount}',
+    sentFor: 'Đánh dấu {name} đã chuyển',
   },
   members: {
     bankTitle: 'Tài khoản nhận tiền của bạn',

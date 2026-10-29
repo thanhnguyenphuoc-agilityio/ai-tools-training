@@ -29,6 +29,8 @@ export function QrDialog({
   const [error, setError] = useState<string | null>(null);
   const from = group.members.find((m) => m.id === settlement.fromId)!;
   const to = group.members.find((m) => m.id === settlement.toId)!;
+  // The owner may open a transfer that another member pays; the title and the button then name the payer.
+  const isOther = settlement.fromId !== group.me.memberId;
   const bank = findBank(to.bankBin);
   const hasAccount = !!bank && !!to.accountNo;
   const qrSupported = group.currency === VIETQR_CURRENCY;
@@ -57,7 +59,7 @@ export function QrDialog({
 
   async function recordSent() {
     try {
-      await api.recordTransfer(group.code, to.id, settlement.amount);
+      await api.recordTransfer(group.code, to.id, settlement.amount, settlement.fromId);
       onRecorded();
     } catch (err) {
       setError(errorMessage(err));
@@ -78,7 +80,11 @@ export function QrDialog({
         className="dialog__panel card stack qr-dialog"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="card__title">{t('qr.title', { name: to.name, amount: money(settlement.amount) })}</h2>
+        <h2 className="card__title">
+          {isOther
+            ? t('qr.titleFor', { from: from.name, name: to.name, amount: money(settlement.amount) })
+            : t('qr.title', { name: to.name, amount: money(settlement.amount) })}
+        </h2>
         {!hasAccount && <p>{t('qr.noAccount', { name: to.name })}</p>}
         {hasAccount && (
           <>
@@ -127,7 +133,7 @@ export function QrDialog({
         {error && <p className="text text--error">{error}</p>}
         <div className="cluster">
           <button className="button" onClick={recordSent}>
-            {t('qr.sent')}
+            {isOther ? t('qr.sentFor', { name: from.name }) : t('qr.sent')}
           </button>
           <button data-autofocus className="button button--ghost" onClick={onClose}>
             {t('common.close')}

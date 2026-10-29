@@ -151,6 +151,8 @@ export const en = {
     confirm: 'Confirm received',
     doneTitle: 'Paid',
     removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
+    recordFor: 'Record payment',
+    recordForLabel: 'Record payment: {from} to {to}',
   },
   qr: {
     title: 'Pay {name} {amount}',
@@ -170,6 +172,8 @@ export const en = {
       'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
     sent: 'I have sent it',
     renderError: 'The QR code could not be created. Use the account details below instead.',
+    titleFor: 'Transfer from {from}: pay {name} {amount}',
+    sentFor: 'Mark as sent by {name}',
   },
   members: {
     bankTitle: 'Your receiving account',
