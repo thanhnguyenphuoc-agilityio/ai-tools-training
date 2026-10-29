@@ -65,6 +65,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - Timestamps: ISO-8601 UTC strings (`created_at`...). Expense dates: `YYYY-MM-DD` without a time zone.
 - Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts`.
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
+  The exception is a receipt photo: deleting its expense also deletes the row and the R2 object (`receipt_photos`).
 - No `CHECK (x IN (...))` for extensible enum-like values, because SQLite has to rebuild the table to change one.
   Values are validated in code.
 - `last_activity_at` tracks the time of the last change (through `recordChange` in `worker/groupData.ts`). Viewing does not move it. Used by `purge_inactive_groups`.
@@ -276,7 +277,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0006_audit_details.sql` (`delete_account`) is now the newest migration, after `0005_group_lock.sql` (`lock_groups`) and `0004_accounts.sql` (`google_sign_in`). `0007_owner_key_revoke.sql` (`owner_link_binds_account`) is the next migration; `receipt_photos` takes a later number. A future `edit_expense` migration must not add `audit_log.details` again. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0011_attachments.sql` (`receipt_photos`) is the newest migration, after `0010_expense_edits.sql` (`edit_expense`). `0012_sessions.sql` (`attendance_split`) is the next one. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -301,17 +302,39 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 
 ### receipt_photos
 
-- **Storage:** R2 binding `RECEIPTS`.
-- **Migration:** `0007_attachments.sql` creates
-  `expense_attachments(id, expense_id, r2_key, content_type, size, created_by, created_at)`.
-- **Client side:** resize to at most 1600px and encode as WebP through `<canvas>`. Re-encoding **removes EXIF/GPS**.
-  The compressed size must be at most 1 MB.
-- **Upload:** `POST /groups/:code/expenses/:id/attachments` with a binary body.
-  This route has its own `bodyLimit` (1 MB); JSON routes keep 16 KB.
-  The server accepts only `image/webp|jpeg|png`.
-- **Download:** `GET .../attachments/:aid` goes through the Worker with a group check. The bucket is never public.
-- **Deletion:** deleting an expense keeps its photos until the group is purged. Purging a group must also delete
-  its R2 objects, because D1 cascades do not reach R2.
+- **Built.** Rules in `docs/business-rules.md` (Expenses, Receipt photo).
+- **Storage:** R2 binding `RECEIPTS` (bucket `tally-receipts`, `wrangler.jsonc`). Object key
+  `<group code>/<expense id>/<attachment id>` (`receiptKey` in `shared/receipts.ts`), so every object of a group sits
+  under `<code>/`.
+- **Migration:** `0011_attachments.sql` creates `expense_attachments(id, group_code, expense_id, r2_key, content_type,
+  size, created_by, created_at)`. `expense_id` is UNIQUE (one photo per expense) and cascades from `expenses`;
+  `group_code` cascades from `groups` and is indexed for the purge.
+- **Client side:** `src/receiptImage.ts` draws the photo on a canvas at most 1600 px on its longest side and encodes it
+  as WebP (JPEG where WebP is unavailable) at quality 0.82, then retries at 0.6 and at 1200 px. Re-encoding **removes
+  EXIF/GPS**. A result still over 1 MB raises `ReceiptTooLargeError`.
+- **Endpoints** (`worker/routes/attachments.ts`):
+  - `POST /groups/:code/expenses/:id/attachments`: binary body, `Content-Type` `image/jpeg|png|webp`. Answers 201
+    `{ id, contentType, size }`. Permission: `requireCanEditExpense` (author or owner). A removed member in the expense
+    answers 409 `EXPENSE_HAS_REMOVED_MEMBER`. Over 1 MB answers 413 `RECEIPT_TOO_LARGE`. A header type that the magic
+    bytes do not match, or an empty body, answers 415 `RECEIPT_TYPE_NOT_ALLOWED`.
+  - `DELETE /groups/:code/expenses/:id/attachments/:aid`: same checks; answers `{ ok: true }`.
+  - `GET /groups/:code/expenses/:id/attachments/:aid`: anyone with the group link, like the rest of the group. Streams the
+    object with `Content-Type`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline` and
+    `Cache-Control: private, max-age=3600`. Writes nothing. A missing, deleted or foreign attachment answers 404
+    `ATTACHMENT_NOT_FOUND`.
+- **Write order:** the R2 object is written first, then the row (`INSERT ... SELECT ... WHERE EXISTS (live expense)`
+  with `ON CONFLICT(expense_id) DO UPDATE`). If no row is written, the new object is deleted and the answer is 404
+  `EXPENSE_NOT_FOUND`. The replaced object is deleted only after the row points at the new one. R2 delete errors are
+  logged, not returned.
+- **bodyLimit exemption:** `worker/app.ts` skips the global 16 KB limit for `POST .../expenses/:id/attachments`; that
+  route applies its own 1 MB limit (`MAX_RECEIPT_BYTES`). Every other route keeps 16 KB.
+- **Deletion:** deleting an expense (`DELETE /groups/:code/expenses/:id`) deletes its row and R2 object after the soft
+  delete succeeds (`deleteExpenseReceipt` in `worker/receipts.ts`). Deleting the account keeps group data, so photos stay.
+- **Purge:** `purgeInactiveGroups(db, now, receipts?)` deletes the R2 prefix `<code>/` of every purged group, after the
+  D1 `RETURNING` delete. An R2 error is logged and does not fail the job. A locked group keeps its photos.
+- **Setup before a remote deploy:** `npx wrangler r2 bucket create tally-receipts`, then
+  `npx wrangler d1 migrations apply DB --remote`.
+- **Tests:** `tests/api/receipts.test.ts`, `tests/unit/receipts.test.ts`, `e2e/receipts.spec.ts`.
 
 ### attendance_split
 
