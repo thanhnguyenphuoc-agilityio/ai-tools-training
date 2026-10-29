@@ -89,7 +89,6 @@ export const en = {
   ownerAccess: {
     title: 'Owner access',
     tied: 'Owner access is tied to your account.',
-    attached: 'Group attached to your account.',
   },
   join: {
     title: 'Who are you in this group?',

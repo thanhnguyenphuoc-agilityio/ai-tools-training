@@ -82,7 +82,6 @@ export const vi: Messages = {
   ownerAccess: {
     title: 'Quyền trưởng nhóm',
     tied: 'Quyền trưởng nhóm gắn với tài khoản của bạn.',
-    attached: 'Đã gắn nhóm vào tài khoản của bạn.',
   },
   join: {
     title: 'Bạn là ai trong nhóm?',
