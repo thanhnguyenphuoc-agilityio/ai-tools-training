@@ -178,3 +178,30 @@ From the product owner (human), 2026-10-28:
   proposed as a backlog ticket.
 - `delete_account` checks the owned groups and then deletes in a separate batch. A member joining in between can leave
   a shared group without an owner (D1 has no interactive transaction). Documented in `docs/design.md`.
+
+## Merge request
+
+- Branch: `feat/transfer_ownership`, stacked on `feat/owner_link_binds_account`. Merge after `TAL-46` (`owner_link_binds_account`).
+- Summary of changes:
+  - No migration. `POST /api/groups/:code/owner/transfer` (`worker/routes/groups.ts`) with `requireCanTransferOwnership` and
+    `requireTransferTarget` in `worker/policy.ts`. One guarded `db.batch` moves `owner_user_id`, `owner_key_hash`
+    (`REVOKED_OWNER_KEY`) and `is_owner`; a kept group stops being kept (`group.unlock`, `last_activity_at` moved); the
+    caller's owner cookie is cleared; `audit()` writes `owner.transfer`, `recordChange()` is not called.
+  - `MemberDto.hasAccount` (boolean only) in `worker/groupData.ts` and `shared/types.ts`; `OWNER_TRANSFER_NOT_LINKED` and
+    `OWNER_TRANSFER_SELF` in `shared/errors.ts` and both locales.
+  - Frontend: `transferOwner` in `src/api.ts`, `canTransferTo` in `src/ownerTools.ts`, `TransferOwnerDialog`
+    (`.tsx` and `.scss`, block `transfer-owner-dialog`, negative confirm button, `useDialog`), the "Make owner" action in
+    `MembersPanel.tsx`.
+  - Tests: `tests/api/transfer-ownership.test.ts` (TO-1 to TO-15), `tests/unit/ownerTools.test.ts`,
+    `e2e/transfer-ownership.spec.ts` (two cases: hand-over of a kept group; Escape closes the dialog). `hasAccount: false`
+    added to the unit `MemberDto` fixtures.
+  - Docs: `docs/business-rules.md` (Groups hand-over bullet, activity lists, kept groups, delete-account note) and
+    `docs/design.md` (section 3 policy list, `transfer_ownership (built)` subsection).
+- Commands run and results (port 5192 for Playwright):
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean.
+  - `npm test`: 38 files, 423 tests passed.
+  - `npm run test:hooks`: 29 of 29 passed.
+  - `npx playwright test --config playwright.local.config.ts`: 121 passed, 1 skipped (the existing saved bank keyboard test).
+- Known limits (see the ticket above): device tokens of the previous owner keep member access; the `delete_account` check
+  and delete are not one transaction.
