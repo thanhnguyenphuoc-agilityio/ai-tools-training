@@ -74,7 +74,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       ? api
           .claimOwner(code, key)
           .then((res) => {
-            if (res.attached) notify('ownerAccess.attached');
+            if (res.attached) notify('toast.ownerAttached');
           })
           .catch((err) => {
             if (err instanceof ApiError && err.status === 404) {

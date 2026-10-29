@@ -211,6 +211,7 @@ export const vi: Messages = {
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
+    ownerAttached: 'Đã gắn nhóm vào tài khoản của bạn.',
     bankSaved: 'Đã lưu tài khoản nhận tiền.',
     settingsSaved: 'Đã lưu cài đặt nhóm.',
     transferRecorded: 'Đã ghi nhận chuyển khoản. Số dư cập nhật khi {name} xác nhận.',

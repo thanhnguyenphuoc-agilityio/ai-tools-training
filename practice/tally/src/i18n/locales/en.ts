@@ -223,6 +223,7 @@ export const en = {
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
+    ownerAttached: 'Group attached to your account.',
     bankSaved: 'Your bank details were saved.',
     settingsSaved: 'Group settings were saved.',
     transferRecorded: 'Transfer recorded. It counts once {name} confirms it.',
