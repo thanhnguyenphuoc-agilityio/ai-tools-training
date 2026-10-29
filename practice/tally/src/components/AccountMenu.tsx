@@ -5,6 +5,7 @@ import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { AccountNameDialog } from './AccountNameDialog';
 import { SavedBankDialog } from './SavedBankDialog';
 import { DeleteAccountDialog } from './DeleteAccountDialog';
 import './AccountMenu.scss';
@@ -27,6 +28,7 @@ export function AccountMenu() {
   const { t, errorMessage } = useI18n();
   const notify = useToast();
   const [open, setOpen] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
   const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -151,6 +153,17 @@ export function AccountMenu() {
                 className="account-menu__item"
                 onClick={() => {
                   close(false);
+                  setNameOpen(true);
+                }}
+              >
+                {t('account.name')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu__item"
+                onClick={() => {
+                  close(false);
                   setBankDetailsOpen(true);
                 }}
               >
@@ -173,6 +186,14 @@ export function AccountMenu() {
             </div>
           )}
           {/* The menu item that opened a dialog is gone by then, so focus returns to the menu button instead. */}
+          {nameOpen && (
+            <AccountNameDialog
+              onClose={() => {
+                setNameOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
           {bankDetailsOpen && (
             <SavedBankDialog
               onClose={() => {

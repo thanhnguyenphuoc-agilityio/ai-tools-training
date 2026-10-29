@@ -226,6 +226,7 @@ export const vi: Messages = {
     devEmailPlaceholder: 'alex@example.com',
     devSubmit: 'Đăng nhập',
     link: 'Liên kết với tài khoản của tôi',
+    name: 'Tên của tôi',
     bankDetails: 'Thông tin tài khoản ngân hàng',
     deleteAccount: 'Xoá tài khoản',
   },
@@ -240,6 +241,14 @@ export const vi: Messages = {
     useDifferent: 'Dùng thông tin khác cho nhóm này',
     useSaved: 'Dùng thông tin đã lưu trong tài khoản',
     usingSavedNow: 'Đang dùng thông tin ngân hàng lưu trong tài khoản.',
+  },
+  accountName: {
+    title: 'Tên của tôi',
+    label: 'Tên',
+    hint: 'Dùng khi bạn tham gia nhóm. Thay đổi tên này không đổi tên của bạn trong các nhóm đã tham gia.',
+    save: 'Lưu',
+    cancel: 'Huỷ',
+    saved: 'Đã lưu tên vào tài khoản.',
   },
   deleteAccount: {
     title: 'Xoá tài khoản',
