@@ -3,7 +3,7 @@ import { CURRENCIES, getCurrency } from '../../shared/currency';
 import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/types';
 import { useAccount } from '../account';
 import { api } from '../api';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { canSetInviteEmail, canTransferTo } from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
@@ -14,11 +14,11 @@ import { TransferOwnerDialog } from './TransferOwnerDialog';
 import './MembersPanel.scss';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const notify = useToast();
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
   const [transferringMember, setTransferringMember] = useState<MemberDto | null>(null);
   const [invitingMember, setInvitingMember] = useState<MemberDto | null>(null);
@@ -33,7 +33,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
         done();
         onChanged();
       })
-      .catch((err) => setError(errorMessage(err)));
+      .catch((err) => setError({ error: err }));
   return (
     <div className="stack">
       {me && (
@@ -140,7 +140,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
             </button>
           </form>
         )}
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
       </section>
 
       {group.me.isOwner && <OwnerSettings group={group} onSaved={onChanged} />}
@@ -195,14 +195,14 @@ function BankForm({
   accountLinked?: boolean;
   onSaved: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const { user } = useAccount();
   const isGroup = member.bankSource === 'group';
   const [useDifferent, setUseDifferent] = useState(false);
   const [bankBin, setBankBin] = useState(isGroup ? (member.bankBin ?? '') : '');
   const [accountNo, setAccountNo] = useState(isGroup ? (member.accountNo ?? '') : '');
   const [accountName, setAccountName] = useState(isGroup ? (member.accountName ?? '') : '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const notify = useToast();
 
   async function save(e: React.FormEvent) {
@@ -213,7 +213,7 @@ function BankForm({
       notify('toast.bankSaved');
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -225,7 +225,7 @@ function BankForm({
       notify('savedBank.usingSavedNow');
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -282,7 +282,7 @@ function BankForm({
             />
           </label>
         </div>
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">
           <button className="button button--block-mobile">{t('common.save')}</button>
           {member.bankSource === 'group' && accountLinked && !!user?.accountNo && (
@@ -297,13 +297,13 @@ function BankForm({
 }
 
 function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => void }) {
-  const { t, money, currencyName, errorMessage } = useI18n();
+  const { t, money, currencyName, message } = useI18n();
   const [name, setName] = useState(group.name);
   const [currencyCode, setCurrencyCode] = useState(group.currency);
   const currency = getCurrency(currencyCode) ?? CURRENCIES[group.currency];
   const coarseUnit = currency.roundOptions[currency.roundOptions.length - 1];
   const [roundCoarse, setRoundCoarse] = useState(group.roundTo > 1);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const notify = useToast();
   const currencyLocked = group.currencyLocked;
 
@@ -319,7 +319,7 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
       if (res.changed) notify('toast.settingsSaved');
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -359,7 +359,7 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
             {t('members.roundCoarse', { unit: money(coarseUnit, currency) })}
           </label>
         )}
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
         <button className="button button--block-mobile">{t('common.save')}</button>
       </form>
       {group.ownedByAccount && <p className="text text--muted">{t('ownerAccess.tied')}</p>}

@@ -3,16 +3,16 @@ import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
 import './ExpenseList.scss';
 
 export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
-  const { t, tp, day, errorMessage } = useI18n();
+  const { t, tp, day, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -24,7 +24,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
       notify('toast.expenseDeleted');
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -34,7 +34,7 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
         <h2 className="card__title">{t('expenseList.title')}</h2>
         <span className="text text--muted">{t('expenseList.total', { amount: money(total) })}</span>
       </div>
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
       {group.expenses.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
       <ul className="list list--divided">
         {group.expenses.map((e) => {
