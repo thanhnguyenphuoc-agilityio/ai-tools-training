@@ -330,7 +330,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   30 days.
 - Request bodies are limited to 16 KB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
-- OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
+- Group codes and owner recovery links resist guessing:
+  - Group codes: 12 of 31 characters, about 59.5 bits; about 1.3e-14 chance per guess at 10,000 groups.
+  - Owner keys, device tokens and session tokens: 256 bits, stored only as SHA-256.
+  - A recovery link stops working once the group is tied to an account.
+  - Throttling failed attempts is tracked as `rate_limit_guessing`.
 
 ## Interface preferences
 

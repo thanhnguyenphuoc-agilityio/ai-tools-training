@@ -63,7 +63,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   decimal places, converted to integer hundredths before calculation; `weight()` in `worker/http.ts` stores
   `roundWeight()` so the stored value matches the split.
 - Timestamps: ISO-8601 UTC strings (`created_at`...). Expense dates: `YYYY-MM-DD` without a time zone.
-- Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts`.
+- Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts` (12 of 31 characters, about 59.5 bits; `loadGroup` in `worker/groupData.ts` answers the same 404 for a malformed and an unknown code). Owner keys, device tokens and session tokens: `randomToken()` in `worker/auth.ts` (32 random bytes in base64url, 256 bits, stored as SHA-256). A revoked owner key is stored as `'revoked'` (`REVOKED_OWNER_KEY`).
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
 - No `CHECK (x IN (...))` for extensible enum-like values, because SQLite has to rebuild the table to change one.
   Values are validated in code.
