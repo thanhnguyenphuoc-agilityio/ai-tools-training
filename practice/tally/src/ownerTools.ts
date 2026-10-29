@@ -1,6 +1,6 @@
 // Interface mirror of the owner rules in worker/policy.ts. Only for showing or hiding controls: the server enforces them.
 import type { Settlement } from '../shared/settle';
-import type { Me, MemberDto } from '../shared/types';
+import type { Me, MemberDto, TransferDto } from '../shared/types';
 
 /** Handing the group over (transfer_ownership): the owner, to an active non-owner member who has an account. */
 export function canTransferTo(me: Me, member: MemberDto): boolean {
@@ -18,12 +18,21 @@ export function canEditAccount(me: Me, member: MemberDto): boolean {
 }
 
 /** Which action a suggested transfer offers: the payer pays; the owner may record it for someone else. */
-export type PayAction = 'pay' | 'recordFor' | null;
+export type PayAction = 'pay' | 'recordFor' | 'waiting' | null;
 
-export function payAction(me: Me, s: Settlement): PayAction {
-  if (s.fromId === me.memberId) return 'pay';
-  if (me.isOwner) return 'recordFor';
-  return null;
+/**
+ * The payer pays, and the owner may record a debt that is not their own. Either becomes 'waiting' while a sent
+ * transfer from the same payer to the same receiver is still unconfirmed. A plain member sees nothing on others' debts.
+ */
+export function payAction(
+  me: Me,
+  s: Settlement,
+  transfers: Pick<TransferDto, 'fromId' | 'toId' | 'status'>[],
+): PayAction {
+  const base: PayAction = s.fromId === me.memberId ? 'pay' : me.isOwner ? 'recordFor' : null;
+  if (base === null) return null;
+  if (transfers.some((tr) => tr.status === 'sent' && tr.fromId === s.fromId && tr.toId === s.toId)) return 'waiting';
+  return base;
 }
 
 /** The owner may release the name of an active, claimed member who is not the owner (wrong_name_claim). */

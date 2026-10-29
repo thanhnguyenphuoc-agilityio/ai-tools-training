@@ -14,6 +14,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const { money } = useGroupMoney(group);
   const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<UiMessage | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
 
@@ -23,6 +24,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
 
   async function confirmTransfer(id: string) {
+    setConfirmingId(id);
     try {
       await api.confirmTransfer(group.code, id);
       setError(null);
@@ -30,6 +32,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
       onChanged();
     } catch (err) {
       setError({ error: err });
+    } finally {
+      setConfirmingId(null);
     }
   }
 
@@ -57,7 +61,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
         {plan.length === 0 && <p className="text text--muted">{t('settle.allEven')}</p>}
         <ul className="list">
           {plan.map((s) => {
-            const action = payAction(group.me, s);
+            const action = payAction(group.me, s, group.transfers);
             return (
               <li key={`${s.fromId}-${s.toId}`} className="list__item cluster cluster--between">
                 <span className="text text--strong">
@@ -76,6 +80,9 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
                   >
                     {t('settle.recordFor')}
                   </button>
+                )}
+                {action === 'waiting' && (
+                  <span className="text text--muted text--small">{t('settle.waitingFor', { to: nameOf(s.toId) })}</span>
                 )}
               </li>
             );
@@ -105,7 +112,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
                   </span>
                 </span>
                 {(tr.toId === group.me.memberId || group.me.isOwner) && (
-                  <button className="button" onClick={() => confirmTransfer(tr.id)}>
+                  <button className="button" onClick={() => confirmTransfer(tr.id)} disabled={confirmingId === tr.id}>
                     {t('settle.confirm')}
                   </button>
                 )}

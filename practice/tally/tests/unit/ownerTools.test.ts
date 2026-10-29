@@ -119,21 +119,40 @@ describe('payAction (owner_member_tools)', () => {
   const plain: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
   const debt = (fromId: string, toId: string): Settlement => ({ fromId, toId, amount: 50_000 });
 
+  const sent = (fromId: string, toId: string, status: 'sent' | 'confirmed' = 'sent') => ({ fromId, toId, status });
+
   it('pay when the current member is the payer', () => {
-    expect(payAction(plain, debt('m-sam', 'm-alex'))).toBe('pay');
-    expect(payAction(owner, debt('m-alex', 'm-jamie'))).toBe('pay');
+    expect(payAction(plain, debt('m-sam', 'm-alex'), [])).toBe('pay');
+    expect(payAction(owner, debt('m-alex', 'm-jamie'), [])).toBe('pay');
   });
 
   it('recordFor for the owner on a debt between two other members', () => {
-    expect(payAction(owner, debt('m-sam', 'm-jamie'))).toBe('recordFor');
+    expect(payAction(owner, debt('m-sam', 'm-jamie'), [])).toBe('recordFor');
   });
 
   it('recordFor for the owner on a debt to the owner', () => {
-    expect(payAction(owner, debt('m-sam', 'm-alex'))).toBe('recordFor');
+    expect(payAction(owner, debt('m-sam', 'm-alex'), [])).toBe('recordFor');
   });
 
   it('null for a plain member on a debt that is not their own', () => {
-    expect(payAction(plain, debt('m-jamie', 'm-alex'))).toBeNull();
+    expect(payAction(plain, debt('m-jamie', 'm-alex'), [])).toBeNull();
+  });
+
+  it('waiting for the payer when a sent transfer matches', () => {
+    expect(payAction(plain, debt('m-sam', 'm-alex'), [sent('m-sam', 'm-alex')])).toBe('waiting');
+  });
+
+  it('waiting for the owner on someone else debt when a sent transfer matches', () => {
+    expect(payAction(owner, debt('m-sam', 'm-jamie'), [sent('m-sam', 'm-jamie')])).toBe('waiting');
+  });
+
+  it('a confirmed transfer or the reverse direction does not count', () => {
+    expect(payAction(plain, debt('m-sam', 'm-alex'), [sent('m-sam', 'm-alex', 'confirmed')])).toBe('pay');
+    expect(payAction(plain, debt('m-sam', 'm-alex'), [sent('m-alex', 'm-sam')])).toBe('pay');
+  });
+
+  it('a plain member on another debt stays null even with a sent transfer', () => {
+    expect(payAction(plain, debt('m-jamie', 'm-alex'), [sent('m-jamie', 'm-alex')])).toBeNull();
   });
 });
 

@@ -27,6 +27,7 @@ export function QrDialog({
   const panel = useDialog(onClose);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<UiMessage | null>(null);
+  const [saving, setSaving] = useState(false);
   const from = group.members.find((m) => m.id === settlement.fromId)!;
   const to = group.members.find((m) => m.id === settlement.toId)!;
   // The owner may open a transfer that another member pays; the title and the button then name the payer.
@@ -58,12 +59,16 @@ export function QrDialog({
   }, [qrSupported, bank, to.accountNo, settlement.amount, message]);
 
   async function recordSent() {
+    if (saving) return;
+    setSaving(true);
     try {
       // Only an owner recording for someone else names the payer; the member's own transfer omits fromId.
       await api.recordTransfer(group.code, to.id, settlement.amount, isOther ? settlement.fromId : undefined);
       onRecorded();
     } catch (err) {
       setError({ error: err });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -133,7 +138,7 @@ export function QrDialog({
         )}
         {error && <p className="text text--error">{formatMessage(error)}</p>}
         <div className="cluster">
-          <button className="button" onClick={recordSent}>
+          <button className="button" onClick={recordSent} disabled={saving}>
             {isOther ? t('qr.sentFor', { name: from.name }) : t('qr.sent')}
           </button>
           <button data-autofocus className="button button--ghost" onClick={onClose}>
