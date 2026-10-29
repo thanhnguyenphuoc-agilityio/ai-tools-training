@@ -244,6 +244,7 @@ export const en = {
     devEmailPlaceholder: 'alex@example.com',
     devSubmit: 'Sign in',
     link: 'Link to my account',
+    name: 'My name',
     bankDetails: 'My bank details',
     deleteAccount: 'Delete account',
   },
@@ -258,6 +259,14 @@ export const en = {
     useDifferent: 'Use different details in this group',
     useSaved: 'Use my saved bank details',
     usingSavedNow: 'Using your saved bank details.',
+  },
+  accountName: {
+    title: 'My name',
+    label: 'Name',
+    hint: 'Used when you join a group. Changing it does not rename you in groups you already joined.',
+    save: 'Save',
+    cancel: 'Cancel',
+    saved: 'Name saved in your account.',
   },
   deleteAccount: {
     title: 'Delete account',

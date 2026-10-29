@@ -58,6 +58,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 ## Members
 
 - A visitor can **join** by entering a name. That device receives a _device token_ (HttpOnly cookie).
+  A signed-in person sees the account name prefilled in the join field; the field stays editable and joining stays one step (`join_as_account`).
 - A member can **add other people by name** (people who do not use the app). Such a person can later open the link
   and click "I am <name>" to claim the name, if nobody has claimed it yet.
 - A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
@@ -234,6 +235,15 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Changing or clearing saved details updates every group that uses them, with nothing to resync and without touching
     groups (not a group change; `last_activity_at` does not move and no audit log row is written).
   - Saved details are kept until changed or cleared. They are also deleted with the account (see "Deleting the account").
+- **Account name (`join_as_account`):**
+  - A signed-in person can set the account name in the account menu ("My name", `PATCH /api/me` with `name`, returning
+    401 `SIGN_IN_REQUIRED` without a session). The name is trimmed and must be 1 to 40 characters: empty or spaces answer
+    400 `FIELD_REQUIRED`, more than 40 answer 400 `FIELD_TOO_LONG`.
+  - A name set this way is kept at sign-in: a later Google or development sign-in refreshes the email but does not
+    overwrite the name (`name_custom = 1`). A name never set this way still follows the name in the sign-in token.
+  - Changing the account name is not a group change: members already joined keep their names, and `last_activity_at`
+    does not move and no audit log row is written.
+  - Bank-only changes to `PATCH /api/me` keep the account name.
 - **Sessions:**
   - A session lasts **30 days** (fixed from sign-in time, not extended by use).
   - An expired session no longer identifies the person and its cookie is cleared.

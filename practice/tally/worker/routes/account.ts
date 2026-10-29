@@ -28,7 +28,7 @@ async function upsertUser(db: D1Database, googleSub: string, email: string, name
   const row = await db
     .prepare(
       `INSERT INTO users (id, google_sub, email, name, created_at) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name RETURNING *`,
+       ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = CASE WHEN users.name_custom = 1 THEN users.name ELSE excluded.name END RETURNING *`,
     )
     .bind(crypto.randomUUID(), googleSub, email, name, now())
     .first<UserRow>();
@@ -102,6 +102,8 @@ accountRoutes.patch('/me', async (c) => {
   const account = await resolveAccount(c);
   const userId = requireSignedIn(account);
   const body = await readJson(c);
+  const name = body.name !== undefined ? text(body.name, 'name', 40) : account!.name;
+  const nameCustom = body.name !== undefined ? 1 : account!.name_custom;
   const current: BankDetails = {
     bankBin: account!.bank_bin,
     accountNo: account!.account_no,
@@ -109,9 +111,9 @@ accountRoutes.patch('/me', async (c) => {
   };
   const patch = bankDetails(body, current);
   const updated = await c.env.DB.prepare(
-    'UPDATE users SET bank_bin = ?, account_no = ?, account_name = ? WHERE id = ? RETURNING *',
+    'UPDATE users SET name = ?, name_custom = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ? RETURNING *',
   )
-    .bind(patch.bankBin, patch.accountNo, patch.accountName, userId)
+    .bind(name, nameCustom, patch.bankBin, patch.accountNo, patch.accountName, userId)
     .first<UserRow>();
   return c.json({ user: toUserDto(updated!) });
 });
