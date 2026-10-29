@@ -36,7 +36,7 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 | `worker/http.ts` | `Env`, `ApiError`, input validation | Add new bindings to `Env` |
 | `migrations/NNNN_*.sql` | Schema, numbered in order | **One new migration per feature**; existing migrations are never edited |
 | `src/api.ts` | Typed client for every endpoint | Add a function per new endpoint |
-| `src/i18n/` | `useI18n()`: `t`, `tp`, `money`, `parseMoney`, `day`, `errorMessage`. User-facing text lives only in `locales/*.ts` | Add keys to `en.ts` first (it defines the types), then to the other locales |
+| `src/i18n/` | `useI18n()`: `t`, `tp`, `money`, `parseMoney`, `day`, `errorMessage`, `message`. User-facing text lives only in `locales/*.ts` | Add keys to `en.ts` first (it defines the types), then to the other locales |
 | `src/styles/` | SCSS: `abstracts/` (tokens, mixins), `base/` (themes, reset), `blocks/` (shared BEM blocks) | Shared blocks go in `blocks/`; component-specific blocks sit next to the component |
 | `src/components/*` | One component per UI block, with a `.scss` file of the same name when it has its own block | |
 | `tests/unit`, `tests/api`, `e2e/` | Vitest (logic), Vitest + Miniflare (API), Playwright (UI) | A bug fix comes with a test that fails first |
@@ -91,6 +91,11 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   `setLocale()`, which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API.
   Flags are inline SVGs in `src/components/Flag.tsx`, typed `Record<Locale, ...>`: a new locale needs a flag
   there before it type-checks, then appears in the menu without other changes.
+- Messages kept in component state use `UiMessage` (`src/i18n/types.ts`): a message key with its variables (a
+  variable can itself be a `MessageVar`, for example the amount examples), and optionally the error for its
+  `{message}` placeholder; or just the error. Components store this, never the translated sentence, and render it with
+  `message(error)` from `useI18n()`. The text is then translated on render, so it follows a language change
+  (`stale_language_messages`).
 - Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
   selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
   and only a newly opened form takes the default of the current language.
@@ -448,7 +453,7 @@ Built. Project conventions are checked automatically by `npm run lint`:
 
 - Built; see section 5, Interface. Direction: keep the green accent and system fonts (no font download), quieter
   section titles in spaced capitals, figures in tabular numerals, icons only where they carry meaning.
-- Not done in this ticket: skeleton loading, and the remaining in-form status texts (`stale_language_messages`).
+- Not done in this ticket: skeleton loading. Messages kept in state follow the language: see section 5, Language.
 - Screenshots: 3 widths x 2 themes x (home + 3 tabs), before and after, in the merge request.
 
 ### currency_conversion
