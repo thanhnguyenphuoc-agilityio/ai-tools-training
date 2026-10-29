@@ -54,4 +54,11 @@ describe('expense that involves a removed member', () => {
     expect(involvesRemovedMember(expense('alex', { alex: 100, jamie: 0 }), withJamieRemoved)).toBe(false);
     expect(involvesRemovedMember(expense('alex', { alex: 100 }), withJamieRemoved)).toBe(false);
   });
+
+  it('does not depend on whether the expense was edited', () => {
+    const edited = { ...expense('alex', { alex: 50, jamie: 50 }), editedAt: '2026-10-10T00:00:00.000Z' };
+    expect(involvesRemovedMember(edited, withJamieRemoved)).toBe(true);
+    const editedZero = { ...expense('alex', { alex: 100, jamie: 0 }), editedAt: '2026-10-10T00:00:00.000Z' };
+    expect(involvesRemovedMember(editedZero, withJamieRemoved)).toBe(false);
+  });
 });
