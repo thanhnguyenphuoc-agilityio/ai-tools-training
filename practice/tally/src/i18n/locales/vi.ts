@@ -88,6 +88,8 @@ export const vi: Messages = {
     iAm: 'Tôi là {name}',
     yourName: 'Tên của bạn',
     submit: 'Tham gia',
+    confirmClaim: 'Bạn sắp tham gia với tên {name}. Chỉ tiếp tục nếu đúng là bạn.',
+    confirmClaimSubmit: 'Đúng, tôi là {name}',
   },
   expenseForm: {
     title: 'Thêm khoản chi',
@@ -187,6 +189,9 @@ export const vi: Messages = {
     removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
     removeReason: 'Lý do (không bắt buộc)',
     removed: 'đã bị xoá khỏi nhóm',
+    release: 'Gỡ tên',
+    releaseLabel: 'Gỡ tên {name}',
+    releaseConfirm: 'Gỡ tên {name}? Thiết bị đang dùng tên này sẽ thành khách, và tên có thể được nhận lại.',
   },
   memberInvite: {
     emailLabel: 'Email (không bắt buộc)',
@@ -221,6 +226,7 @@ export const vi: Messages = {
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
+    memberReleased: '{name} có thể được nhận lại.',
     ownerAttached: 'Đã gắn nhóm vào tài khoản của bạn.',
     bankSaved: 'Đã lưu tài khoản nhận tiền.',
     settingsSaved: 'Đã lưu cài đặt nhóm.',
