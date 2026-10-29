@@ -205,3 +205,13 @@ From the product owner (human), 2026-10-28:
   - `npx playwright test --config playwright.local.config.ts`: 121 passed, 1 skipped (the existing saved bank keyboard test).
 - Known limits (see the ticket above): device tokens of the previous owner keep member access; the `delete_account` check
   and delete are not one transaction.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `POST /api/groups/:code/owner/transfer` moves `owner_user_id`, the revoked key and `is_owner` in one guarded batch; a lost race is read back as `OWNER_ONLY`, `MEMBER_REMOVED` or `OWNER_TRANSFER_NOT_LINKED`.
+- A kept group stops being kept in the same batch: `group.unlock` is written and `last_activity_at` moves to the hand-over time, so the next cleanup cannot purge it (Answer 6, changed on 2026-10-28). An unkept group hand-over writes only `owner.transfer`.
+- Only a boolean `hasAccount` is exposed per member. The dialog uses `useDialog` and starts on Cancel.
+- No changes needed. Known limits stay as listed above.
+- Checks: typecheck and lint clean, 423 unit and API tests, 29 hook tests, e2e 121 passed and 1 skipped.
