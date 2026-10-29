@@ -164,3 +164,20 @@ describe('release refusals', () => {
     expect(await auditRows('member.release')).toHaveLength(1);
   });
 });
+
+describe('claim refusals already on develop (regression)', () => {
+  it('refuses a device that already joined as another member, and keeps its identity', async () => {
+    const casey = (await owner.call<{ id: string }>('POST', `/groups/${code}/members`, { name: 'Casey' })).json.id;
+    const sam = new Browser(env.env);
+    await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
+
+    const res = await sam.call<ErrorBody>('POST', `/groups/${code}/members/${casey}/claim`);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('ALREADY_MEMBER');
+    expect((await getGroup(owner)).members.find((m) => m.id === casey)!.claimed).toBe(false);
+  });
+
+  it('audits a claim with the claimed member as actor', async () => {
+    expect(await auditRows('member.claim')).toEqual([{ actor: ids.jamie, target: ids.jamie }]);
+  });
+});
