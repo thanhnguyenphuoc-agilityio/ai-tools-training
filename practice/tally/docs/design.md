@@ -565,7 +565,8 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 
 - Initial focus goes to the `data-autofocus` element, else the panel. React `autoFocus` is not used: under
   StrictMode the effect cleanup focuses the opener before the effect runs again.
-- Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
+- Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. `QrDialog` with `viewOnly` (`show_qr_again`)
+  hides the record button; `SettlePanel` opens it from a waiting suggestion of the current member. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
 - Destructive confirmations (delete session, delete expense) use the shared `ConfirmDialog`
   (`src/components/ConfirmDialog.tsx`) on `useDialog`; `window.confirm` is not used. The confirm button is disabled

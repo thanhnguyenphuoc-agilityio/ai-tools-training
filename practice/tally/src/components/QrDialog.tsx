@@ -16,11 +16,14 @@ export function QrDialog({
   settlement,
   onClose,
   onRecorded,
+  viewOnly = false,
 }: {
   group: GroupDto;
   settlement: Settlement;
   onClose: () => void;
-  onRecorded: () => void;
+  onRecorded?: () => void;
+  /** Reopened after the transfer was marked as sent (show_qr_again): no button to record it again. */
+  viewOnly?: boolean;
 }) {
   const { t, message: formatMessage } = useI18n();
   const { money } = useGroupMoney(group);
@@ -64,7 +67,7 @@ export function QrDialog({
     try {
       // Only an owner recording for someone else names the payer; the member's own transfer omits fromId.
       await api.recordTransfer(group.code, to.id, settlement.amount, isOther ? settlement.fromId : undefined);
-      onRecorded();
+      onRecorded?.();
     } catch (err) {
       setError({ error: err });
     } finally {
@@ -138,9 +141,11 @@ export function QrDialog({
         )}
         {error && <p className="text text--error">{formatMessage(error)}</p>}
         <div className="cluster">
-          <button className="button" onClick={recordSent} disabled={saving}>
-            {isOther ? t('qr.sentFor', { name: from.name }) : t('qr.sent')}
-          </button>
+          {!viewOnly && (
+            <button className="button" onClick={recordSent} disabled={saving}>
+              {isOther ? t('qr.sentFor', { name: from.name }) : t('qr.sent')}
+            </button>
+          )}
           <button data-autofocus className="button button--ghost" onClick={onClose}>
             {t('common.close')}
           </button>
