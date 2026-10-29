@@ -89,3 +89,26 @@ Actual: two transfers are recorded; after both are confirmed, Alex owes Sam 50,0
 ## Answers
 
 From the product owner (human), 2026-10-29: 1. Not in this ticket; a follow-up ticket if wanted.
+
+## Merge request
+
+Branch `fix/duplicate_sent_transfers` into `develop`.
+
+- `POST /groups/:code/transfers` keeps one `INSERT ... SELECT`, now also requiring that no `sent` transfer exists for
+  the same group, payer and receiver. When the insert writes nothing, one follow-up read answers 409 `TRANSFER_PENDING`
+  for a pending row and 400 `PARTICIPANT_NOT_IN_GROUP` otherwise.
+- Confirm updates only a row that is still `sent`. Zero changes answers 409 `ALREADY_CONFIRMED` before the audit row.
+- `payAction` returns `waiting` while a `sent` transfer matches the suggestion, and the settle-up row shows
+  "Waiting for {to} to confirm". The Confirm and "I have sent it" buttons are disabled while their request runs.
+- Existing duplicate `sent` rows are left as they are. `tickets/README.md` now names `TAL-57` as the next free ID.
+
+Commands, run in `practice/tally`:
+
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `npm test`: two full runs hit Miniflare timeouts and poisoned stubs in unrelated files (the failing set changed
+  between runs). `tests/api/money-flow.test.ts`, `tests/unit/ownerTools.test.ts` and `tests/unit/lintRules.test.ts`
+  then passed together, 56 tests.
+- `npm run test:hooks`: 29 passed.
+- `npx playwright test --config playwright.local.config.ts e2e/settle-up.spec.ts e2e/owner-member-tools.spec.ts`:
+  12 passed.
