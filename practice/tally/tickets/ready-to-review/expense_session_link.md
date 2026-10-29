@@ -54,3 +54,27 @@ Commands run in the worktree, all green:
 - `npm test` (616 tests; two full runs hit the known Miniflare timeout and poisoned-stub flake, and the three files that still failed passed alone)
 - `npm run test:hooks`
 - `npx playwright test --config playwright.local.config.ts` (152 passed)
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Checked against the plan and the Acceptance criteria. No API or migration change: create and update already accept
+  and validate `sessionId` (`SESSION_NOT_FOUND`). The form sends `sessionId || null` on both paths. The select is
+  hidden without sessions, lists "No session" plus the sessions newest first, and defaults to the session the form was
+  opened from or the edited expense's session.
+- On a new expense, choosing a session ticks its present active members, sets its day, and fills an empty description
+  with its note. When editing, a session change touches nothing else, so participants and stored shares are kept
+  (rule of `attendance_split`). `sessionLabel` is shared by the select and the list badge and hard-codes no text.
+- `develop` (TAL-55, TAL-53, TAL-56) was merged into the branch before the review. `ExpenseList.tsx` and
+  `ExpenseForm.tsx` merged without conflicts: the delete dialog, the session badge, the select and the submit button
+  class all keep their behaviour. `vi` keeps its diacritics.
+- No blocking findings, no fixes needed.
+
+Verdict: approve. Commit authors and dates checked.
+
+Checks after merging `develop`: `npm run typecheck` and `npm run lint` passed, `npm test` 50 files / 625 passed,
+e2e `attendance`, `edit-expense` and `ui-redesign` (port 5194) 26 passed; the builder's full e2e run was 152 passed.
+Typecheck and `npm test` rerun on `develop` after the merge.
