@@ -52,7 +52,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanEditExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
 The interface mirror of these rules for showing controls only is in `src/ownerTools.ts` (`canEditAccount`, `payAction`, `canReleaseMember`); the server enforces them.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
@@ -409,10 +409,31 @@ Built. Project conventions are checked automatically by `npm run lint`:
 
 ### edit_expense
 
-- Depends on an open question in `docs/business-rules.md` (who may edit and whether history is kept). The BA
-  exercise settles the rules first; the design is written into this section in the same branch as the feature.
-- Constraints already known: shares are recomputed only through `splitAmount` (`splitExact` for exact splits);
-  edits are written to `audit_log`; permission rules go into `policy.ts`.
+Built. Rules in `docs/business-rules.md`, "Editing an expense".
+
+- Data: migration `0010_expense_edits.sql` adds `expenses.edited_at` (NULL until a real edit). `audit_log.details`
+  already exists from `0006_audit_details.sql`, so this migration does not add it. `ExpenseDto.editedAt` carries the
+  column.
+- API: `PATCH /groups/:code/expenses/:id` takes the same body as `POST`. `parseExpense` in
+  `worker/routes/expenses.ts` validates both. The author or the owner may edit (`requireCanEditExpense` in
+  `policy.ts`); an expense with `created_by` NULL can be edited only by the owner. A guest gets `JOIN_FIRST`, another
+  member `EDIT_NOT_ALLOWED`, an unknown or deleted expense `EXPENSE_NOT_FOUND`, and an expense a removed member paid
+  or owes a share of `EXPENSE_HAS_REMOVED_MEMBER`.
+- Shares: `shared/expenseEdit.ts` decides whether the stored shares are stale (`splitChanged`, weights compared in
+  hundredths, participants matched by member id) and whether a stored field changed (`expenseFieldsChanged`, the one
+  place a later item adds a field such as a session). Only a stale split recomputes, through `splitAmount` with the
+  group's current `round_to`, or `splitExact` for exact mode (no rounding). A date or description edit keeps the
+  stored shares. A request that repeats the stored values answers `changed: false` and writes nothing.
+- A real edit sets `edited_at` and records `expense.edit` through `recordChange`, whose optional details are stored as
+  JSON: `{ previous, sharesChanged }`. That moves `last_activity_at`. A lock does not block the edit.
+- Race (D1 has no interactive transaction): the UPDATE repeats the "no named member is removed" check and the "the
+  stored expense involves no removed member" check. The share DELETE and INSERT are in the same batch, gated on
+  `edited_at` equalling the new value, so they write nothing when the UPDATE wrote nothing. Zero changes map to
+  `EXPENSE_NOT_FOUND`, `EXPENSE_HAS_REMOVED_MEMBER`, `PAYER_NOT_IN_GROUP` or `PARTICIPANT_NOT_IN_GROUP`.
+- UI: the expense list shows an edit action to the author and the owner, hidden when the expense involves a removed
+  member, and an "edited" badge when `editedAt` is set. The form opens in edit mode (keyed by the expense id) with a
+  Cancel action; the toast appears only when the save changed something. A reload drops the edit when the expense is
+  gone. The form props leave room for a later item to pass a session or a receipt.
 
 ### remove_member
 

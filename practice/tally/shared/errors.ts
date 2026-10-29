@@ -57,6 +57,7 @@ export const ERROR_CODES = [
   'OWNER_TRANSFER_SELF',
   'MEMBER_NOT_CLAIMED',
   'CANNOT_RELEASE_OWNER',
+  'EDIT_NOT_ALLOWED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

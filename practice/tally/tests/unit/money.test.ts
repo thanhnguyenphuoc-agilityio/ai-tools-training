@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '../../shared/currency';
 import {
   exactSplitDifference,
+  formatAmountInput,
   formatMoney,
   MAX_AMOUNT,
   parseAmount,
@@ -127,6 +128,28 @@ describe('toDecimalString', () => {
 
   it('rejects an amount that is not an integer', () => {
     expect(() => toDecimalString(12.5, USD)).toThrow(RangeError);
+  });
+});
+
+describe('formatAmountInput', () => {
+  it('round-trips through parseAmount for VND and a two-digit currency, in both locales', () => {
+    // Zero is left out: parseAmount rejects it (an empty share field is the way to type zero).
+    const cases: [number, typeof VND, typeof vi][] = [
+      [300_000, VND, vi],
+      [1_250_000, VND, en],
+      [125_050, USD, en],
+      [5, USD, en],
+      [125_050, USD, vi],
+    ];
+    for (const [amount, currency, rules] of cases) {
+      expect(parseAmount(formatAmountInput(amount, rules, currency), rules, currency)).toBe(amount);
+    }
+  });
+
+  it('uses the locale decimal separator and writes both minor digits', () => {
+    expect(formatAmountInput(125_050, en, USD)).toBe('1250.50');
+    expect(formatAmountInput(125_050, vi, USD)).toBe('1250,50');
+    expect(formatAmountInput(300_000, vi, VND)).toBe('300000');
   });
 });
 

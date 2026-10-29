@@ -107,8 +107,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
     or named in a new transfer. Their device becomes a guest (view only). Their bank details are no longer
     returned by the API (the stored values are kept).
-  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted
-    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting it would give them a balance that nobody could settle.
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted or edited
+    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting or editing it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
@@ -153,9 +153,27 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   3. Equal and weighted splits: the remainder that cannot be split at the rounding unit (for example 500 dong when
      rounding to 1,000) goes to the **payer** if the payer is a participant, otherwise to the first participant.
   4. Shares are computed **once, when the expense is saved**, and are not recomputed when the rounding setting
-     changes.
+     changes. An edit is a new save: the shares are computed again only when the amount, payer, participants or
+     split change, and then with the rounding setting current at that moment.
 - Deleting an expense: only its **author** or the **owner**. Deletion is soft (`deleted_at`) and stays in the audit log.
-- OPEN QUESTION: who may edit an expense, and is an edit history needed? (`edit_expense`)
+- **Editing an expense** (`edit_expense`):
+  - Only its **author** or the **owner** may edit it. An expense without a recorded author can be edited only by the
+    owner. Any member may reduce their own share; this is accepted, because the "edited" marker shows the group that
+    the expense changed and the audit log records who changed it and the previous values.
+  - Every field may change: amount, payer, participants, split, date and description.
+  - An edited expense is marked **"edited"** in the list. The previous values are kept in the audit log; the interface
+    does not show them.
+  - An edit counts as a new save: shares are computed with the group's **current** rounding setting, but only when the
+    amount, payer, participants or split change. Editing only the date or the description keeps the stored shares.
+    Weights are compared in hundredths, so a value that differs only past that precision is the same weight.
+  - Nothing is blocked for settling up: sent and confirmed transfers stay as they are, balances are recalculated from
+    the edited shares, and a new difference is settled with a new transfer.
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be edited
+    (`EXPENSE_HAS_REMOVED_MEMBER`), for the same reason it can no longer be deleted.
+  - A request that repeats the stored amount, payer, participants, split, date and description changes nothing: no
+    value is written, the expense is not marked as edited, no audit entry is added and `last_activity_at` does not move.
+  - A real edit is activity: it moves `last_activity_at`. It works the same in a kept group, because a lock only stops
+    deletion.
 
 ## Balances and settling up
 

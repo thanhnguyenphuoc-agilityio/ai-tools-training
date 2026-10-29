@@ -29,6 +29,7 @@ const expense = (payerId: string, amount: number, shares: [string, number][]): E
   shares: shares.map(([memberId, a]) => ({ memberId, weight: 1, amount: a })),
   createdBy: payerId,
   createdAt: '2026-10-19T12:00:00Z',
+  editedAt: null,
 });
 
 const transfer = (fromId: string, toId: string, amount: number, status: TransferDto['status']): TransferDto => ({

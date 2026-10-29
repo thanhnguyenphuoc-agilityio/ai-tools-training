@@ -48,6 +48,20 @@ export function toDecimalString(amount: number, currency: CurrencyInfo): string 
 }
 
 /**
+ * Minor units as the text an amount box shows, in the locale's convention: "1250,50" in Vietnamese, "1250.50" in
+ * English, "300000" for VND. The inverse of parseAmount, so an edit form starts from the stored value (edit_expense).
+ */
+export function formatAmountInput(amount: number, rules: AmountInputRules, currency: CurrencyInfo): string {
+  if (!Number.isSafeInteger(amount) || amount < 0) {
+    throw new RangeError(`amount must be a non-negative integer, got ${amount}`);
+  }
+  const digits = currency.minorDigits;
+  if (digits === 0) return String(amount);
+  const padded = String(amount).padStart(digits + 1, '0');
+  return `${padded.slice(0, -digits)}${rules.decimalSeparator}${padded.slice(-digits)}`;
+}
+
+/**
  * How people type amounts in one locale. Lives in the locale files
  * (src/i18n/locales) because separators and shorthand are language-specific.
  */

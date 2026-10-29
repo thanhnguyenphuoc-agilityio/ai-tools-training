@@ -116,6 +116,8 @@ export const vi: Messages = {
     invalidShare: 'Phần của {name} không hợp lệ. Để trống hoặc nhập 0 nếu người này không phải trả.',
     exactMismatch: 'Phần của từng người phải cộng lại đúng bằng tổng trước khi lưu.',
     submit: 'Lưu khoản chi',
+    editTitle: 'Sửa khoản chi',
+    editSubmit: 'Lưu thay đổi',
   },
   expenseList: {
     title: 'Các khoản chi',
@@ -129,6 +131,9 @@ export const vi: Messages = {
     deleteLabel: 'Xoá khoản "{description}"',
     confirmDelete: 'Xoá khoản "{description}"?',
     deleteLocked: 'Không xoá được: có thành viên đã bị xoá',
+    edit: 'Sửa',
+    editLabel: 'Sửa khoản "{description}"',
+    edited: 'Đã sửa',
   },
   settle: {
     balancesTitle: 'Số dư',
@@ -231,6 +236,7 @@ export const vi: Messages = {
   toast: {
     ownerTransferred: '{name} hiện là trưởng nhóm.',
     expenseAdded: 'Đã thêm khoản chi.',
+    expenseEdited: 'Đã cập nhật khoản chi.',
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
@@ -363,7 +369,7 @@ export const vi: Messages = {
     MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
     MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
     CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
-    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể xoá được nữa.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể sửa hoặc xoá được nữa.',
     ALREADY_MEMBER: 'Thiết bị này đã là thành viên trong nhóm.',
     SIGN_IN_REQUIRED: 'Vui lòng đăng nhập trước.',
     INVALID_GOOGLE_TOKEN: 'Không thể xác thực đăng nhập Google.',
@@ -378,6 +384,7 @@ export const vi: Messages = {
     OWNER_TRANSFER_SELF: 'Thành viên này đã là trưởng nhóm.',
     MEMBER_NOT_CLAIMED: 'Tên này chưa được nhận.',
     CANNOT_RELEASE_OWNER: 'Không thể gỡ tên của trưởng nhóm.',
+    EDIT_NOT_ALLOWED: 'Chỉ người đã thêm khoản chi này hoặc trưởng nhóm mới được sửa.',
   },
 };
 

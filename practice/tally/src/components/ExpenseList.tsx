@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GroupDto } from '../../shared/types';
+import type { ExpenseDto, GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
@@ -8,7 +8,16 @@ import { useToast } from '../toast';
 import { Icon } from './Icon';
 import './ExpenseList.scss';
 
-export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
+export function ExpenseList({
+  group,
+  onChanged,
+  onEdit,
+}: {
+  group: GroupDto;
+  onChanged: () => void;
+  /** Opens the expense in the form for editing (edit_expense). Omitted: no edit action. */
+  onEdit?: (expense: ExpenseDto) => void;
+}) {
   const { t, tp, day, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
@@ -56,6 +65,16 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
                 <span className="text text--strong">{e.description}</span>
                 <span className="expense-list__end">
                   <span className="expense-list__amount">{money(e.amount)}</span>
+                  {canDelete && !locked && onEdit && (
+                    <button
+                      className="button button--icon"
+                      onClick={() => onEdit(e)}
+                      aria-label={t('expenseList.editLabel', { description: e.description })}
+                      title={t('expenseList.edit')}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                  )}
                   {canDelete && !locked && (
                     <button
                       className="button button--icon"
@@ -72,6 +91,9 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
                 </span>
               </div>
               <div className="text text--muted text--small">{meta}</div>
+              {e.editedAt && (
+                <span className="text text--muted text--small expense-list__edited">{t('expenseList.edited')}</span>
+              )}
               <div className="text text--muted text--small">
                 {e.shares.map((s) => `${nameOf(s.memberId)} ${money(s.amount)}`).join(t('common.separator'))}
               </div>

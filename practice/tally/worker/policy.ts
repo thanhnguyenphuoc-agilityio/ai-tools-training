@@ -124,6 +124,18 @@ export function requireCanDeleteExpense(me: Identity, expense: { created_by: str
   }
 }
 
+/**
+ * Editing an expense (edit_expense): the author or the owner. An expense without a recorded author can be edited
+ * only by the owner. A guest gets JOIN_FIRST, as for any member action.
+ */
+export function requireCanEditExpense(me: Identity, expense: { created_by: string | null }): void {
+  if (me.isOwner) return;
+  const caller = requireMember(me);
+  if (!expense.created_by || caller !== expense.created_by) {
+    throw new ApiError(403, 'EDIT_NOT_ALLOWED', 'only the author or the group owner can edit this');
+  }
+}
+
 /** Recording "I sent money": only for yourself, unless you are the owner. */
 export function requireCanRecordTransfer(me: Identity, fromId: string): void {
   const caller = requireMember(me);

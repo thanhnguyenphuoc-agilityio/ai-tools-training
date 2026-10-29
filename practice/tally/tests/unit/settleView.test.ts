@@ -26,6 +26,7 @@ const expense = (payerId: string, shares: Record<string, number>): ExpenseDto =>
   shares: Object.entries(shares).map(([memberId, amount]) => ({ memberId, weight: 1, amount })),
   createdBy: payerId,
   createdAt: '2026-10-10T10:00:00.000Z',
+  editedAt: null,
 });
 
 describe('settle view', () => {
