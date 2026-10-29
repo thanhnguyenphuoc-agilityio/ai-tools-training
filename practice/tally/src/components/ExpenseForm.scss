@@ -61,4 +61,17 @@
     margin: 0;
     text-align: right;
   }
+
+  // Receipt photo: the stored one (with its remove button) sits above the file picker.
+  &__receipt {
+    gap: space(1);
+  }
+
+  &__receipt-stored {
+    justify-content: space-between;
+  }
+
+  &__file-input {
+    max-width: 22rem;
+  }
 }

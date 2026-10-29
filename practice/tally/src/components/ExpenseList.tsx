@@ -65,6 +65,18 @@ export function ExpenseList({
                 <span className="text text--strong">{e.description}</span>
                 <span className="expense-list__end">
                   <span className="expense-list__amount">{money(e.amount)}</span>
+                  {e.receipt && (
+                    <a
+                      className="button button--icon"
+                      href={api.receiptUrl(group.code, e.id, e.receipt.id)}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={t('expenses.receipt.view')}
+                      title={t('expenses.receipt.view')}
+                    >
+                      <Icon name="receipt" />
+                    </a>
+                  )}
                   {canDelete && !locked && onEdit && (
                     <button
                       className="button button--icon"

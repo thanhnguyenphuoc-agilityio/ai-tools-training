@@ -115,7 +115,7 @@ export async function loadLedger(
   db: D1Database,
   code: string,
 ): Promise<{ expenses: ExpenseDto[]; transfers: TransferDto[] }> {
-  const [expenseRows, shareRows, transferRows] = await Promise.all([
+  const [expenseRows, shareRows, transferRows, receiptRows] = await Promise.all([
     db
       .prepare(
         'SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC',
@@ -136,8 +136,21 @@ export async function loadLedger(
       .bind(code)
       .all<Record<string, string | number | null>>()
       .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT a.id, a.expense_id, a.content_type, a.size FROM expense_attachments a
+         JOIN expenses e ON e.id = a.expense_id
+         WHERE a.group_code = ? AND e.deleted_at IS NULL`,
+      )
+      .bind(code)
+      .all<{ id: string; expense_id: string; content_type: string; size: number }>()
+      .then((r) => r.results),
   ]);
 
+  // One photo per expense (UNIQUE expense_id in migration 0011).
+  const receiptByExpense = new Map(
+    receiptRows.map((r) => [r.expense_id, { id: r.id, contentType: r.content_type, size: r.size }] as const),
+  );
   const expenses: ExpenseDto[] = expenseRows.map((e) => ({
     id: e.id as string,
     payerId: e.payer_id as string,
@@ -151,6 +164,7 @@ export async function loadLedger(
     createdBy: e.created_by as string | null,
     createdAt: e.created_at as string,
     editedAt: (e.edited_at as string | null) ?? null,
+    receipt: receiptByExpense.get(e.id as string) ?? null,
   }));
   const transfers: TransferDto[] = transferRows.map((t) => ({
     id: t.id as string,

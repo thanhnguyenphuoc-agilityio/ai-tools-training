@@ -38,6 +38,13 @@ export interface MemberDto extends BankDetails {
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */
 export type SplitMode = 'equal' | 'weight' | 'exact';
 
+/** The optional receipt photo of an expense (receipt_photos). The bytes are fetched from `/attachments/<id>`. */
+export interface ReceiptDto {
+  id: string;
+  contentType: string;
+  size: number;
+}
+
 export interface ExpenseDto {
   id: string;
   payerId: string;
@@ -51,6 +58,8 @@ export interface ExpenseDto {
   createdAt: string; // ISO timestamp (UTC)
   /** Time of the last edit (edit_expense); null when the expense was never edited. */
   editedAt: string | null;
+  /** The receipt photo, or null when the expense has none (receipt_photos). */
+  receipt: ReceiptDto | null;
 }
 
 export interface TransferDto {

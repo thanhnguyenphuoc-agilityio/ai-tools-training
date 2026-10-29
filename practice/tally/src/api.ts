@@ -65,6 +65,27 @@ export const api = {
   updateExpense: (code: string, id: string, expense: NewExpense) =>
     call<{ id: string; sharesChanged: boolean; changed: boolean }>('PATCH', `${g(code)}/expenses/${id}`, expense),
 
+  // Receipt photos (receipt_photos): the body is the image itself, not JSON.
+  uploadReceipt: async (
+    code: string,
+    expenseId: string,
+    blob: Blob,
+  ): Promise<{ id: string; contentType: string; size: number }> => {
+    const res = await fetch(`/api${g(code)}/expenses/${expenseId}/attachments`, {
+      method: 'POST',
+      headers: { 'content-type': blob.type },
+      body: blob,
+    });
+    const json = (await res.json().catch(() => ({}))) as Partial<ErrorBody> &
+      Partial<{ id: string; contentType: string; size: number }>;
+    if (!res.ok) throw new ApiError(res.status, json.code, json.error ?? `HTTP ${res.status}`, json.params);
+    return json as { id: string; contentType: string; size: number };
+  },
+  deleteReceipt: (code: string, expenseId: string, attachmentId: string) =>
+    call<{ ok: true }>('DELETE', `${g(code)}/expenses/${expenseId}/attachments/${attachmentId}`),
+  receiptUrl: (code: string, expenseId: string, attachmentId: string) =>
+    `/api${g(code)}/expenses/${expenseId}/attachments/${attachmentId}`,
+
   recordTransfer: (code: string, toId: string, amount: number, fromId?: string) =>
     call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount, fromId }),
   confirmTransfer: (code: string, id: string) => call('POST', `${g(code)}/transfers/${id}/confirm`),

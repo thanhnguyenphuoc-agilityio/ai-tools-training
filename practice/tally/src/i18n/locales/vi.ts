@@ -135,6 +135,16 @@ export const vi: Messages = {
     editLabel: 'Sửa khoản "{description}"',
     edited: 'Đã sửa',
   },
+  expenses: {
+    receipt: {
+      label: 'Ảnh hóa đơn (không bắt buộc)',
+      saved: 'Đã lưu ảnh hóa đơn.',
+      remove: 'Gỡ ảnh',
+      view: 'Xem ảnh hóa đơn',
+      tooLarge: 'Ảnh vẫn quá lớn sau khi thu nhỏ. Hãy thử ảnh nhỏ hơn.',
+      failed: 'Khoản chi đã được lưu, nhưng không tải lên được ảnh hóa đơn. Hãy thử lại hoặc gỡ ảnh.',
+    },
+  },
   settle: {
     balancesTitle: 'Số dư',
     gets: 'được nhận {amount}',
@@ -385,6 +395,9 @@ export const vi: Messages = {
     MEMBER_NOT_CLAIMED: 'Tên này chưa được nhận.',
     CANNOT_RELEASE_OWNER: 'Không thể gỡ tên của trưởng nhóm.',
     EDIT_NOT_ALLOWED: 'Chỉ người đã thêm khoản chi này hoặc trưởng nhóm mới được sửa.',
+    RECEIPT_TOO_LARGE: 'Ảnh hóa đơn lớn hơn 1 MB.',
+    RECEIPT_TYPE_NOT_ALLOWED: 'Ảnh hóa đơn phải là ảnh JPEG, PNG hoặc WebP.',
+    ATTACHMENT_NOT_FOUND: 'Ảnh hóa đơn này không còn tồn tại.',
   },
 };
 

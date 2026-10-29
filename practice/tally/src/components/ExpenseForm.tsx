@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { splitChanged } from '../../shared/expenseEdit';
 import { exactSplitDifference, splitAmount } from '../../shared/money';
 import type { ExpenseDto, GroupDto, SplitMode } from '../../shared/types';
@@ -6,6 +6,7 @@ import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n, type UiMessage } from '../i18n';
+import { prepareReceipt, ReceiptTooLargeError } from '../receiptImage';
 import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
@@ -21,7 +22,8 @@ export function ExpenseForm({
   onCancel,
 }: {
   group: GroupDto;
-  onSaved: () => void;
+  /** `keepForm` is true when the expense was saved but its receipt photo was not: the form stays open with the error. */
+  onSaved: (keepForm?: boolean) => void;
   /** Reloads the group when the API says a chosen member is no longer in it (removed on another device). */
   onStale: () => void;
   editing?: ExpenseDto | null;
@@ -50,8 +52,18 @@ export function ExpenseForm({
   const [shareTexts, setShareTexts] = useState<Record<string, string>>(() =>
     Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, formatAmount(s.amount)])),
   );
+  // Receipt photo (receipt_photos): a new file to upload, or the removal of the stored one (edit mode only).
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [removeStoredReceipt, setRemoveStoredReceipt] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<UiMessage | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function clearReceiptPicker() {
+    setReceiptFile(null);
+    setRemoveStoredReceipt(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
 
   const amount = parseMoney(amountText);
   const chosen = members.filter((m) => selected.has(m.id));
@@ -122,19 +134,42 @@ export function ExpenseForm({
         splitMode: mode,
         participants: mode === 'exact' ? exactParts : participants,
       };
+      let savedId: string;
       if (editing) {
+        savedId = editing.id;
         const { changed } = await api.updateExpense(group.code, editing.id, input);
         // A save that repeats the stored values is not an edit: say nothing rather than report a change.
         if (changed) notify('toast.expenseEdited');
-        onSaved();
       } else {
-        await api.addExpense(group.code, input);
+        savedId = (await api.addExpense(group.code, input)).id;
         setAmountText('');
         setDescription('');
         setShareTexts({});
         notify('toast.expenseAdded');
-        onSaved();
       }
+
+      // The expense is saved; the photo follows. A failure keeps the expense and shows the error.
+      try {
+        if (receiptFile) {
+          await api.uploadReceipt(group.code, savedId, await prepareReceipt(receiptFile));
+        } else if (editing?.receipt && removeStoredReceipt) {
+          await api.deleteReceipt(group.code, savedId, editing.receipt.id);
+        }
+      } catch (receiptErr) {
+        setError(
+          receiptErr instanceof ReceiptTooLargeError
+            ? { key: 'expenses.receipt.tooLarge' }
+            : { key: 'expenses.receipt.failed' },
+        );
+        // An add cannot be retried without adding the expense twice, so its picker is cleared. An edit keeps the
+        // picked file, so saving again retries the photo.
+        if (!editing) clearReceiptPicker();
+        onSaved(true);
+        return;
+      }
+
+      clearReceiptPicker();
+      onSaved();
     } catch (err) {
       setError({ error: err });
       if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
@@ -285,6 +320,28 @@ export function ExpenseForm({
             </p>
           )}
         </fieldset>
+
+        <div className="field expense-form__receipt">
+          <span className="field__label">{t('expenses.receipt.label')}</span>
+          {editing?.receipt && !removeStoredReceipt && !receiptFile && (
+            <div className="cluster expense-form__receipt-stored">
+              <span className="text text--muted text--small">{t('expenses.receipt.saved')}</span>
+              <button type="button" className="button button--ghost" onClick={() => setRemoveStoredReceipt(true)}>
+                {t('expenses.receipt.remove')}
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="field__control expense-form__file-input"
+            onChange={(e) => {
+              setReceiptFile(e.target.files?.[0] ?? null);
+              setRemoveStoredReceipt(false);
+            }}
+          />
+        </div>
 
         {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">

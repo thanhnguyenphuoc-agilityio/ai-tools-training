@@ -37,6 +37,8 @@ const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'a
   createdBy: e.payerId,
   createdAt: '2026-10-01T09:00:00.000Z',
   editedAt: null,
+
+  receipt: null,
   ...e,
 });
 

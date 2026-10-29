@@ -7,6 +7,8 @@ import { findBank, type BankDetails } from '../shared/types';
 
 export interface Env {
   DB: D1Database;
+  /** Receipt photos (receipt_photos). Bound in wrangler.jsonc as RECEIPTS. */
+  RECEIPTS: R2Bucket;
   GOOGLE_CLIENT_ID?: string;
   DEV_LOGIN?: string;
 }
@@ -31,7 +33,7 @@ export type Ctx = Context<AppEnv>;
 
 export class ApiError extends Error {
   constructor(
-    public status: 400 | 401 | 403 | 404 | 409 | 413 | 500,
+    public status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 500,
     public code: ErrorCode,
     message: string,
     public params?: ErrorParams,

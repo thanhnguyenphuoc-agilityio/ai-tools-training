@@ -175,6 +175,20 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - A real edit is activity: it moves `last_activity_at`. It works the same in a kept group, because a lock only stops
     deletion.
 
+### Receipt photo
+
+- An expense has at most one optional receipt photo (`receipt_photos`). Uploading again replaces the old photo, and the
+  old file is deleted.
+- Adding, replacing and removing the photo follow the edit rule: only the **author** or the **owner**. An expense that
+  involves a removed member cannot change its photo (`EXPENSE_HAS_REMOVED_MEMBER`). Viewing works like the rest of the
+  group: anyone with the link.
+- Accepted types are JPEG, PNG and WebP, checked by their leading bytes and not only the `Content-Type` header. The
+  browser reduces a photo to at most 1600 px on its longest side and re-encodes it, which also removes EXIF and GPS
+  data. An upload over 1 MB, or a wrong type, is refused (`RECEIPT_TOO_LARGE`, `RECEIPT_TYPE_NOT_ALLOWED`).
+- Deleting an expense deletes its photo. A purged group deletes all of its photos. Deleting an account does not, since
+  it keeps group data.
+- Adding, replacing and removing a photo are changes: they move the deletion date.
+
 ## Balances and settling up
 
 - A member's balance = total paid - total owed +/- **confirmed** transfers.
@@ -328,7 +342,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Owner keys, device tokens and session tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`.
   Group cookies are sent only to the API path of their own group; session cookies are sent to `/api` and expire after
   30 days.
-- Request bodies are limited to 16 KB.
+- Request bodies are limited to 16 KB, except receipt uploads, 1 MB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
 - Group codes and owner recovery links resist guessing:
   - Group codes: 12 of 31 characters, about 59.5 bits; about 1.3e-14 chance per guess at 10,000 groups.

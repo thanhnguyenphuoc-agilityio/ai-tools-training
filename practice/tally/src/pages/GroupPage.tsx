@@ -206,8 +206,9 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
               group={group}
               editing={editing}
               onCancel={() => setEditing(null)}
-              onSaved={() => {
-                setEditing(null);
+              onSaved={(keepForm) => {
+                // A failed receipt upload keeps the edit open with its error; a new key would remount the form.
+                if (!keepForm) setEditing(null);
                 reload();
               }}
               onStale={reload}
