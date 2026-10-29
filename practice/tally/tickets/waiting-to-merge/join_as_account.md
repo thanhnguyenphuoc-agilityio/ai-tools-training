@@ -142,3 +142,31 @@ From the product owner (human):
       (migration `0008`, the upsert `CASE`, the `PATCH /api/me` fields). Edit only the google_sign_in upsert bullet.
 11. Merge order: this branch merges after TAL-46 (`feat/owner_link_binds_account`) and TAL-47; expected conflicts are in
     `AccountMenu.tsx`, `worker/routes/account.ts`, the locale files and the docs.
+
+## Merge request
+
+Branch `feat/join_as_account` into `develop`. Merge after `feat/owner_link_binds_account` (TAL-46) and `feat/transfer_ownership` (TAL-47). Expected conflicts: `AccountMenu.tsx`, `worker/routes/account.ts`, the locale files and the docs (both branches add lines to the same blocks). The merge request link is added when it exists.
+
+What changed:
+
+- `migrations/0008_user_name_custom.sql` (new): adds `users.name_custom INTEGER NOT NULL DEFAULT 0`.
+- `worker/routes/account.ts`: `upsertUser` keeps `users.name` when `name_custom = 1` and always refreshes the email; `PATCH /api/me` accepts `name` (trimmed, 1 to 40 characters) and sets `name_custom = 1`. Bank-only bodies keep the name.
+- `worker/http.ts`: `UserRow.name_custom`.
+- `src/api.ts`: `updateMe` takes `Partial<BankDetails> & { name?: string }`.
+- `src/components/AccountNameDialog.tsx` and `.scss` (new): "My name" dialog on `useDialog`, with a saving state, a 40-character limit and the trimmed name sent.
+- `src/components/AccountMenu.tsx`: "My name" menu item and dialog render.
+- `src/components/JoinPanel.tsx`: prefills the join name from the account (cut to 40 characters), stays editable, and refills when the account loads later until the person types.
+- `src/i18n/locales/en.ts`, `vi.ts`: `account.name` and the `accountName` block. No new error code.
+- `docs/business-rules.md`: "Account name" bullets, join prefill in Members. `docs/design.md`: the upsert bullet in section 6 and the `join_as_account (built)` subsection.
+- `tests/api/account-name.test.ts` (new): AN-1 to AN-6 and AN-5b (development sign-in), plus the migration default on a row that existed before `0008`.
+- `e2e/join-as-account.spec.ts` (new): My name saved and prefilled join; taken prefilled name shows `errors.DUPLICATE_NAME`, then the edited name joins; Escape closes My name (desktop only). Each test uses unique synthetic emails.
+
+Commands and results (run in the feature worktree; e2e on port 5193):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 35 files, 397 tests passed.
+- `npm run test:hooks`: 29 passed, 0 failed.
+- `npx playwright test --config playwright.local.config.ts`: 116 passed, 2 skipped (desktop-only keyboard checks on the mobile project).
+
+The first full e2e run failed 4 older tests (`account.spec.ts` at 360px and `saved-bank.spec.ts` SB-6) because the new spec had saved a custom name for the shared dev email `sam@example.com` in the worktree's local dev database. The fix is in the spec, which now uses unique emails. The local `.wrangler/state` was cleared (git-ignored) and the full suite was rerun green.
