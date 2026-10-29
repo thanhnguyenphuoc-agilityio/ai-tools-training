@@ -206,6 +206,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   active members.
 - There is no stored schedule. A new session form prefills the times and the attendance of the latest session, and the
   date defaults to today.
+- The session of an expense can be chosen or changed in the expense form: "No session" or any session of the group. On a
+  new expense, choosing a session preselects its present members and its day. Changing the session of a saved expense is
+  a field change that keeps the stored shares. The expense list shows the session as a badge.
 - A session can be deleted only when it has no live (non-deleted) costs. Otherwise it answers 409
   `SESSION_HAS_EXPENSES`. Removed members stay in past attendance records, also when the owner edits such a session
   later (the edit keeps them even though the form lists only active members), and cannot be newly marked present on
