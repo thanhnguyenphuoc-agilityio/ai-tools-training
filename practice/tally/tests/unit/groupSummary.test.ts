@@ -30,6 +30,8 @@ const expense = (payerId: string, amount: number, shares: [string, number][]): E
   createdBy: payerId,
   createdAt: '2026-10-19T12:00:00Z',
   editedAt: null,
+
+  receipt: null,
 });
 
 const transfer = (fromId: string, toId: string, amount: number, status: TransferDto['status']): TransferDto => ({

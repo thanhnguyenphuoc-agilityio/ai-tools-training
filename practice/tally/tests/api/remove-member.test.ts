@@ -260,7 +260,7 @@ describe('removing a member while other changes arrive', () => {
     env.env.DB.prepare('UPDATE members SET removed_at = ? WHERE id = ?').bind(new Date().toISOString(), id).run();
   /** The owner's device, whose next write matching `match` runs after `before` has committed. */
   const ownerRacing = (match: RegExp, before: () => Promise<unknown>) =>
-    owner.withEnv({ DB: interleave(env.env.DB, match, before) });
+    owner.withEnv({ ...env.env, DB: interleave(env.env.DB, match, before) });
 
   it('refuses an expense whose participant is removed after the check', async () => {
     const raced = ownerRacing(/INSERT INTO expenses/, () => markRemoved(ids.jamie));

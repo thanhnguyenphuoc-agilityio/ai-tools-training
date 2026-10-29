@@ -416,6 +416,7 @@ describe('editing an expense while a member is removed', () => {
       newExpense(ids.alex, 90_000, [ids.alex, ids.jamie]),
     );
     const raced = sam.withEnv({
+      ...env.env,
       DB: interleave(env.env.DB, /UPDATE expenses SET payer_id/, () => markRemoved(ids.jamie)),
     });
     const res = await edit(raced, added.id, newExpense(ids.alex, 120_000, [ids.alex, ids.sam]));

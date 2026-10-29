@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ErrorBody } from '../shared/errors';
 import { ApiError, type AppEnv } from './http';
 import { accountRoutes } from './routes/account';
+import { attachmentRoutes } from './routes/attachments';
 import { myGroupRoutes } from './routes/myGroups';
 import { expenseRoutes } from './routes/expenses';
 import { groupRoutes } from './routes/groups';
@@ -18,12 +19,14 @@ const MAX_BODY_BYTES = 16 * 1024;
 export function createApp() {
   const app = new Hono<AppEnv>().basePath('/api');
 
-  app.use(
-    '*',
-    bodyLimit({
-      maxSize: MAX_BODY_BYTES,
-      onError: (c) => c.json({ error: 'request body too large', code: 'BODY_TOO_LARGE' } satisfies ErrorBody, 413),
-    }),
+  // Receipt uploads have their own limit (routes/attachments.ts), so the global 16 KB limit skips them.
+  const RECEIPT_UPLOAD = /^\/api\/groups\/[^/]+\/expenses\/[^/]+\/attachments$/;
+  const jsonBodyLimit = bodyLimit({
+    maxSize: MAX_BODY_BYTES,
+    onError: (c) => c.json({ error: 'request body too large', code: 'BODY_TOO_LARGE' } satisfies ErrorBody, 413),
+  });
+  app.use('*', (c, next) =>
+    c.req.method === 'POST' && RECEIPT_UPLOAD.test(c.req.path) ? next() : jsonBodyLimit(c, next),
   );
 
   app.onError((err, c) => {
@@ -42,6 +45,7 @@ export function createApp() {
   app.route('/groups', groupRoutes);
   app.route('/groups', memberRoutes);
   app.route('/groups', expenseRoutes);
+  app.route('/groups', attachmentRoutes);
   app.route('/groups', transferRoutes);
   app.route('/groups', linkRoutes);
 

@@ -154,6 +154,7 @@ describe('release refusals', () => {
   it('lets only one of two simultaneous releases win', async () => {
     const plain = owner.withEnv(env.env);
     const raced = owner.withEnv({
+      ...env.env,
       DB: interleave(env.env.DB, /UPDATE members SET token_hash = NULL/, async () => {
         await release(plain, ids.jamie);
       }),

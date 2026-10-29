@@ -13,6 +13,7 @@ import {
 } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv, type Ctx } from '../http';
 import { requireCanDeleteExpense, requireCanEditExpense, requireMember } from '../policy';
+import { deleteExpenseReceipt } from '../receipts';
 
 export const expenseRoutes = new Hono<AppEnv>();
 
@@ -260,6 +261,7 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
     if (!stillThere) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
     throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
   }
+  await deleteExpenseReceipt(c.env, id);
   await recordChange(c.env.DB, group.code, me, 'expense.delete', id);
   return c.json({ ok: true });
 });

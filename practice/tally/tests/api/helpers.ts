@@ -27,8 +27,14 @@ export interface CreateTestEnvOptions {
 export async function createTestEnv(
   options?: CreateTestEnvOptions,
 ): Promise<{ env: Env; dispose: () => Promise<void> }> {
-  const mf = new Miniflare({ modules: true, script: 'export default {}', d1Databases: ['DB'] });
+  const mf = new Miniflare({
+    modules: true,
+    script: 'export default {}',
+    d1Databases: ['DB'],
+    r2Buckets: ['RECEIPTS'],
+  });
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
+  const receipts = (await mf.getR2Bucket('RECEIPTS')) as unknown as R2Bucket;
   const allFiles = readdirSync(MIGRATIONS).sort();
 
   if (options?.beforeMigration) {
@@ -50,7 +56,7 @@ export async function createTestEnv(
     }
   }
 
-  return { env: { DB: db }, dispose: () => mf.dispose() };
+  return { env: { DB: db, RECEIPTS: receipts }, dispose: () => mf.dispose() };
 }
 
 /** One "browser": keeps its own cookies between requests. */
@@ -99,6 +105,30 @@ export class Browser {
       }
     }
     return { status: res.status, json: (await res.json()) as T };
+  }
+
+  /** Sends a binary body (a receipt photo) with its content type. Cookies are handled as in `call`. */
+  async sendBytes(
+    method: string,
+    path: string,
+    bytes: Uint8Array,
+    contentType: string,
+  ): Promise<{ status: number; json: any }> {
+    const headers: Record<string, string> = { 'content-type': contentType };
+    if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
+    const res = await this.app.request(
+      `${this.origin}/api${path}`,
+      { method, headers, body: bytes.slice().buffer },
+      this.env,
+    );
+    return { status: res.status, json: await res.json().catch(() => ({})) };
+  }
+
+  /** Fetches a raw response (for example a receipt photo) with the browser's cookies. */
+  async fetchRaw(path: string): Promise<Response> {
+    const headers: Record<string, string> = {};
+    if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
+    return this.app.request(`${this.origin}/api${path}`, { method: 'GET', headers }, this.env);
   }
 
   getCookie(name: string): string | undefined {
