@@ -192,3 +192,27 @@ Reviewed with the `review-checklist` skill. Verdict: approve with nits. Findings
   reload, documented as harmless.
 - [nit] `src/liveUpdates.ts`: a signal that arrives in the same moment the tab returns to the foreground can reload
   twice. The second reload shows the same data.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Checked against the Answers: one `GroupLive` Durable Object per group code with the Hibernation API; the message is
+  only `{type:"changed"}` and the client reads the group through `GET /api/groups/:code`; the refresh is silent and
+  keeps the form state (the form key does not change); reconnect with backoff and one reload after a drop or on
+  return to the foreground. The signal runs in one middleware after the handler, only for writes under 400, plus the
+  documented `member_email_invite` auto-link on GET. The live endpoint is a GET that writes nothing to D1.
+- [minor, cross-ticket] `tests/api/live.test.ts` lists the route files by name. After `receipt_photos` and
+  `attendance_split` land on `develop`, the attachment and session routes are not in that list, so the guard test
+  that every group write signals does not cover them. Fixed on `develop` through `fix/batch-b-review`.
+- [nit] `tests/api/purge.test.ts` PG-8 now calls `runDailyJobs` instead of `worker.scheduled`, because Node cannot
+  load `cloudflare:workers`. The handler is a one-line call; accepted.
+- No D1 migration; `wrangler.jsonc` carries Durable Object migration `v1`. `tickets/README.md` next free ID is `TAL-53`
+  (TAL-50 and TAL-51 come from this batch, TAL-52 is this ticket).
+
+Verdict: approve. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 46 files / 556 passed, `npm run test:hooks` passed,
+e2e (port 5195) 144 passed / 2 skipped. Typecheck and `npm test` rerun on `develop` after the merge.
