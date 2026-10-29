@@ -49,3 +49,30 @@ look and behave like deleting a session.
    the form assertions stay. Run `e2e/attendance.spec.ts` so the session flow is unchanged.
 6. `docs/design.md`, section `dialog_keyboard_focus`: destructive confirmations use `ConfirmDialog` on `useDialog`;
    `window.confirm` is not used. No change to `docs/business-rules.md`.
+
+## Merge request
+
+Branch `feat/expense_delete_dialog` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- New `src/components/ConfirmDialog.tsx` holds the destructive-confirmation markup that used to live in
+  `DeleteSessionDialog`: `useDialog`, a backdrop click that must start on the backdrop, buttons disabled while the
+  request runs, and the error shown inside the dialog. Callers pass already translated strings. The only text the
+  component translates is `common.cancel`.
+- `SessionsPanel.tsx` renders `ConfirmDialog` with the same session strings. Deleting a session looks the same.
+- `ExpenseList.tsx` no longer calls `window.confirm`. The trash button opens the dialog, which shows the description,
+  amount and day. Cancel, Escape or a backdrop click keeps the expense. Confirming deletes it, closes the dialog and
+  shows the toast. An API error stays in the dialog. Deleting the expense being edited still returns the form to adding.
+- `expenseList.confirmDelete` is a statement. `deleteTitle` and `confirmDeleteButton` were added in both locales.
+- `docs/design.md` (`dialog_keyboard_focus`) notes the shared dialog. `docs/business-rules.md` is unchanged.
+
+Commands and results, run in `practice/tally`:
+
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm test`: 614 passed.
+- `npm run test:hooks`: 29 passed.
+- `npx playwright test --config playwright.local.config.ts`: 150 passed, 2 skipped. The first run died when the dev
+  server stopped answering (connection refused); the rerun passed.
