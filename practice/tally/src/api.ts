@@ -44,7 +44,9 @@ export const api = {
     call<{ ok: true; changed: boolean }>('PATCH', g(code), patch),
   lockGroup: (code: string) => call<{ ok: true; changed: boolean }>('POST', `${g(code)}/lock`),
   unlockGroup: (code: string) => call<{ ok: true; changed: boolean }>('DELETE', `${g(code)}/lock`),
-  claimOwner: (code: string, ownerKey: string) => call('POST', `${g(code)}/owner/claim`, { ownerKey }),
+  claimOwner: (code: string, ownerKey: string) =>
+    call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/claim`, { ownerKey }),
+  attachOwner: (code: string) => call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/attach`),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),
   addMember: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name }),

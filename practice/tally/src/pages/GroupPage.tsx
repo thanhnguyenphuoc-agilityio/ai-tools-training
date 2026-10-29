@@ -11,7 +11,7 @@ import { GroupSummaryBar } from '../components/GroupSummaryBar';
 import { Icon, type IconName } from '../components/Icon';
 import { JoinPanel } from '../components/JoinPanel';
 import { MembersPanel } from '../components/MembersPanel';
-import { OwnerKeyBanner } from '../components/OwnerKeyBanner';
+import { OwnerAccessNote, OwnerKeyBanner } from '../components/OwnerKeyBanner';
 import { SettlePanel } from '../components/SettlePanel';
 import { todayLocal } from '../dates';
 import { downloadTextFile } from '../download';
@@ -44,6 +44,10 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const [tab, setTab] = useState<Tab>('expenses');
   const notify = useToast();
   const [newOwnerKey, setNewOwnerKey] = useState<string | null>(() => history.state?.ownerKey ?? null);
+  // Shown after creating a group while signed in: owner access is tied to the account, no recovery link.
+  const [showOwnerNote, setShowOwnerNote] = useState<boolean>(
+    () => !!history.state?.created && history.state?.ownerKey == null,
+  );
   const { version } = useAccount();
 
   const reload = useCallback(async () => {
@@ -64,17 +68,27 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
 
   useEffect(() => {
     const key = takeOwnerKeyFromHash();
+    // reload() clears the error on success, so a refused link message is kept and set again after the reload.
+    let refusal: string | null = null;
     const claim = key
-      ? api.claimOwner(code, key).catch((err) => {
-          if (err instanceof ApiError && err.status === 404) {
-            forgetGroup(code);
-            setError(t('group.notFound'));
-          } else {
-            setError(t('group.badRecoveryLink', { message: errorMessage(err) }));
-          }
-        })
+      ? api
+          .claimOwner(code, key)
+          .then((res) => {
+            if (res.attached) notify('ownerAccess.attached');
+          })
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 404) {
+              forgetGroup(code);
+              setError(t('group.notFound'));
+            } else {
+              refusal = t('group.badRecoveryLink', { message: errorMessage(err) });
+            }
+          })
       : Promise.resolve();
-    claim.then(reload);
+    claim.then(async () => {
+      await reload();
+      if (refusal) setError(refusal);
+    });
     // Run once per group code (the owner key must be claimed only once), not
     // again when reload's identity changes with the locale.
   }, [code]);
@@ -96,6 +110,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const dismissKey = () => {
     history.replaceState(null, '', location.pathname);
     setNewOwnerKey(null);
+    setShowOwnerNote(false);
   };
 
   if (error && !group) {
@@ -155,6 +170,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       {newOwnerKey && group.me.isOwner && (
         <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />
       )}
+      {showOwnerNote && group.me.isOwner && !newOwnerKey && <OwnerAccessNote onDismiss={dismissKey} />}
       {error && <p className="text text--error">{error}</p>}
       {!group.me.memberId && <JoinPanel group={group} onDone={reload} />}
 

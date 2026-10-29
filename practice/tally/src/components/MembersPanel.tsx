@@ -301,6 +301,7 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
         {error && <p className="text text--error">{error}</p>}
         <button className="button button--block-mobile">{t('common.save')}</button>
       </form>
+      {group.ownedByAccount && <p className="text text--muted">{t('ownerAccess.tied')}</p>}
       <KeepGroup group={group} onSaved={onSaved} />
     </section>
   );

@@ -32,3 +32,19 @@ export function OwnerKeyBanner({ code, ownerKey, onDismiss }: { code: string; ow
     </section>
   );
 }
+
+// Shown once after creating a group while signed in: no recovery link, owner access is tied to the account.
+export function OwnerAccessNote({ onDismiss }: { onDismiss: () => void }) {
+  const { t } = useI18n();
+  return (
+    <section className="card stack">
+      <h2 className="card__title">{t('ownerAccess.title')}</h2>
+      <p>{t('ownerAccess.tied')}</p>
+      <div className="cluster">
+        <button className="button button--ghost" onClick={onDismiss}>
+          {t('ownerKey.done')}
+        </button>
+      </div>
+    </section>
+  );
+}

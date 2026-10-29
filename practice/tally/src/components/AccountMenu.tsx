@@ -23,7 +23,7 @@ declare global {
 }
 
 export function AccountMenu() {
-  const { config, user, refresh, signOut, signInRequest } = useAccount();
+  const { config, user, afterSignIn, signOut, signInRequest } = useAccount();
   const { t, errorMessage } = useI18n();
   const notify = useToast();
   const [open, setOpen] = useState(false);
@@ -78,7 +78,7 @@ export function AccountMenu() {
           callback: async (res: { credential: string }) => {
             try {
               await api.signInGoogle(res.credential);
-              await refresh();
+              await afterSignIn();
               notify('toast.signedIn');
               close(false);
             } catch (err: unknown) {
@@ -104,14 +104,14 @@ export function AccountMenu() {
       script.onload = initGoogle;
       document.body.appendChild(script);
     }
-  }, [open, config?.googleClientId, refresh, notify, errorMessage]);
+  }, [open, config?.googleClientId, afterSignIn, notify, errorMessage]);
 
   const handleDevSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
       await api.signInDev(email);
-      await refresh();
+      await afterSignIn();
       notify('toast.signedIn');
       close(false);
     } catch (err: unknown) {
