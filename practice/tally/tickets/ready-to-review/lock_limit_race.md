@@ -5,7 +5,7 @@
 | ID | `TAL-45` |
 | Labels | `type::bug`, `priority::low`, `area::data` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `lock_groups` |
 
@@ -38,3 +38,17 @@ tests in `tests/api/lock-groups.test.ts` only send requests one after another, s
    `group.unlock` row.
 4. Update the `lock_groups` notes in `docs/design.md` if they describe the two-step check. Verify with
    `npm run typecheck`, `npm run lint`, `npm test`.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `POST /groups/:code/lock` repeats the `MAX_LOCKED_GROUPS` count inside the `UPDATE`. When no row changes, the
+  route reads the group again: already locked answers `changed: false`, otherwise `409 LOCK_LIMIT_REACHED`. The
+  early count stays for the common path.
+- `DELETE /groups/:code/lock` updates only `WHERE locked_at IS NOT NULL` and writes no audit row when nothing
+  changed.
+- Tests LG-13 and LG-14 in `tests/api/lock-groups.test.ts` use `interleave` to commit a second request between the
+  check and the write; both fail on the old route. `docs/design.md` no longer lists the race as a known limit.
+- Checks: `npm run typecheck` and `npm run lint` pass, `npm test` 389 passed. No e2e run: the change is limited
+  to the API and its responses are unchanged.

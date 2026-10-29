@@ -165,11 +165,21 @@ groupRoutes.post('/:code/lock', async (c) => {
     throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
   }
 
-  const updateRes = await c.env.DB.prepare('UPDATE groups SET locked_at = ? WHERE code = ? AND locked_at IS NULL')
-    .bind(now(), group.code)
+  // The limit is repeated in the UPDATE so that two simultaneous locks cannot both pass the count above.
+  const updateRes = await c.env.DB.prepare(
+    `UPDATE groups SET locked_at = ?1 WHERE code = ?2 AND locked_at IS NULL AND owner_user_id = ?3
+       AND (SELECT COUNT(*) FROM groups WHERE owner_user_id = ?3 AND locked_at IS NOT NULL) < ?4`,
+  )
+    .bind(now(), group.code, me.userId, MAX_LOCKED_GROUPS)
     .run();
   if ((updateRes.meta.changes ?? 0) === 0) {
-    return c.json({ ok: true, changed: false });
+    const current = await c.env.DB.prepare('SELECT locked_at FROM groups WHERE code = ?')
+      .bind(group.code)
+      .first<{ locked_at: string | null }>();
+    if (current?.locked_at != null) {
+      return c.json({ ok: true, changed: false });
+    }
+    throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
   }
 
   await recordChange(c.env.DB, group.code, me, 'group.lock', null);
@@ -186,7 +196,14 @@ groupRoutes.delete('/:code/lock', async (c) => {
     return c.json({ ok: true, changed: false });
   }
 
-  await c.env.DB.prepare('UPDATE groups SET locked_at = NULL WHERE code = ?').bind(group.code).run();
+  const updateRes = await c.env.DB.prepare(
+    'UPDATE groups SET locked_at = NULL WHERE code = ? AND locked_at IS NOT NULL',
+  )
+    .bind(group.code)
+    .run();
+  if ((updateRes.meta.changes ?? 0) === 0) {
+    return c.json({ ok: true, changed: false });
+  }
   await recordChange(c.env.DB, group.code, me, 'group.unlock', null);
   return c.json({ ok: true, changed: true });
 });
