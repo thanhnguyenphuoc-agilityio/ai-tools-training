@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { computeBalances } from '../../shared/settle';
 import type { GroupDto } from '../../shared/types';
-import { Browser, createTestEnv } from './helpers';
+import { Browser, createTestEnv, interleave } from './helpers';
 
 let env: Awaited<ReturnType<typeof createTestEnv>>;
 let owner: Browser;
@@ -56,7 +56,8 @@ describe('expenses', () => {
     expect((await owner.call('POST', `/groups/${code}/expenses`, { ...base, spentOn: '10/10/2026' })).status).toBe(400);
     expect((await owner.call('POST', `/groups/${code}/expenses`, { ...base, spentOn: '2026-02-30' })).status).toBe(400);
     const weighted = (weight: number) => ({ ...base, splitMode: 'weight', participants: [{ memberId: ids.sam, weight }] });
-    for (const weight of [0.001, 0.333]) {
+    // 1e-12 is within the tolerance of zero but rounds to a zero weight, so it is refused like 0.001.
+    for (const weight of [0.001, 0.333, 1e-12, 100.001]) {
       const res = await owner.call('POST', `/groups/${code}/expenses`, weighted(weight));
       expect(res.status).toBe(400);
       expect(res.json.code).toBe('INVALID_WEIGHT');
@@ -64,6 +65,30 @@ describe('expenses', () => {
     const ok = await owner.call('POST', `/groups/${code}/expenses`, weighted(0.25));
     expect(ok.status).toBe(201);
     await owner.call('DELETE', `/groups/${code}/expenses/${ok.json.id}`);
+  });
+
+  it('stores the two-decimal weight that the split used', async () => {
+    const res = await owner.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.alex,
+      amount: 330_000,
+      description: 'Groceries',
+      spentOn: today,
+      splitMode: 'weight',
+      participants: [
+        { memberId: ids.alex, weight: 2.299999999999 },
+        { memberId: ids.sam, weight: 1 },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const group = await getGroup(owner);
+    const expense = group.expenses.find((e) => e.id === res.json.id)!;
+    // The API does not promise an order for shares, so they are compared by member.
+    const byMember = Object.fromEntries(expense.shares.map((s) => [s.memberId, s]));
+    expect(expense.shares).toHaveLength(2);
+    expect(byMember[ids.alex].weight).toBe(2.3);
+    expect(byMember[ids.sam].weight).toBe(1);
+    expect(byMember[ids.alex].amount).toBe(230_000);
+    expect(byMember[ids.sam].amount).toBe(100_000);
   });
 
   it('accepts an expense shared by a 35-member group', async () => {
@@ -202,5 +227,81 @@ describe('transfers', () => {
   it("does not let a member record someone else's transfer", async () => {
     const res = await sam.call('POST', `/groups/${code}/transfers`, { fromId: ids.jamie, toId: ids.alex, amount: 1000 });
     expect(res.status).toBe(403);
+  });
+
+  it('refuses a second transfer while one is waiting', async () => {
+    const first = await sam.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 });
+    expect(first.status).toBe(201);
+    const second = await sam.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 });
+    expect(second.status).toBe(409);
+    expect(second.json.code).toBe('TRANSFER_PENDING');
+    const waiting = (await getGroup(owner)).transfers.filter((tr) => tr.status === 'sent');
+    expect(waiting).toHaveLength(1);
+
+    expect((await owner.call('POST', `/groups/${code}/transfers/${first.json.id}/confirm`)).status).toBe(200);
+    expect((await sam.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 })).status).toBe(201);
+  });
+
+  it('refuses the owner recording for a payer who has a waiting transfer', async () => {
+    expect((await sam.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 })).status).toBe(201);
+    const recorded = await owner.call('POST', `/groups/${code}/transfers`, {
+      fromId: ids.sam,
+      toId: ids.alex,
+      amount: 100_000,
+    });
+    expect(recorded.status).toBe(409);
+    expect(recorded.json.code).toBe('TRANSFER_PENDING');
+  });
+
+  it('refuses a transfer when another one is recorded between the check and the insert', async () => {
+    const body = { toId: ids.alex, amount: 100_000 };
+    const raced = sam.withEnv({
+      ...env.env,
+      DB: interleave(env.env.DB, /INSERT INTO transfers/, () => sam.call('POST', `/groups/${code}/transfers`, body)),
+    });
+    const res = await raced.call('POST', `/groups/${code}/transfers`, body);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('TRANSFER_PENDING');
+    const sent = await env.env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM transfers WHERE group_code = ? AND status = 'sent'",
+    )
+      .bind(code)
+      .first<{ n: number }>();
+    expect(sent?.n).toBe(1);
+  });
+
+  it('still answers PARTICIPANT_NOT_IN_GROUP when the receiver is removed before the insert', async () => {
+    const raced = sam.withEnv({
+      ...env.env,
+      DB: interleave(env.env.DB, /INSERT INTO transfers/, () =>
+        env.env.DB.prepare('UPDATE members SET removed_at = ? WHERE id = ?').bind(new Date().toISOString(), ids.alex).run(),
+      ),
+    });
+    const res = await raced.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 });
+    expect(res.status).toBe(400);
+    expect(res.json.code).toBe('PARTICIPANT_NOT_IN_GROUP');
+    const rows = await env.env.DB.prepare('SELECT COUNT(*) AS n FROM transfers WHERE group_code = ?')
+      .bind(code)
+      .first<{ n: number }>();
+    expect(rows?.n).toBe(0);
+  });
+
+  it('counts one confirm when two confirms race', async () => {
+    const sent = await sam.call('POST', `/groups/${code}/transfers`, { toId: ids.alex, amount: 100_000 });
+    expect(sent.status).toBe(201);
+    const confirmPath = `/groups/${code}/transfers/${sent.json.id}/confirm`;
+    const raced = owner.withEnv({
+      ...env.env,
+      DB: interleave(env.env.DB, /UPDATE transfers SET status = 'confirmed'/, () => owner.call('POST', confirmPath)),
+    });
+    const res = await raced.call('POST', confirmPath);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('ALREADY_CONFIRMED');
+    const audits = await env.env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM audit_log WHERE group_code = ? AND action = 'transfer.confirm'",
+    )
+      .bind(code)
+      .first<{ n: number }>();
+    expect(audits?.n).toBe(1);
   });
 });

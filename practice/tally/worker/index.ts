@@ -1,6 +1,9 @@
 import { createApp, type Env } from './app';
 import { runDailyJobs } from './cleanup';
 
+// The Durable Object class must be exported from the entry module (group_live_updates).
+export { GroupLive } from './liveObject';
+
 const app = createApp();
 
 // Only /api/* reaches the Worker (see run_worker_first in wrangler.jsonc);

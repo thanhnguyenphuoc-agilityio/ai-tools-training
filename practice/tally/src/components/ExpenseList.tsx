@@ -1,30 +1,44 @@
 import { useState } from 'react';
-import type { GroupDto } from '../../shared/types';
+import type { ExpenseDto, GroupDto } from '../../shared/types';
 import { api } from '../api';
-import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
+import { involvesRemovedMember, memberName, payerName, sessionLabel } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
 import './ExpenseList.scss';
 
-export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
-  const { t, tp, day, errorMessage } = useI18n();
+export function ExpenseList({
+  group,
+  onChanged,
+  onEdit,
+}: {
+  group: GroupDto;
+  onChanged: () => void;
+  /** Opens the expense in the form for editing (edit_expense). Omitted: no edit action. */
+  onEdit?: (expense: ExpenseDto) => void;
+}) {
+  const { t, tp, day } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
-  const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ExpenseDto | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<UiMessage | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  async function remove(id: string, description: string) {
-    if (!confirm(t('expenseList.confirmDelete', { description }))) return;
+  async function confirmDelete(expense: ExpenseDto) {
+    setDeleteBusy(true);
     try {
-      await api.deleteExpense(group.code, id);
-      setError(null);
+      await api.deleteExpense(group.code, expense.id);
+      setPendingDelete(null);
       notify('toast.expenseDeleted');
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setDeleteError({ error: err });
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -34,7 +48,6 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
         <h2 className="card__title">{t('expenseList.title')}</h2>
         <span className="text text--muted">{t('expenseList.total', { amount: money(total) })}</span>
       </div>
-      {error && <p className="text text--error">{error}</p>}
       {group.expenses.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
       <ul className="list list--divided">
         {group.expenses.map((e) => {
@@ -50,16 +63,42 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
             ...(e.splitMode === 'weight' ? [t('expenseList.byWeight')] : []),
             ...(e.splitMode === 'exact' ? [t('expenseList.exact')] : []),
           ].join(t('common.separator'));
+          const session = e.sessionId ? group.sessions.find((s) => s.id === e.sessionId) : undefined;
           return (
             <li key={e.id} className="list__item expense-list__item">
               <div className="expense-list__row">
                 <span className="text text--strong">{e.description}</span>
                 <span className="expense-list__end">
                   <span className="expense-list__amount">{money(e.amount)}</span>
+                  {e.receipt && (
+                    <a
+                      className="button button--icon"
+                      href={api.receiptUrl(group.code, e.id, e.receipt.id)}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={t('expenses.receipt.view')}
+                      title={t('expenses.receipt.view')}
+                    >
+                      <Icon name="receipt" />
+                    </a>
+                  )}
+                  {canDelete && !locked && onEdit && (
+                    <button
+                      className="button button--icon"
+                      onClick={() => onEdit(e)}
+                      aria-label={t('expenseList.editLabel', { description: e.description })}
+                      title={t('expenseList.edit')}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                  )}
                   {canDelete && !locked && (
                     <button
                       className="button button--icon"
-                      onClick={() => remove(e.id, e.description)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setPendingDelete(e);
+                      }}
                       aria-label={t('expenseList.deleteLabel', { description: e.description })}
                       title={t('expenseList.delete')}
                     >
@@ -72,6 +111,16 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
                 </span>
               </div>
               <div className="text text--muted text--small">{meta}</div>
+              {session && (
+                <div>
+                  <span className="badge expense-list__session">
+                    {t('expenseList.sessionBadge', { label: sessionLabel(session, t, day) })}
+                  </span>
+                </div>
+              )}
+              {e.editedAt && (
+                <span className="text text--muted text--small expense-list__edited">{t('expenseList.edited')}</span>
+              )}
               <div className="text text--muted text--small">
                 {e.shares.map((s) => `${nameOf(s.memberId)} ${money(s.amount)}`).join(t('common.separator'))}
               </div>
@@ -79,6 +128,20 @@ export function ExpenseList({ group, onChanged }: { group: GroupDto; onChanged: 
           );
         })}
       </ul>
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t('expenseList.deleteTitle')}
+          detail={[pendingDelete.description, money(pendingDelete.amount), day(pendingDelete.spentOn)].join(
+            t('common.separator'),
+          )}
+          message={t('expenseList.confirmDelete')}
+          confirmLabel={t('expenseList.confirmDeleteButton')}
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </section>
   );
 }

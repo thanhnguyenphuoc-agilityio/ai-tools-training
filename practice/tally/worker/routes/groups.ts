@@ -4,11 +4,40 @@ import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
 import { expiresAt, MAX_LOCKED_GROUPS } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
-import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
-import { linkToAccount } from '../accountLink';
-import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
+import {
+  clearOwnerCookie,
+  memberCookieName,
+  ownerCookieName,
+  randomToken,
+  resolveAccount,
+  REVOKED_OWNER_KEY,
+  setGroupCookie,
+  sha256Hex,
+} from '../auth';
+import { attachOwnerGroup, tryAttachOwnerGroup } from '../accountLink';
+import { linkInvitedMember } from '../inviteLink';
+import {
+  audit,
+  loadActiveMember,
+  loadGroup,
+  loadLedger,
+  loadMember,
+  loadMembers,
+  loadSessions,
+  recordChange,
+  toMemberDto,
+} from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { canLinkToAccount, requireGroupNotOwnedByOther, requireOwner, requireOwnerAccount } from '../policy';
+import {
+  canAutoLinkInvite,
+  canLinkToAccount,
+  requireAccount,
+  requireCanTransferOwnership,
+  requireGroupNotOwnedByOther,
+  requireOwner,
+  requireOwnerAccount,
+  requireTransferTarget,
+} from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -35,7 +64,9 @@ groupRoutes.post('/', async (c) => {
   const userId = account?.id ?? null;
 
   const code = generateGroupCode();
-  const ownerKey = randomToken();
+  // A group created while signed in is owned by the account: no owner key is issued (owner_link_binds_account).
+  const ownerKey = userId ? null : randomToken();
+  const ownerKeyHash = ownerKey ? await sha256Hex(ownerKey) : REVOKED_OWNER_KEY;
   const memberId = crypto.randomUUID();
   const memberToken = randomToken();
   const at = now();
@@ -43,13 +74,15 @@ groupRoutes.post('/', async (c) => {
   await c.env.DB.batch([
     c.env.DB.prepare(
       'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, owner_user_id, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), userId, at, at),
+    ).bind(code, name, groupCurrency.code, rounding, ownerKeyHash, userId, at, at),
     c.env.DB.prepare(
       'INSERT INTO members (id, group_code, name, token_hash, user_id, is_owner, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
     ).bind(memberId, code, ownerName, await sha256Hex(memberToken), userId, at),
   ]);
 
-  setGroupCookie(c, code, ownerCookieName(code), ownerKey);
+  if (ownerKey) {
+    setGroupCookie(c, code, ownerCookieName(code), ownerKey);
+  }
   setGroupCookie(c, code, memberCookieName(code), `${memberId}.${memberToken}`);
   return c.json({ code, ownerKey } satisfies CreateGroupResponse, 201);
 });
@@ -59,13 +92,26 @@ groupRoutes.get('/:code', async (c) => {
   const { group, me } = await loadGroup(c);
   const db = c.env.DB;
 
-  const [members, { expenses, transfers }] = await Promise.all([
+  // member_email_invite: a signed-in account with no member here is linked to the invited member that has its email.
+  // This is the only GET that writes, and only when a link happens (recorded as a change, like a claim).
+  if (canAutoLinkInvite(me)) {
+    const account = await resolveAccount(c);
+    const memberId = account ? await linkInvitedMember(db, group, me, account.email) : null;
+    if (memberId) {
+      await recordChange(db, group.code, { ...me, memberId }, 'member.link', memberId);
+      c.set('groupChanged', true);
+      me.memberId = memberId;
+      me.accountMemberId = memberId;
+    }
+  }
+
+  const [members, { expenses, transfers }, sessions] = await Promise.all([
     loadMembers(db, group.code),
     loadLedger(db, group.code),
+    loadSessions(db, group.code),
   ]);
-  const ownerMember = members.find((m) => m.is_owner === 1 && !m.removed_at) ?? null;
   const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
-  const canLinkAccount = canLinkToAccount(me, group, ownerMember, deviceMember);
+  const canLinkAccount = canLinkToAccount(me, deviceMember);
 
   const locked = group.locked_at !== null;
   const dto: GroupDto = {
@@ -77,11 +123,13 @@ groupRoutes.get('/:code', async (c) => {
     lastActivityAt: group.last_activity_at,
     expiresAt: locked ? null : expiresAt(group.last_activity_at),
     locked,
+    ownedByAccount: group.owner_user_id !== null,
     currencyLocked: await isCurrencyLocked(db, group.code),
     canLinkAccount,
     members: members.map(toMemberDto),
     expenses,
     transfers,
+    sessions,
     me: {
       memberId: me.memberId,
       isOwner: me.isOwner,
@@ -133,9 +181,118 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
   const body = await readJson(c);
   const { group, me } = await loadGroup(c);
   const key = text(body.ownerKey, 'ownerKey', 200);
+
+  // A revoked key matches nothing: the group is tied to an account (owner_link_binds_account).
+  if (group.owner_key_hash === REVOKED_OWNER_KEY) {
+    if (me.userId && group.owner_user_id === me.userId) {
+      return c.json({ ok: true, attached: false });
+    }
+    if (me.userId && group.owner_user_id !== null) {
+      throw new ApiError(403, 'GROUP_OWNED_BY_OTHER_ACCOUNT', 'group belongs to another account');
+    }
+    throw new ApiError(403, 'OWNER_KEY_REVOKED', 'this recovery link was revoked because the group is now linked to an account');
+  }
+
   if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+
+  if (me.userId) {
+    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
+    clearOwnerCookie(c, group.code);
+    if (changed) {
+      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+    }
+    return c.json({ ok: true, attached: true });
+  }
+
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
   await audit(c.env.DB, group.code, { ...me, isOwner: true }, 'owner.claim', null);
+  return c.json({ ok: true, attached: false });
+});
+
+// Attaches the group from the owner cookie of this device after sign-in (called for each device group).
+groupRoutes.post('/:code/owner/attach', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireAccount(me);
+
+  if (!me.hasOwnerKey) {
+    return c.json({ ok: true, attached: false });
+  }
+
+  const { attached, memberId } = await tryAttachOwnerGroup(c.env.DB, group, me);
+  if (attached) {
+    clearOwnerCookie(c, group.code);
+    await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+  }
+  return c.json({ ok: true, attached });
+});
+
+// Hand the group over to another member (transfer_ownership). The receiver must be linked to an account; the
+// previous owner stays a normal member. The recovery link is revoked, so the previous owner loses owner access
+// outside the account. A hand-over does not move last_activity_at, except for a kept group, which stops being kept:
+// its locked_at is cleared, last_activity_at moves to the hand-over time (a fresh 10 days) and group.unlock is written.
+// These statements share the batch with the ownership move, so they apply only when that move wins the race.
+groupRoutes.post('/:code/owner/transfer', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireCanTransferOwnership(me);
+  const body = await readJson(c);
+  const memberId = text(body.memberId, 'memberId', 64);
+
+  const target = await loadActiveMember(c.env.DB, group.code, memberId);
+  requireTransferTarget(target);
+  const currentOwner = await c.env.DB.prepare(
+    'SELECT id FROM members WHERE group_code = ? AND is_owner = 1 AND removed_at IS NULL',
+  )
+    .bind(group.code)
+    .first<{ id: string }>();
+  if (!currentOwner) throw new ApiError(404, 'MEMBER_NOT_FOUND', 'owner member not found');
+
+  // Every statement carries the guards again, so two simultaneous hand-overs cannot both win. The group statement
+  // runs first and the member statement only applies while the previous owner is still the owner member.
+  // The unlock statements share one timestamp and carry the same guards. The audit row runs before the update,
+  // because it selects on locked_at IS NOT NULL.
+  const handOverAt = now();
+  const unlockActor = me.memberId ?? 'owner';
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE groups SET owner_user_id = ?1, owner_key_hash = ?2
+       WHERE code = ?3
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?4 AND group_code = ?3 AND is_owner = 1 AND removed_at IS NULL)
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?5 AND group_code = ?3 AND user_id = ?1 AND removed_at IS NULL)`,
+    ).bind(target.user_id, REVOKED_OWNER_KEY, group.code, currentOwner.id, target.id),
+    c.env.DB.prepare(
+      `UPDATE members SET is_owner = CASE WHEN id = ?1 THEN 1 ELSE 0 END
+       WHERE group_code = ?2 AND id IN (?1, ?3)
+       AND EXISTS (SELECT 1 FROM groups WHERE code = ?2 AND owner_user_id = ?4 AND owner_key_hash = ?5)
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?3 AND group_code = ?2 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(target.id, group.code, currentOwner.id, target.user_id, REVOKED_OWNER_KEY),
+    // A kept group stops being kept: the unlock is recorded, and last_activity_at restarts the 10 days. Applies only
+    // when the ownership move above won (the receiver is now the owner of the group with the revoked key).
+    c.env.DB.prepare(
+      `INSERT INTO audit_log (group_code, actor, action, target, details, at)
+       SELECT code, ?1, 'group.unlock', NULL, '{"reason":"owner.transfer"}', ?2 FROM groups
+       WHERE code = ?3 AND locked_at IS NOT NULL AND owner_user_id = ?4 AND owner_key_hash = ?5
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?6 AND group_code = ?3 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(unlockActor, handOverAt, group.code, target.user_id, REVOKED_OWNER_KEY, target.id),
+    c.env.DB.prepare(
+      `UPDATE groups SET locked_at = NULL, last_activity_at = ?1
+       WHERE code = ?2 AND locked_at IS NOT NULL AND owner_user_id = ?3 AND owner_key_hash = ?4
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?5 AND group_code = ?2 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(handOverAt, group.code, target.user_id, REVOKED_OWNER_KEY, target.id),
+  ]);
+
+  // Read back: when nothing moved, say why.
+  const after = await loadMember(c.env.DB, group.code, target.id);
+  if (after.is_owner !== 1) {
+    if (after.removed_at) throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+    if (after.user_id === null) {
+      throw new ApiError(409, 'OWNER_TRANSFER_NOT_LINKED', 'the member needs an account to receive ownership');
+    }
+    // Another hand-over (or a revoke) won the race, so the caller no longer owns the group.
+    throw new ApiError(403, 'OWNER_ONLY', 'only the group owner can do this');
+  }
+
+  clearOwnerCookie(c, group.code);
+  await audit(c.env.DB, group.code, me, 'owner.transfer', target.id);
   return c.json({ ok: true });
 });
 
@@ -146,7 +303,8 @@ groupRoutes.post('/:code/lock', async (c) => {
 
   if (group.owner_user_id !== me.userId) {
     requireGroupNotOwnedByOther(me, group);
-    const { changed, memberId } = await linkToAccount(c.env.DB, group, me);
+    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
+    clearOwnerCookie(c, group.code);
     if (changed) {
       await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
     }
@@ -165,11 +323,21 @@ groupRoutes.post('/:code/lock', async (c) => {
     throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
   }
 
-  const updateRes = await c.env.DB.prepare('UPDATE groups SET locked_at = ? WHERE code = ? AND locked_at IS NULL')
-    .bind(now(), group.code)
+  // The limit is repeated in the UPDATE so that two simultaneous locks cannot both pass the count above.
+  const updateRes = await c.env.DB.prepare(
+    `UPDATE groups SET locked_at = ?1 WHERE code = ?2 AND locked_at IS NULL AND owner_user_id = ?3
+       AND (SELECT COUNT(*) FROM groups WHERE owner_user_id = ?3 AND locked_at IS NOT NULL) < ?4`,
+  )
+    .bind(now(), group.code, me.userId, MAX_LOCKED_GROUPS)
     .run();
   if ((updateRes.meta.changes ?? 0) === 0) {
-    return c.json({ ok: true, changed: false });
+    const current = await c.env.DB.prepare('SELECT locked_at FROM groups WHERE code = ?')
+      .bind(group.code)
+      .first<{ locked_at: string | null }>();
+    if (current?.locked_at != null) {
+      return c.json({ ok: true, changed: false });
+    }
+    throw new ApiError(409, 'LOCK_LIMIT_REACHED', 'lock limit reached', { max: MAX_LOCKED_GROUPS });
   }
 
   await recordChange(c.env.DB, group.code, me, 'group.lock', null);
@@ -186,7 +354,14 @@ groupRoutes.delete('/:code/lock', async (c) => {
     return c.json({ ok: true, changed: false });
   }
 
-  await c.env.DB.prepare('UPDATE groups SET locked_at = NULL WHERE code = ?').bind(group.code).run();
+  const updateRes = await c.env.DB.prepare(
+    'UPDATE groups SET locked_at = NULL WHERE code = ? AND locked_at IS NOT NULL',
+  )
+    .bind(group.code)
+    .run();
+  if ((updateRes.meta.changes ?? 0) === 0) {
+    return c.json({ ok: true, changed: false });
+  }
   await recordChange(c.env.DB, group.code, me, 'group.unlock', null);
   return c.json({ ok: true, changed: true });
 });

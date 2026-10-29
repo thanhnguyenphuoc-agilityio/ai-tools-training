@@ -11,11 +11,21 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   not guessable and not sequential.
 - Anyone with the link `/g/<code>` can **view** the whole group: members, expenses, balances and receiving accounts.
 - The creator of a group is its **owner** and also its first member.
-- The owner receives a secret **owner key**:
+- When a group is created without signing in, the owner receives a secret **owner key**:
   - The server stores only its SHA-256 hash, never the key.
   - The key is shown **once**, as a recovery link `.../g/<code>#owner=<key>`.
   - The key is after `#`, so browsers do not send it to the server and it does not appear in logs.
-  - Opening the recovery link on another device restores owner access.
+  - Opening the recovery link on another device restores owner access, until the group is tied to an account.
+  - Opening the recovery link while signed in attaches the group and the owner member to that account, without a confirmation step, and shows a toast. The owner key is then revoked (`owner_key_hash = 'revoked'`) and the owner cookie on every device stops granting owner access; each device clears it on its next request to the group.
+  - An owner who created a group without an account and signs in later on the same device is attached automatically: after sign-in, the interface asks the server to attach each group of the device history that the device holds an owner key for.
+  - After attaching, a revoked recovery link answers `403 OWNER_KEY_REVOKED`. A group owned by another account answers `403 GROUP_OWNED_BY_OTHER_ACCOUNT`.
+- When a group is created while signed in, it belongs to the account from the start: no owner key is issued (`ownerKey` is null), `owner_key_hash` is set to `'revoked'`, and no recovery link is shown. The page shows no notice for it; the members tab states that owner access is tied to the account.
+- Owner access of an account-owned group is tied to the account. Migration `0007_owner_key_revoke.sql` revoked the owner key of every group that already had an account owner.
+- **Handing over the group** (`transfer_ownership`):
+  - Only the **owner** can hand the group over, to an active member who is linked to an account (`OWNER_TRANSFER_NOT_LINKED` otherwise; `OWNER_TRANSFER_SELF` for the current owner; `MEMBER_REMOVED` for a removed member).
+  - The new owner does not have to accept. The owner confirms once and the hand-over takes effect at once.
+  - The previous owner stays a member with their expenses and history. Their recovery link is revoked, and owner access on their devices ends (their owner key cookies are cleared on the next request).
+  - A hand-over of a group that is not kept leaves `last_activity_at` unchanged.
 - The owner can rename the group and change the rounding mode.
 - **Currency** is a group setting, independent of the interface language (for example, a trip to Thailand uses THB
   while the interface stays in Vietnamese).
@@ -27,36 +37,67 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     because they stay in the history with their amounts in the original currency.
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
-  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
-  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings, signing in and saving account bank details write nothing.
+  - **Changes that count as activity:** adding, editing or deleting an expense, adding, editing or deleting a session
+    (`attendance_split`), recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, the automatic link of an invited member (`member_email_invite`), keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
+  - **Changes that count as activity:** attaching a group to an account (`group.link`, from opening a recovery link while signed in, from the attach after sign-in, or from keeping the group) moves `last_activity_at` like "Link to my account" does.
+  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), a hand-over of a group that is not kept (`transfer_ownership`, recorded in `audit_log` as `owner.transfer`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
   - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
   - **Kept groups (`lock_groups`):**
     - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
-    - If the group does not belong to an account yet, keeping it links the group and the owner member to the owner's account with the same checks and refusals as "Link to my account" (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
+    - If the group does not belong to an account yet, keeping it attaches the group and the owner member to the owner's account and revokes the owner key, with the same refusals as attaching an owner (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
     - Kept groups are exempt from the daily purge (`locked_at IS NULL`).
     - Unlocking restarts the 10 days: `last_activity_at` is set to the unlock time, so the expiry is 10 days after the unlock.
     - Keeping and unlocking are changes audited in `audit_log` as `group.lock` and `group.unlock`.
     - A kept group stays fully editable: expenses, transfers, and members can still be added or changed.
     - Everyone who views the group sees "Kept until the owner stops keeping it" instead of the deletion date line, without warning colors. Members and guests see no keep control.
     - Deleting the owner account (`delete_account`) stops keeping: the group is unlocked, audited as `group.unlock` with details `{"reason":"account.delete"}`, and its 10 days restart from the deletion time.
+    - A hand-over (`transfer_ownership`) of a kept group stops keeping it: the group is unlocked, audited as `group.unlock` with details `{"reason":"owner.transfer"}`, and its 10 days restart from the hand-over time. The new owner can keep it again.
 
 ## Members
 
 - A visitor can **join** by entering a name. That device receives a _device token_ (HttpOnly cookie).
+  A signed-in person sees the account name prefilled in the join field; the field stays editable and joining stays one step (`join_as_account`).
 - A member can **add other people by name** (people who do not use the app). Such a person can later open the link
   and click "I am <name>" to claim the name, if nobody has claimed it yet.
+- **Claiming a name** (`wrong_name_claim`):
+  - Anyone with the link may claim an unclaimed name; no approval step is needed. "I am <name>" first asks for a
+    confirmation ("You are about to join as <name>"). Cancel sends nothing; the visitor stays a guest.
+  - The claim is audited as `member.claim` with the claimed member as actor (not `anonymous`).
+  - **Releasing a name:** the owner may release a claimed member (`POST /groups/:code/members/:id/release`). Not the
+    owner's own member, not a removed member, and not a member who is not claimed (`MEMBER_NOT_CLAIMED`). The owner
+    gets a confirmation first.
+  - A release keeps the member's name, expenses, history and bank details. It clears the device token, the account
+    link and the invite email. The device and the account become guests (view only); the group leaves their
+    "Your groups" list; the name can be claimed again with "I am <name>".
+  - Refusals: `403 OWNER_ONLY` for a member or a guest; `409 CANNOT_RELEASE_OWNER`; `409 MEMBER_REMOVED`; `404
+    MEMBER_NOT_FOUND`. A release is recorded as `member.release` with the owner member as actor, and it moves
+    `last_activity_at`.
 - A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
   or joining again. The rule extends to accounts: one account is at most one member per group; if the account already has
   a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
+- **Invite by email** (`member_email_invite`):
+  - A member who adds a person by name (`claim: false`) may give that person an email (`inviteEmail`, optional, at most
+    254 characters). Empty means none; anything that is not a single `name@domain`-shaped address gives `400 INVALID_EMAIL`.
+    The email is stored trimmed and lowercased.
+  - Afterwards only the owner can set or clear it (`PATCH`, `OWNER_ONLY` for others), and only while the member is not
+    claimed (`MEMBER_ALREADY_CLAIMED`) and not removed (`MEMBER_REMOVED`). Each change is recorded as `member.update`.
+  - The API never returns the email: `MemberDto` carries only `invited` (true for an active, unclaimed member with an
+    email). The members list shows an "Invited by email" badge.
+  - When a signed-in person opens the group link (`GET /groups/:code`) and their account email equals the invite email
+    (ignoring case), has no member in the group and the device is not acting as a member, the oldest matching active,
+    unclaimed member is linked to the account and its invite email is cleared. This is recorded as `member.link` and
+    moves `last_activity_at`. If nothing matches, or the account already has a member, nothing is written and no error
+    is shown. A second GET writes nothing.
+  - The invite email is also cleared when the member is claimed, linked through the device account link, or removed.
+    Releasing a member clears `invite_email` as well.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
   (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
-  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf (API only in the MVP; the interface is
-  `owner_member_tools`). Clearing the account
-  number clears all three fields.
+  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf from the
+  member list (`owner_member_tools`). Clearing the account number clears all three fields.
 - **Removing a member** (`remove_member`):
   - Only the **owner** can remove a member. The owner cannot be removed.
   - A member can be removed only when their balance is **zero** and no transfer to or from them is waiting for
@@ -67,8 +108,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     taken in the group. A removed member cannot be claimed, edited, chosen as payer or participant of a new expense,
     or named in a new transfer. Their device becomes a guest (view only). Their bank details are no longer
     returned by the API (the stored values are kept).
-  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted
-    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting it would give them a balance that nobody could settle.
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted or edited
+    (`EXPENSE_HAS_REMOVED_MEMBER`): deleting or editing it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
@@ -88,6 +129,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Split modes:
   - **Equal** among the selected participants.
   - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
+    A weight within a tiny tolerance of two decimals is accepted and stored rounded to two decimals, the value the
+    split uses; a weight that rounds to zero is refused.
   - **Exact shares** (the ticket calls it a split by exact amounts): the total is typed first (as printed on the
     bill), then each participant's share.
     - Each share follows the same input conventions as the amount field (suffixes, separators, currency marks),
@@ -111,9 +154,65 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   3. Equal and weighted splits: the remainder that cannot be split at the rounding unit (for example 500 dong when
      rounding to 1,000) goes to the **payer** if the payer is a participant, otherwise to the first participant.
   4. Shares are computed **once, when the expense is saved**, and are not recomputed when the rounding setting
-     changes.
+     changes. An edit is a new save: the shares are computed again only when the amount, payer, participants or
+     split change, and then with the rounding setting current at that moment.
 - Deleting an expense: only its **author** or the **owner**. Deletion is soft (`deleted_at`) and stays in the audit log.
-- OPEN QUESTION: who may edit an expense, and is an edit history needed? (`edit_expense`)
+- **Editing an expense** (`edit_expense`):
+  - Only its **author** or the **owner** may edit it. An expense without a recorded author can be edited only by the
+    owner. Any member may reduce their own share; this is accepted, because the "edited" marker shows the group that
+    the expense changed and the audit log records who changed it and the previous values.
+  - Every field may change: amount, payer, participants, split, date and description.
+  - An edited expense is marked **"edited"** in the list. The previous values are kept in the audit log; the interface
+    does not show them.
+  - An edit counts as a new save: shares are computed with the group's **current** rounding setting, but only when the
+    amount, payer, participants or split change. Editing only the date or the description keeps the stored shares.
+    Weights are compared in hundredths, so a value that differs only past that precision is the same weight.
+  - Nothing is blocked for settling up: sent and confirmed transfers stay as they are, balances are recalculated from
+    the edited shares, and a new difference is settled with a new transfer.
+  - An expense that a removed member paid, or in which they owe a share above zero, can no longer be edited
+    (`EXPENSE_HAS_REMOVED_MEMBER`), for the same reason it can no longer be deleted.
+  - A request that repeats the stored amount, payer, participants, split, date and description changes nothing: no
+    value is written, the expense is not marked as edited, no audit entry is added and `last_activity_at` does not move.
+  - A real edit is activity: it moves `last_activity_at`. It works the same in a kept group, because a lock only stops
+    deletion.
+
+### Receipt photo
+
+- An expense has at most one optional receipt photo (`receipt_photos`). Uploading again replaces the old photo, and the
+  old file is deleted.
+- Adding, replacing and removing the photo follow the edit rule: only the **author** or the **owner**. An expense that
+  involves a removed member cannot change its photo (`EXPENSE_HAS_REMOVED_MEMBER`). Viewing works like the rest of the
+  group: anyone with the link.
+- Accepted types are JPEG, PNG and WebP, checked by their leading bytes and not only the `Content-Type` header. The
+  browser reduces a photo to at most 1600 px on its longest side and re-encodes it, which also removes EXIF and GPS
+  data. An upload over 1 MB, or a wrong type, is refused (`RECEIPT_TOO_LARGE`, `RECEIPT_TYPE_NOT_ALLOWED`).
+- Deleting an expense deletes its photo. A purged group deletes all of its photos. Deleting an account does not, since
+  it keeps group data.
+- Adding, replacing and removing a photo are changes: they move the deletion date.
+
+## Sessions and attendance
+
+- The owner creates sessions and edits attendance (`requireCanManageSessions`). Any member can add a cost to a session;
+  it is an ordinary expense with `session_id`. Its participants default to the members marked present, and the split is
+  equal by default. All split modes stay available.
+- A session belongs to the day it starts (`day`). If `ends_at` is earlier than `starts_at`, it ends the next day (for
+  example 21:00-00:30 is 3 h 30 min). Equal start and end times are rejected (`INVALID_SESSION_TIME`). A cost added
+  from a session defaults to the session day as `spentOn`, not the calendar day of the end time. The list shows
+  `21:00 - 00:30 (+1 day)` through the locale files.
+- Shares are computed once (split rule 4). Changing attendance never touches saved expenses. The session view flags a
+  cost whose participants differ from the current attendance ("does not match attendance") with an edit action for its
+  author or the owner, not offered when the cost involves a removed member, as in the expense list. A removed member
+  who is present but takes no part in the cost is ignored by the comparison, because a new cost can only include
+  active members.
+- There is no stored schedule. A new session form prefills the times and the attendance of the latest session, and the
+  date defaults to today.
+- The session of an expense can be chosen or changed in the expense form: "No session" or any session of the group. On a
+  new expense, choosing a session preselects its present members and its day. Changing the session of a saved expense is
+  a field change that keeps the stored shares. The expense list shows the session as a badge.
+- A session can be deleted only when it has no live (non-deleted) costs. Otherwise it answers 409
+  `SESSION_HAS_EXPENSES`. Removed members stay in past attendance records, also when the owner edits such a session
+  later (the edit keeps them even though the form lists only active members), and cannot be newly marked present on
+  new or edited sessions (`PARTICIPANT_NOT_IN_GROUP`).
 
 ## Balances and settling up
 
@@ -127,8 +226,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
-- A member can record only **their own** transfers. The owner can record transfers on behalf of others (API only
-  in the MVP; the interface is `owner_member_tools`).
+- While a transfer from a payer to a receiver is `sent`, the same pair cannot record another (409 `TRANSFER_PENDING`),
+  and the suggestion shows "waiting for confirmation" instead of Pay or Record payment. A transfer is confirmed once;
+  a second confirm answers `ALREADY_CONFIRMED`. Existing duplicate `sent` rows are left as they are.
+- While waiting, the payer can open the payment QR again ("Show QR again", `show_qr_again`) with the amount that
+  was marked as sent. The reopened dialog has no button to record the transfer.
+- A member can record only **their own** transfers. The owner can record transfers on behalf of others: on each
+  suggested transfer that is not the owner's own debt, the owner records the payment from the suggestion (`owner_member_tools`).
 
 ## Spreadsheet export
 
@@ -163,7 +267,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   currency `704`, country `VN`, CRC-16/CCITT-FALSE at the end.
 - With an amount the QR is dynamic (`01` = `12`); without an amount it is static (`11`).
 - VietQR is **only for VND groups**. Groups in other currencies show the account number for manual transfer, without
-  a QR code. OPEN QUESTION: currency conversion when paying back a non-VND group (`currency_conversion`).
+  a QR code. Paying back a non-VND group in VND with an agreed rate is planned as `vnd_settle_rate` (backlog).
 - The transfer message is stripped of diacritics, upper-cased, limited to `A-Z 0-9` and spaces, and capped at
   50 characters. The screen shows **exactly** the message encoded in the QR.
 - The QR code is generated in the browser. Account numbers are never sent to a third-party service.
@@ -180,6 +284,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   without leaving the current page.
 - The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
   keeps its own choice.
+- Messages already on screen (errors and confirmations) switch to the new language at once.
 - Changing the language does not change any group data, including the currency of an existing group.
 
 ## Accounts (optional sign-in)
@@ -197,18 +302,21 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
   claiming a name while signed in links that member to the account (`members.user_id`).
 - **Link to my account:**
-  - The button is shown only when there is something to link: the signed-in person holds the owner key and the group
-    or the owner member is not linked to the account yet, or holds a device token of a member who is not linked to
-    any account. It is not shown when the group or the member belongs to another account, or when the account is
-    already another member of the group.
-  - An owner with access from a recovery link on this device can attach the group and the owner member to their account.
-    Both rows are updated or nothing changes.
+  - The button is shown only when a member device token is held, the member is not linked to any account, and the
+    account is not already another member of the group. It is never shown to an owner: owners attach their group
+    automatically (see the owner key bullets above).
   - A member with access from a device token on this device can attach that member to their account.
-  - If the group belongs to another account, linking is refused (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`).
   - If the member is linked to another account, linking is refused (`409 MEMBER_LINKED_ELSEWHERE`).
   - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
+  - An owner member's device token cannot be linked this way (`403 OWNER_ONLY`): the owner attaches through the owner key.
+  - Linking a member is a change of the group (`member.link`); it moves `last_activity_at`.
+- **Owner attach:** a signed-in person whose device holds the owner key of a group can attach the group and the owner
+  member to the account. The attach answers `attached: false` and writes nothing when the device holds no live key,
+  the group belongs to another account, the account already has another member in the group, or the owner member is
+  linked to another account. Both the group and the owner member are updated, or neither is.
+  - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
 - Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
-  is **never returned in group data** or shown to other members.
+  for email invites (`member_email_invite`), and is **never returned in group data** or shown to other members.
 - **Saved bank details (`saved_bank_details`):**
   - A signed-in person can save one set of bank details in their account (`PATCH /api/me`, returning 401
     `SIGN_IN_REQUIRED` without a session).
@@ -219,6 +327,15 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Changing or clearing saved details updates every group that uses them, with nothing to resync and without touching
     groups (not a group change; `last_activity_at` does not move and no audit log row is written).
   - Saved details are kept until changed or cleared. They are also deleted with the account (see "Deleting the account").
+- **Account name (`join_as_account`):**
+  - A signed-in person can set the account name in the account menu ("My name", `PATCH /api/me` with `name`, returning
+    401 `SIGN_IN_REQUIRED` without a session). The name is trimmed and must be 1 to 40 characters: empty or spaces answer
+    400 `FIELD_REQUIRED`, more than 40 answer 400 `FIELD_TOO_LONG`.
+  - A name set this way is kept at sign-in: a later Google or development sign-in refreshes the email but does not
+    overwrite the name (`name_custom = 1`). A name never set this way still follows the name in the sign-in token.
+  - Changing the account name is not a group change: members already joined keep their names, and `last_activity_at`
+    does not move and no audit log row is written.
+  - Bank-only changes to `PATCH /api/me` keep the account name.
 - **Sessions:**
   - A session lasts **30 days** (fixed from sign-in time, not extended by use).
   - An expired session no longer identifies the person and its cookie is cleared.
@@ -230,11 +347,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Deletion confirms through a dialog explaining what is deleted and what stays, with no typed confirmation.
   - **Deleted:** the `users` row (Google account id, email, display name, saved bank details) and all sessions across every device. The session cookie is cleared and the interface signs out.
   - **Stays:** groups and everything inside them (members, expenses, transfers, bank details entered in a group, audit log). Group data is purged by the inactivity rule or cleared in the group.
-  - **Owned groups:** detached (`owner_user_id` set to NULL) and keep working. Owner access remains on devices holding the owner key or through the recovery link.
+  - **Refused while the account owns a group with other members:** deletion answers `409 ACCOUNT_OWNS_SHARED_GROUP` (with `count`) while the account owns any group that has at least one other active (not removed) member. The owner first hands the group over (`transfer_ownership`) or removes those members. Nothing is deleted when refused.
+  - **Solo owned groups:** a group where the owner is the only active member does not block the deletion. It is detached (`owner_user_id` set to NULL), its owner key stays revoked, and it has no owner left. It is deleted by the inactivity rule.
+  - **Owned groups:** detached (`owner_user_id` set to NULL). Owner access is tied to the account, so after deletion nobody holds owner access to a detached group. A previous owner who handed a group over (`transfer_ownership`) no longer owns it, so that group does not block their deletion.
   - **Kept groups:** stop being kept. Each kept group owned by the account is unlocked (`locked_at` cleared), audited as `group.unlock` (actor `owner`, details `{"reason":"account.delete"}`), and its `last_activity_at` moves to the deletion time (giving 10 full days).
   - **Linked members:** detached (`members.user_id` set to NULL). The member name, expenses, and history stay; devices with a device token keep acting as that member. Members who used the saved bank details no longer show bank details (`bankSource: null`).
   - **Not a group change:** detaching owners and members is not a change and does not move `last_activity_at` on non-kept groups.
-  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding the owner key or a device token).
+  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding a member device token; an owner's group is not reattached, since its key is revoked).
 - **Member removal:**
   - When the owner removes a member, `user_id` is cleared; the account no longer resolves to it and may join the group
     again as a new member.
@@ -253,10 +372,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Owner keys, device tokens and session tokens are stored only as hashes. Cookies are `HttpOnly` and `SameSite=Lax`.
   Group cookies are sent only to the API path of their own group; session cookies are sent to `/api` and expire after
   30 days.
-- Request bodies are limited to 16 KB.
+- Request bodies are limited to 16 KB, except receipt uploads, 1 MB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
-- OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
-- OPEN QUESTION: anyone with the link can claim an unclaimed name. Is this risk acceptable? (`wrong_name_claim`)
+- Group codes and owner recovery links resist guessing:
+  - Group codes: 12 of 31 characters, about 59.5 bits; about 1.3e-14 chance per guess at 10,000 groups.
+  - Owner keys, device tokens and session tokens: 256 bits, stored only as SHA-256.
+  - A recovery link stops working once the group is tied to an account.
+  - Throttling failed attempts is tracked as `rate_limit_guessing`.
 
 ## Interface preferences
 
@@ -267,7 +389,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   so the page does not flash in the other theme on load. Choosing "same as the device" forgets the stored choice.
 
 - **Confirmation messages:** a save that does not visibly change the page (an expense added or deleted, a member
-  added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
+  added, removed or released (a name released), bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
   the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
   shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
   that caused them and stay until the next attempt. Saving group settings that are identical to the stored ones changes
@@ -275,6 +397,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - **Group summary and deletion date:** above the tabs, the group page shows the total spent, the number of current members and, for
   a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
   count, as in the balances. A visitor who has not joined sees no personal balance. Directly below the summary bar, the deletion date line shows when the group will be deleted if no changes are made, highlighted during the last 72 hours.
+- **Live updates:** an open group page refreshes silently when another member changes the group (joins, adds,
+  edits or deletes an expense, records or confirms a transfer, changes settings or members, links an account). Values
+  the person is typing are kept, and no message is shown. After a lost connection, or when the tab returns to the
+  foreground, the page reconnects and reloads once. A signal carries no group data and is not activity: it does not
+  move the deletion date.
 - **Phones:** below 768px wide, the group tabs are a bar at the bottom of the screen.
 
 ## Planned (in the backlog)

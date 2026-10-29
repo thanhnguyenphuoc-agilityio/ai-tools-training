@@ -29,10 +29,21 @@ export interface MemberDto extends BankDetails {
   removed: boolean;
   removedReason: string | null;
   bankSource: 'group' | 'account' | null;
+  /** Linked to a signed-in account (boolean only; the account itself is never returned). */
+  hasAccount: boolean;
+  /** Active unclaimed member who has an invite email set. The email itself is never returned. */
+  invited: boolean;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */
 export type SplitMode = 'equal' | 'weight' | 'exact';
+
+/** The optional receipt photo of an expense (receipt_photos). The bytes are fetched from `/attachments/<id>`. */
+export interface ReceiptDto {
+  id: string;
+  contentType: string;
+  size: number;
+}
 
 export interface ExpenseDto {
   id: string;
@@ -45,6 +56,31 @@ export interface ExpenseDto {
   shares: { memberId: string; weight: number; amount: number }[];
   createdBy: string | null; // member id of the author
   createdAt: string; // ISO timestamp (UTC)
+  /** Time of the last edit (edit_expense); null when the expense was never edited. */
+  editedAt: string | null;
+  /** The receipt photo, or null when the expense has none (receipt_photos). */
+  receipt: ReceiptDto | null;
+  /** The session the cost belongs to (attendance_split); null when it has none. */
+  sessionId: string | null;
+}
+
+/** A recurring session with the members present (attendance_split). Times are HH:mm in group-local time. */
+export interface SessionDto {
+  id: string;
+  day: string; // YYYY-MM-DD, the day the session starts
+  startsAt: string;
+  endsAt: string;
+  note: string;
+  /** Members marked present, from attendance. */
+  presentIds: string[];
+}
+
+export interface NewSession {
+  day: string;
+  startsAt: string;
+  endsAt: string;
+  note?: string;
+  presentIds: string[];
 }
 
 export interface TransferDto {
@@ -76,19 +112,22 @@ export interface GroupDto {
   expiresAt: string | null;
   /** A kept group is exempt from inactivity deletion (lock_groups). */
   locked: boolean;
+  /** True when the group belongs to a signed-in account (owner_link_binds_account). */
+  ownedByAccount: boolean;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
   canLinkAccount: boolean;
   members: MemberDto[];
   expenses: ExpenseDto[];
   transfers: TransferDto[];
+  sessions: SessionDto[];
   me: Me;
 }
 
 export interface CreateGroupResponse {
   code: string;
-  /** Shown once. The server only stores its hash. */
-  ownerKey: string;
+  /** Shown once. The server only stores its hash. Null when created by a signed-in account. */
+  ownerKey: string | null;
 }
 
 export interface UserDto extends BankDetails {
@@ -114,6 +153,8 @@ export interface NewExpense {
   splitMode: SplitMode;
   /** `weight` is read in weight mode; `amount` (minor units, zero allowed) in exact mode. */
   participants: { memberId: string; weight?: number; amount?: number }[];
+  /** The session the cost belongs to; null, empty or absent means none (attendance_split). */
+  sessionId?: string | null;
 }
 
 export interface MyGroupDto {

@@ -83,6 +83,18 @@ test('create a group, split an expense and settle with VietQR', async ({ page })
 
   await dialog.getByRole('button', { name: t('qr.sent') }).click();
 
+  // The suggestion waits for the receiver instead of offering Pay again.
+  await expect(page.getByRole('button', { name: t('settle.pay') })).toHaveCount(0);
+  await expect(page.getByText(t('settle.waitingFor', { to: 'Sam' }))).toBeVisible();
+
+  // show_qr_again: the payer can reopen the QR, but cannot record the transfer a second time.
+  await page.getByRole('button', { name: t('settle.showQrAgain') }).click();
+  const again = page.getByRole('dialog');
+  await expect(again.getByRole('heading', { name: t('qr.title', { name: 'Sam', amount: vnd(150_000) }) })).toBeVisible();
+  await expect(again.getByRole('button', { name: t('qr.sent') })).toHaveCount(0);
+  await again.getByRole('button', { name: t('common.close') }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
   // Still owed until the receiver (or the owner, which we are) confirms.
   await expect(page.getByText(owes)).toBeVisible();
   await page.getByRole('button', { name: t('settle.confirm') }).click();

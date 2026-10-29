@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '../../shared/currency';
 import {
   exactSplitDifference,
+  formatAmountInput,
   formatMoney,
   MAX_AMOUNT,
   parseAmount,
   parseShareAmount,
+  roundWeight,
   splitAmount,
   splitExact,
   toDecimalString,
+  weightHundredths,
+  isValidWeight,
 } from '../../shared/money';
 import { enLocale } from '../../src/i18n/locales/en';
 import { viLocale } from '../../src/i18n/locales/vi';
@@ -127,6 +131,28 @@ describe('toDecimalString', () => {
   });
 });
 
+describe('formatAmountInput', () => {
+  it('round-trips through parseAmount for VND and a two-digit currency, in both locales', () => {
+    // Zero is left out: parseAmount rejects it (an empty share field is the way to type zero).
+    const cases: [number, typeof VND, typeof vi][] = [
+      [300_000, VND, vi],
+      [1_250_000, VND, en],
+      [125_050, USD, en],
+      [5, USD, en],
+      [125_050, USD, vi],
+    ];
+    for (const [amount, currency, rules] of cases) {
+      expect(parseAmount(formatAmountInput(amount, rules, currency), rules, currency)).toBe(amount);
+    }
+  });
+
+  it('uses the locale decimal separator and writes both minor digits', () => {
+    expect(formatAmountInput(125_050, en, USD)).toBe('1250.50');
+    expect(formatAmountInput(125_050, vi, USD)).toBe('1250,50');
+    expect(formatAmountInput(300_000, vi, VND)).toBe('300000');
+  });
+});
+
 describe('splitAmount', () => {
   const equal = (ids: string[]) => ids.map((memberId) => ({ memberId, weight: 1 }));
   const sum = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
@@ -210,7 +236,22 @@ describe('splitAmount', () => {
     // At most two decimals: 0.001 would round to a zero weight, 0.333 would be split as 0.33.
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.001 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.333 }], { roundTo: 1, payerId: 'a' })).toThrow();
+    expect(() => splitAmount(1000, [{ memberId: 'a', weight: 1e-12 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, equal(['a']), { roundTo: 0, payerId: 'a' })).toThrow();
+  });
+});
+
+describe('roundWeight, weightHundredths and isValidWeight', () => {
+  it('rounds valid weights to two decimals and computes hundredths', () => {
+    expect(roundWeight(2.299999999999)).toBe(2.3);
+    expect(roundWeight(0.29)).toBe(0.29);
+    expect(weightHundredths(0.29)).toBe(29);
+  });
+
+  it('refuses a tiny weight that rounds to zero hundredths and keeps the tolerance for two decimals', () => {
+    expect(isValidWeight(1e-12)).toBe(false);
+    expect(isValidWeight(0.01)).toBe(true);
+    expect(isValidWeight(0.29)).toBe(true);
   });
 });
 

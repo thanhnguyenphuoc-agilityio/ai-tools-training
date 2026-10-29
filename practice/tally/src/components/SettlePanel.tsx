@@ -3,17 +3,21 @@ import type { Settlement } from '../../shared/settle';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
+import { payAction } from '../ownerTools';
 import { settleView } from '../settleView';
 import { useToast } from '../toast';
 import { QrDialog } from './QrDialog';
 
 export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
-  const { t, dateTime, errorMessage } = useI18n();
+  const { t, dateTime, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // show_qr_again: the payer reopens the QR of a transfer they already marked as sent, without recording it again.
+  const [viewing, setViewing] = useState<Settlement | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
 
   // A removed member has settled up (remove_member), so only current members are listed and suggested.
@@ -21,14 +25,23 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const pending = group.transfers.filter((t) => t.status === 'sent');
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
 
+  // The QR shown again carries the amount that was marked as sent, which is what the bank app should show.
+  const sentAs = (s: Settlement): Settlement => {
+    const tr = pending.find((p) => p.fromId === s.fromId && p.toId === s.toId);
+    return tr ? { ...s, amount: tr.amount } : s;
+  };
+
   async function confirmTransfer(id: string) {
+    setConfirmingId(id);
     try {
       await api.confirmTransfer(group.code, id);
       setError(null);
       notify('toast.transferConfirmed');
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
+    } finally {
+      setConfirmingId(null);
     }
   }
 
@@ -55,18 +68,42 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
         <h2 className="card__title">{t('settle.planTitle')}</h2>
         {plan.length === 0 && <p className="text text--muted">{t('settle.allEven')}</p>}
         <ul className="list">
-          {plan.map((s) => (
-            <li key={`${s.fromId}-${s.toId}`} className="list__item cluster cluster--between">
-              <span className="text text--strong">
-                {t('settle.transferLine', { from: nameOf(s.fromId), to: nameOf(s.toId), amount: money(s.amount) })}
-              </span>
-              {s.fromId === group.me.memberId && (
-                <button className="button" onClick={() => setPaying(s)}>
-                  {t('settle.pay')}
-                </button>
-              )}
-            </li>
-          ))}
+          {plan.map((s) => {
+            const action = payAction(group.me, s, group.transfers);
+            return (
+              <li key={`${s.fromId}-${s.toId}`} className="list__item cluster cluster--between">
+                <span className="text text--strong">
+                  {t('settle.transferLine', { from: nameOf(s.fromId), to: nameOf(s.toId), amount: money(s.amount) })}
+                </span>
+                {action === 'pay' && (
+                  <button className="button" onClick={() => setPaying(s)}>
+                    {t('settle.pay')}
+                  </button>
+                )}
+                {action === 'recordFor' && (
+                  <button
+                    className="button button--ghost"
+                    onClick={() => setPaying(s)}
+                    aria-label={t('settle.recordForLabel', { from: nameOf(s.fromId), to: nameOf(s.toId) })}
+                  >
+                    {t('settle.recordFor')}
+                  </button>
+                )}
+                {action === 'waiting' && (
+                  <span className="cluster">
+                    <span className="text text--muted text--small">
+                      {t('settle.waitingFor', { to: nameOf(s.toId) })}
+                    </span>
+                    {s.fromId === group.me.memberId && (
+                      <button className="button button--ghost button--small" onClick={() => setViewing(sentAs(s))}>
+                        {t('settle.showQrAgain')}
+                      </button>
+                    )}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
         {pending.length > 0 && <p className="text text--muted text--small">{t('settle.pendingNote')}</p>}
         {removedWithBalance.map((m) => (
@@ -76,7 +113,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
         ))}
       </section>
 
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
 
       {pending.length > 0 && (
         <section className="card">
@@ -92,7 +129,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
                   </span>
                 </span>
                 {(tr.toId === group.me.memberId || group.me.isOwner) && (
-                  <button className="button" onClick={() => confirmTransfer(tr.id)}>
+                  <button className="button" onClick={() => confirmTransfer(tr.id)} disabled={confirmingId === tr.id}>
                     {t('settle.confirm')}
                   </button>
                 )}
@@ -116,6 +153,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           </ul>
         </section>
       )}
+
+      {viewing && <QrDialog group={group} settlement={viewing} viewOnly onClose={() => setViewing(null)} />}
 
       {paying && (
         <QrDialog

@@ -1,0 +1,9 @@
+// Uses the shared .dialog and .dialog__panel classes from src/styles/blocks.
+// The confirm button is negative: the hand-over cannot be undone from this app.
+.transfer-owner-dialog {
+  &__confirm {
+    border-color: var(--color-negative);
+    background: var(--color-negative);
+    color: var(--color-on-accent);
+  }
+}

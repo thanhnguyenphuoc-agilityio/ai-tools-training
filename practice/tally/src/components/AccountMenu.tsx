@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAccount } from '../account';
 import { api } from '../api';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { AccountNameDialog } from './AccountNameDialog';
 import { SavedBankDialog } from './SavedBankDialog';
 import { DeleteAccountDialog } from './DeleteAccountDialog';
 import './AccountMenu.scss';
@@ -23,14 +24,15 @@ declare global {
 }
 
 export function AccountMenu() {
-  const { config, user, refresh, signOut, signInRequest } = useAccount();
-  const { t, errorMessage } = useI18n();
+  const { config, user, afterSignIn, signOut, signInRequest } = useAccount();
+  const { t, message } = useI18n();
   const notify = useToast();
   const [open, setOpen] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
   const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
@@ -78,11 +80,11 @@ export function AccountMenu() {
           callback: async (res: { credential: string }) => {
             try {
               await api.signInGoogle(res.credential);
-              await refresh();
+              await afterSignIn();
               notify('toast.signedIn');
               close(false);
             } catch (err: unknown) {
-              setError(errorMessage(err));
+              setError({ error: err });
             }
           },
         });
@@ -104,18 +106,18 @@ export function AccountMenu() {
       script.onload = initGoogle;
       document.body.appendChild(script);
     }
-  }, [open, config?.googleClientId, refresh, notify, errorMessage]);
+  }, [open, config?.googleClientId, afterSignIn, notify]);
 
   const handleDevSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
       await api.signInDev(email);
-      await refresh();
+      await afterSignIn();
       notify('toast.signedIn');
       close(false);
     } catch (err: unknown) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   };
 
@@ -151,6 +153,17 @@ export function AccountMenu() {
                 className="account-menu__item"
                 onClick={() => {
                   close(false);
+                  setNameOpen(true);
+                }}
+              >
+                {t('account.name')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu__item"
+                onClick={() => {
+                  close(false);
                   setBankDetailsOpen(true);
                 }}
               >
@@ -172,8 +185,31 @@ export function AccountMenu() {
               </button>
             </div>
           )}
-          {bankDetailsOpen && <SavedBankDialog onClose={() => setBankDetailsOpen(false)} />}
-          {deleteAccountOpen && <DeleteAccountDialog onClose={() => setDeleteAccountOpen(false)} />}
+          {/* The menu item that opened a dialog is gone by then, so focus returns to the menu button instead. */}
+          {nameOpen && (
+            <AccountNameDialog
+              onClose={() => {
+                setNameOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
+          {bankDetailsOpen && (
+            <SavedBankDialog
+              onClose={() => {
+                setBankDetailsOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
+          {deleteAccountOpen && (
+            <DeleteAccountDialog
+              onClose={() => {
+                setDeleteAccountOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
         </>
       ) : (
         <>
@@ -193,7 +229,9 @@ export function AccountMenu() {
             <div className="account-menu__panel">
               {/* Local development with DEV_LOGIN shows both, so e2e can sign in while a client id is set. */}
               {config?.googleClientId && <div ref={googleBtnRef} />}
-              {config?.googleClientId && !config.devLogin && error && <p className="text text--error">{error}</p>}
+              {config?.googleClientId && !config.devLogin && error && (
+                <p className="text text--error">{message(error)}</p>
+              )}
               {config?.devLogin ? (
                 <form onSubmit={handleDevSubmit} className="account-menu__form">
                   <p className="account-menu__dev-title">{t('account.devTitle')}</p>
@@ -212,7 +250,7 @@ export function AccountMenu() {
                   <button type="submit" className="button button--primary button--small">
                     {t('account.devSubmit')}
                   </button>
-                  {error && <p className="text text--error">{error}</p>}
+                  {error && <p className="text text--error">{message(error)}</p>}
                 </form>
               ) : null}
             </div>

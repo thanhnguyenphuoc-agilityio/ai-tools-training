@@ -1,7 +1,7 @@
 // Loading a group and its members, activity tracking and audit log.
 import { GROUP_CODE_RE } from '../shared/groupCode';
 import { computeBalances } from '../shared/settle';
-import type { ExpenseDto, MemberDto, TransferDto } from '../shared/types';
+import type { ExpenseDto, MemberDto, SessionDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
 
@@ -32,6 +32,8 @@ export interface MemberRow {
   created_at: string;
   removed_at: string | null;
   removed_reason: string | null;
+  /** Never copied into a DTO; only `invited` is derived from it. */
+  invite_email?: string | null;
 }
 
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
@@ -87,6 +89,25 @@ export const noneRemovedSql = (n: number) =>
   `NOT EXISTS (SELECT 1 FROM members WHERE removed_at IS NOT NULL AND id IN (SELECT value FROM json_each(?${n})))`;
 
 /**
+ * True when a removed member paid the expense or owes a share above zero. Such an expense can no longer be edited
+ * or deleted, the same rule as `involvesRemovedMember` in src/expenseRow.ts for the list.
+ */
+export async function involvesRemovedMember(db: D1Database, code: string, id: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT EXISTS (
+         SELECT 1 FROM members m
+         WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
+           AND (m.id = (SELECT payer_id FROM expenses WHERE id = ?1)
+                OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
+       ) AS removed`,
+    )
+    .bind(id, code)
+    .first<{ removed: number }>();
+  return !!row?.removed;
+}
+
+/**
  * The expenses (deleted ones left out, newest first) and transfers of a group, as the API returns them.
  * Balances are always computed from this with computeBalances (shared/settle.ts), never with a second formula.
  */
@@ -94,7 +115,7 @@ export async function loadLedger(
   db: D1Database,
   code: string,
 ): Promise<{ expenses: ExpenseDto[]; transfers: TransferDto[] }> {
-  const [expenseRows, shareRows, transferRows] = await Promise.all([
+  const [expenseRows, shareRows, transferRows, receiptRows] = await Promise.all([
     db
       .prepare(
         'SELECT * FROM expenses WHERE group_code = ? AND deleted_at IS NULL ORDER BY spent_on DESC, created_at DESC',
@@ -115,8 +136,21 @@ export async function loadLedger(
       .bind(code)
       .all<Record<string, string | number | null>>()
       .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT a.id, a.expense_id, a.content_type, a.size FROM expense_attachments a
+         JOIN expenses e ON e.id = a.expense_id
+         WHERE a.group_code = ? AND e.deleted_at IS NULL`,
+      )
+      .bind(code)
+      .all<{ id: string; expense_id: string; content_type: string; size: number }>()
+      .then((r) => r.results),
   ]);
 
+  // One photo per expense (UNIQUE expense_id in migration 0011).
+  const receiptByExpense = new Map(
+    receiptRows.map((r) => [r.expense_id, { id: r.id, contentType: r.content_type, size: r.size }] as const),
+  );
   const expenses: ExpenseDto[] = expenseRows.map((e) => ({
     id: e.id as string,
     payerId: e.payer_id as string,
@@ -129,6 +163,9 @@ export async function loadLedger(
       .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
     createdBy: e.created_by as string | null,
     createdAt: e.created_at as string,
+    editedAt: (e.edited_at as string | null) ?? null,
+    receipt: receiptByExpense.get(e.id as string) ?? null,
+    sessionId: (e.session_id as string | null) ?? null,
   }));
   const transfers: TransferDto[] = transferRows.map((t) => ({
     id: t.id as string,
@@ -140,6 +177,33 @@ export async function loadLedger(
     confirmedAt: t.confirmed_at as string | null,
   }));
   return { expenses, transfers };
+}
+
+/** The sessions of a group, newest day first, with the members present (attendance_split). */
+export async function loadSessions(db: D1Database, code: string): Promise<SessionDto[]> {
+  const [sessionRows, attendanceRows] = await Promise.all([
+    db
+      .prepare('SELECT * FROM group_sessions WHERE group_code = ? ORDER BY day DESC, starts_at DESC')
+      .bind(code)
+      .all<{ id: string; day: string; starts_at: string; ends_at: string; note: string }>()
+      .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT a.session_id, a.member_id FROM attendance a
+         JOIN group_sessions s ON s.id = a.session_id WHERE s.group_code = ?`,
+      )
+      .bind(code)
+      .all<{ session_id: string; member_id: string }>()
+      .then((r) => r.results),
+  ]);
+  return sessionRows.map((s) => ({
+    id: s.id,
+    day: s.day,
+    startsAt: s.starts_at,
+    endsAt: s.ends_at,
+    note: s.note,
+    presentIds: attendanceRows.filter((a) => a.session_id === s.id).map((a) => a.member_id),
+  }));
 }
 
 /**
@@ -172,6 +236,8 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
       accountNo: null,
       accountName: null,
       bankSource: null,
+      hasAccount: false,
+      invited: false,
     };
   }
 
@@ -192,26 +258,37 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
     bankSource = 'account';
   }
 
+  const claimed = m.token_hash !== null || m.user_id !== null;
   return {
     id: m.id,
     name: m.name,
     isOwner: m.is_owner === 1,
-    claimed: m.token_hash !== null || m.user_id !== null,
+    claimed,
     removed: false,
     removedReason: m.removed_reason,
     bankBin,
     accountNo,
     accountName,
     bankSource,
+    hasAccount: m.user_id !== null,
+    invited: !claimed && !!m.invite_email,
   };
 };
 
 /** Records an event in the audit log without changing last_activity_at. */
-export async function audit(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+export async function audit(
+  db: D1Database,
+  code: string,
+  me: Identity,
+  action: string,
+  target: string | null,
+  /** JSON-able values that explain the change, e.g. the values before an edit. */
+  details?: unknown,
+) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
   await db
-    .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-    .bind(code, actor, action, target, now())
+    .prepare('INSERT INTO audit_log (group_code, actor, action, target, details, at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(code, actor, action, target, details === undefined ? null : JSON.stringify(details), now())
     .run();
 }
 
@@ -219,13 +296,21 @@ export async function audit(db: D1Database, code: string, me: Identity, action: 
  * Use for every change listed in `docs/business-rules.md`; use `audit()` alone for events that are not changes.
  * Records the change in audit_log and pushes back the deletion date (last_activity_at) in one db.batch.
  */
-export async function recordChange(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+export async function recordChange(
+  db: D1Database,
+  code: string,
+  me: Identity,
+  action: string,
+  target: string | null,
+  /** JSON-able values that explain the change, e.g. the values before an edit. */
+  details?: unknown,
+) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
   const timestamp = now();
   await db.batch([
     db
-      .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-      .bind(code, actor, action, target, timestamp),
+      .prepare('INSERT INTO audit_log (group_code, actor, action, target, details, at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(code, actor, action, target, details === undefined ? null : JSON.stringify(details), timestamp),
     db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(timestamp, code),
   ]);
 }

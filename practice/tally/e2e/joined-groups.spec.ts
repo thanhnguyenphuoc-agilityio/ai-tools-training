@@ -22,7 +22,6 @@ test.describe('Joined groups list (JG-7, JG-8)', () => {
     await page1.getByRole('button', { name: t('home.create.submit') }).click();
 
     await expect(page1).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-    await page1.getByRole('button', { name: t('ownerKey.done') }).click();
     await expect(page1.getByText(t('common.ownerBadge'))).toBeVisible();
 
     // Context 2: separate browser context (second device)
@@ -90,7 +89,7 @@ test.describe('Joined groups list (JG-7, JG-8)', () => {
         await page.getByRole('button', { name: t('home.create.submit') }).click();
 
         await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-        await page.getByRole('button', { name: t('ownerKey.done') }).click();
+        await expect(page.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();
 
         // Navigate back to home page
         await page.locator('.app__brand').click();

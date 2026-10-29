@@ -9,6 +9,7 @@ import type {
   MeResponse,
   MyGroupsResponse,
   NewExpense,
+  NewSession,
   UserDto,
 } from '../shared/types';
 
@@ -44,26 +45,60 @@ export const api = {
     call<{ ok: true; changed: boolean }>('PATCH', g(code), patch),
   lockGroup: (code: string) => call<{ ok: true; changed: boolean }>('POST', `${g(code)}/lock`),
   unlockGroup: (code: string) => call<{ ok: true; changed: boolean }>('DELETE', `${g(code)}/lock`),
-  claimOwner: (code: string, ownerKey: string) => call('POST', `${g(code)}/owner/claim`, { ownerKey }),
+  claimOwner: (code: string, ownerKey: string) =>
+    call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/claim`, { ownerKey }),
+  attachOwner: (code: string) => call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/attach`),
+  transferOwner: (code: string, memberId: string) =>
+    call<{ ok: true }>('POST', `${g(code)}/owner/transfer`, { memberId }),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),
-  addMember: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name }),
+  addMember: (code: string, name: string, inviteEmail?: string) =>
+    call<{ id: string }>('POST', `${g(code)}/members`, { name, inviteEmail }),
   claimMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/claim`),
-  updateMember: (code: string, id: string, patch: Partial<BankDetails> & { name?: string }) =>
+  updateMember: (code: string, id: string, patch: Partial<BankDetails> & { name?: string; inviteEmail?: string }) =>
     call('PATCH', `${g(code)}/members/${id}`, patch),
   removeMember: (code: string, id: string, reason: string) =>
     call('POST', `${g(code)}/members/${id}/remove`, { reason }),
+  releaseMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/release`),
+
+  createSession: (code: string, session: NewSession) => call<{ id: string }>('POST', `${g(code)}/sessions`, session),
+  updateSession: (code: string, id: string, session: Partial<NewSession>) =>
+    call<{ ok: true; changed?: boolean }>('PATCH', `${g(code)}/sessions/${id}`, session),
+  deleteSession: (code: string, id: string) => call<{ ok: true }>('DELETE', `${g(code)}/sessions/${id}`),
 
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),
+  updateExpense: (code: string, id: string, expense: NewExpense) =>
+    call<{ id: string; sharesChanged: boolean; changed: boolean }>('PATCH', `${g(code)}/expenses/${id}`, expense),
 
-  recordTransfer: (code: string, toId: string, amount: number) =>
-    call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount }),
+  // Receipt photos (receipt_photos): the body is the image itself, not JSON.
+  uploadReceipt: async (
+    code: string,
+    expenseId: string,
+    blob: Blob,
+  ): Promise<{ id: string; contentType: string; size: number }> => {
+    const res = await fetch(`/api${g(code)}/expenses/${expenseId}/attachments`, {
+      method: 'POST',
+      headers: { 'content-type': blob.type },
+      body: blob,
+    });
+    const json = (await res.json().catch(() => ({}))) as Partial<ErrorBody> &
+      Partial<{ id: string; contentType: string; size: number }>;
+    if (!res.ok) throw new ApiError(res.status, json.code, json.error ?? `HTTP ${res.status}`, json.params);
+    return json as { id: string; contentType: string; size: number };
+  },
+  deleteReceipt: (code: string, expenseId: string, attachmentId: string) =>
+    call<{ ok: true }>('DELETE', `${g(code)}/expenses/${expenseId}/attachments/${attachmentId}`),
+  receiptUrl: (code: string, expenseId: string, attachmentId: string) =>
+    `/api${g(code)}/expenses/${expenseId}/attachments/${attachmentId}`,
+
+  recordTransfer: (code: string, toId: string, amount: number, fromId?: string) =>
+    call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount, fromId }),
   confirmTransfer: (code: string, id: string) => call('POST', `${g(code)}/transfers/${id}/confirm`),
 
   getConfig: () => call<ConfigResponse>('GET', '/config'),
   getMe: () => call<MeResponse>('GET', '/me'),
-  updateMe: (patch: BankDetails) => call<{ user: UserDto }>('PATCH', '/me', patch),
+  updateMe: (patch: Partial<BankDetails> & { name?: string }) => call<{ user: UserDto }>('PATCH', '/me', patch),
   deleteMe: () => call<{ ok: true }>('DELETE', '/me'),
   signInGoogle: (credential: string) => call<{ user: UserDto }>('POST', '/auth/google', { credential }),
   signInDev: (email: string, name?: string) => call<{ user: UserDto }>('POST', '/auth/dev', { email, name }),

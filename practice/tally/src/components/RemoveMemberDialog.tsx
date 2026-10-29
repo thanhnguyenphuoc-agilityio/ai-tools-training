@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { GroupDto, MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 
 export function RemoveMemberDialog({
   group,
@@ -15,10 +15,10 @@ export function RemoveMemberDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const panel = useDialog(onClose, { canClose: !busy });
   // True when the current press started on the backdrop itself; a press that starts in the panel (e.g. selecting
   // the reason with the mouse) and ends on the backdrop must not close the dialog and lose the typed reason.
@@ -33,7 +33,7 @@ export function RemoveMemberDialog({
       onClose();
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export function RemoveMemberDialog({
               data-autofocus
             />
           </label>
-          {error && <p className="text text--error">{error}</p>}
+          {error && <p className="text text--error">{message(error)}</p>}
           <div className="cluster">
             <button className="button" type="submit" disabled={busy}>
               {t('members.remove')}

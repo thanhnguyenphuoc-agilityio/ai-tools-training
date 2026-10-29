@@ -29,7 +29,10 @@ test.describe('Delete account (DA-9)', () => {
         await signInBtn.click();
 
         await page.getByLabel(t('account.devEmail')).fill(email);
-        await page.locator('.account-menu__form').getByRole('button', { name: t('account.devSubmit') }).click();
+        await page
+          .locator('.account-menu__form')
+          .getByRole('button', { name: t('account.devSubmit') })
+          .click();
 
         const accountBtn = page.getByRole('button', { name: t('account.menuLabel', { name }) });
         await expect(accountBtn).toBeVisible();
@@ -52,6 +55,14 @@ test.describe('Delete account (DA-9)', () => {
         await cancelBtn.click();
         await expect(dialog).toBeHidden();
         await expect(accountBtn).toBeVisible();
+
+        // Escape closes it and focus returns to the account menu button (TAL-44)
+        await accountBtn.click();
+        await deleteItem.click();
+        await expect(dialog).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(dialog).toBeHidden();
+        await expect(accountBtn).toBeFocused();
 
         // Open again and confirm deletion
         await accountBtn.click();

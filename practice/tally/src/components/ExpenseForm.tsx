@@ -1,42 +1,79 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { splitChanged } from '../../shared/expenseEdit';
 import { exactSplitDifference, splitAmount } from '../../shared/money';
-import type { GroupDto, SplitMode } from '../../shared/types';
+import type { ExpenseDto, GroupDto, SessionDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
+import { sessionLabel } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
+import { prepareReceipt, ReceiptTooLargeError } from '../receiptImage';
 import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
+/**
+ * Adds an expense, or edits `editing` when it is given (edit_expense). GroupPage keys the form by the edited
+ * expense, so the fields start from the stored values each time an edit begins.
+ */
 export function ExpenseForm({
   group,
   onSaved,
   onStale,
+  editing = null,
+  onCancel,
+  session,
 }: {
   group: GroupDto;
-  onSaved: () => void;
+  /** `keepForm` is true when the expense was saved but its receipt photo was not: the form stays open with the error. */
+  onSaved: (keepForm?: boolean) => void;
   /** Reloads the group when the API says a chosen member is no longer in it (removed on another device). */
   onStale: () => void;
+  editing?: ExpenseDto | null;
+  onCancel?: () => void;
+  /** A session the cost belongs to (attendance_split): its present members, day and note are preselected. */
+  session?: SessionDto;
 }) {
-  const { t, errorMessage } = useI18n();
-  const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
+  const { t, day, message } = useI18n();
+  const { currency, money, parseMoney, parseShareMoney, formatAmount } = useGroupMoney(group);
   const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
   const members = group.members.filter((m) => !m.removed);
-  const [chosenPayerId, setPayerId] = useState(group.me.memberId ?? members[0].id);
+  const [chosenPayerId, setPayerId] = useState(editing?.payerId ?? group.me.memberId ?? members[0].id);
   // A payer removed since the form opened falls back to the user, or to the first current member.
   const fallbackPayerId = members.some((m) => m.id === group.me.memberId) ? group.me.memberId! : members[0].id;
   const payerId = members.some((m) => m.id === chosenPayerId) ? chosenPayerId : fallbackPayerId;
-  const [amountText, setAmountText] = useState('');
-  const [description, setDescription] = useState('');
-  const [spentOn, setSpentOn] = useState(todayLocal);
-  const [mode, setMode] = useState<SplitMode>('equal');
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(members.map((m) => m.id)));
-  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [amountText, setAmountText] = useState(editing ? formatAmount(editing.amount) : '');
+  const [description, setDescription] = useState(editing?.description ?? session?.note ?? '');
+  const [spentOn, setSpentOn] = useState(editing?.spentOn ?? session?.day ?? todayLocal);
+  // The session the expense belongs to (expense_session_link): the edited expense's session, the session the form was
+  // opened from, or none. Empty means no session.
+  const [sessionId, setSessionId] = useState<string>(editing ? (editing.sessionId ?? '') : (session?.id ?? ''));
+  const [mode, setMode] = useState<SplitMode>(editing?.splitMode ?? 'equal');
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    if (editing) return new Set(editing.shares.map((s) => s.memberId));
+    // A session cost starts with the members present; a removed member cannot be preselected.
+    if (session) return new Set(members.filter((m) => session.presentIds.includes(m.id)).map((m) => m.id));
+    return new Set(members.map((m) => m.id));
+  });
+  const [weights, setWeights] = useState<Record<string, string>>(() =>
+    Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, String(s.weight)])),
+  );
   // Exact mode: the text typed per member. An empty field means the member owes nothing.
-  const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [shareTexts, setShareTexts] = useState<Record<string, string>>(() =>
+    Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, formatAmount(s.amount)])),
+  );
+  // Receipt photo (receipt_photos): a new file to upload, or the removal of the stored one (edit mode only).
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [removeStoredReceipt, setRemoveStoredReceipt] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function clearReceiptPicker() {
+    setReceiptFile(null);
+    setRemoveStoredReceipt(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
 
   const amount = parseMoney(amountText);
   const chosen = members.filter((m) => selected.has(m.id));
@@ -61,8 +98,35 @@ export function ExpenseForm({
     }
     // participantsKey stands in for participants, which is rebuilt every render.
   }, [amount, participantsKey, group.roundTo, payerId]);
+  // An edit that changes nothing the shares depend on keeps the stored shares (edit_expense), so the preview shows
+  // those instead of a recomputation with the group's current rounding that will not be saved.
+  const splitInput = chosen.map((m) => ({
+    memberId: m.id,
+    weight: mode === 'weight' ? Number((weights[m.id] ?? '1').replace(',', '.')) : 1,
+    amount: mode === 'exact' ? (typedShares.get(m.id) ?? 0) : 0,
+  }));
+  const keepsStoredShares =
+    !!editing &&
+    !!amount &&
+    !splitChanged(
+      { amount: editing.amount, payerId: editing.payerId, splitMode: editing.splitMode, shares: editing.shares },
+      { amount, payerId, splitMode: mode, participants: splitInput },
+    );
+  const storedPreview = keepsStoredShares ? new Map(editing.shares.map((s) => [s.memberId, s.amount])) : null;
   // In exact mode the preview shows each typed amount as parsed (no rounding), e.g. what "150k" became.
-  const preview = mode === 'exact' ? typedShares : computed;
+  const preview = storedPreview ?? (mode === 'exact' ? typedShares : computed);
+
+  /** Picks the session. On a new expense it also preselects the present members and the session day. */
+  function chooseSession(value: string) {
+    setSessionId(value);
+    // A session change on a saved expense is a field change: it keeps the participants and the stored shares.
+    if (editing) return;
+    const chosenSession = group.sessions.find((s) => s.id === value);
+    if (!chosenSession) return;
+    setSelected(new Set(members.filter((m) => chosenSession.presentIds.includes(m.id)).map((m) => m.id)));
+    setSpentOn(chosenSession.day);
+    if (description.trim() === '') setDescription(chosenSession.note);
+  }
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -74,31 +138,62 @@ export function ExpenseForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) {
-      const examples = t(currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples');
-      return setError(t('expenseForm.invalidAmount', { examples }));
+      const examplesKey = currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples';
+      return setError({ key: 'expenseForm.invalidAmount', vars: { examples: { key: examplesKey } } });
     }
     if (mode === 'exact') {
-      if (invalidShare) return setError(t('expenseForm.invalidShare', { name: invalidShare.name }));
-      if (difference !== 0) return setError(t('expenseForm.exactMismatch'));
+      if (invalidShare) return setError({ key: 'expenseForm.invalidShare', vars: { name: invalidShare.name } });
+      if (difference !== 0) return setError({ key: 'expenseForm.exactMismatch' });
     }
     setBusy(true);
     setError(null);
     try {
-      await api.addExpense(group.code, {
+      const input = {
         payerId,
         amount,
         description,
         spentOn,
         splitMode: mode,
         participants: mode === 'exact' ? exactParts : participants,
-      });
-      setAmountText('');
-      setDescription('');
-      setShareTexts({});
-      notify('toast.expenseAdded');
+      };
+      let savedId: string;
+      if (editing) {
+        savedId = editing.id;
+        const { changed } = await api.updateExpense(group.code, editing.id, { ...input, sessionId: sessionId || null });
+        // A save that repeats the stored values is not an edit: say nothing rather than report a change.
+        if (changed) notify('toast.expenseEdited');
+      } else {
+        savedId = (await api.addExpense(group.code, { ...input, sessionId: sessionId || null })).id;
+        setAmountText('');
+        setDescription('');
+        setShareTexts({});
+        notify('toast.expenseAdded');
+      }
+
+      // The expense is saved; the photo follows. A failure keeps the expense and shows the error.
+      try {
+        if (receiptFile) {
+          await api.uploadReceipt(group.code, savedId, await prepareReceipt(receiptFile));
+        } else if (editing?.receipt && removeStoredReceipt) {
+          await api.deleteReceipt(group.code, savedId, editing.receipt.id);
+        }
+      } catch (receiptErr) {
+        setError(
+          receiptErr instanceof ReceiptTooLargeError
+            ? { key: 'expenses.receipt.tooLarge' }
+            : { key: 'expenses.receipt.failed' },
+        );
+        // An add cannot be retried without adding the expense twice, so its picker is cleared. An edit keeps the
+        // picked file, so saving again retries the photo.
+        if (!editing) clearReceiptPicker();
+        onSaved(true);
+        return;
+      }
+
+      clearReceiptPicker();
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
       if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
         onStale();
       }
@@ -127,13 +222,15 @@ export function ExpenseForm({
 
   return (
     <section className="card expense-form">
-      <h2 className="card__title">{t('expenseForm.title')}</h2>
+      <h2 className="card__title">{t(editing ? 'expenseForm.editTitle' : 'expenseForm.title')}</h2>
       <form onSubmit={submit} className="stack">
         <div className="columns">
           <label className="field">
             <span className="field__label">{t('expenseForm.amount')}</span>
             <input
               className="field__control"
+              // The hint below repeats the amount as money, so the name is set here and stays the same in edit mode.
+              aria-label={t('expenseForm.amount')}
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
               placeholder={t('expenseForm.amountPlaceholder')}
@@ -175,6 +272,19 @@ export function ExpenseForm({
               required
             />
           </label>
+          {group.sessions.length > 0 && (
+            <label className="field">
+              <span className="field__label">{t('expenseForm.session')}</span>
+              <select className="field__control" value={sessionId} onChange={(e) => chooseSession(e.target.value)}>
+                <option value="">{t('expenseForm.noSession')}</option>
+                {group.sessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {sessionLabel(s, t, day)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <fieldset className="fieldset stack stack--tight">
@@ -246,10 +356,42 @@ export function ExpenseForm({
           )}
         </fieldset>
 
-        {error && <p className="text text--error">{error}</p>}
-        <button className="button button--block-mobile" disabled={busy || chosen.length === 0}>
-          {t('expenseForm.submit')}
-        </button>
+        <div className="field expense-form__receipt">
+          <span className="field__label">{t('expenses.receipt.label')}</span>
+          {editing?.receipt && !removeStoredReceipt && !receiptFile && (
+            <div className="cluster expense-form__receipt-stored">
+              <span className="text text--muted text--small">{t('expenses.receipt.saved')}</span>
+              <button type="button" className="button button--ghost" onClick={() => setRemoveStoredReceipt(true)}>
+                {t('expenses.receipt.remove')}
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="field__control expense-form__file-input"
+            onChange={(e) => {
+              setReceiptFile(e.target.files?.[0] ?? null);
+              setRemoveStoredReceipt(false);
+            }}
+          />
+        </div>
+
+        {error && <p className="text text--error">{message(error)}</p>}
+        <div className="cluster">
+          <button
+            className="button"
+            disabled={busy || chosen.length === 0}
+          >
+            {t(editing ? 'expenseForm.editSubmit' : 'expenseForm.submit')}
+          </button>
+          {(editing || session) && onCancel && (
+            <button type="button" className="button button--ghost" onClick={onCancel} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

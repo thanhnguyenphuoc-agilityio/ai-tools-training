@@ -2,13 +2,17 @@
 import type { Context } from 'hono';
 import type { ErrorCode, ErrorParams } from '../shared/errors';
 import { getCurrency, type CurrencyInfo } from '../shared/currency';
-import { MAX_AMOUNT, MAX_WEIGHT, isValidWeight } from '../shared/money';
+import { MAX_AMOUNT, MAX_WEIGHT, isValidWeight, roundWeight } from '../shared/money';
 import { findBank, type BankDetails } from '../shared/types';
 
 export interface Env {
   DB: D1Database;
+  /** Receipt photos (receipt_photos). Bound in wrangler.jsonc as RECEIPTS. */
+  RECEIPTS: R2Bucket;
   GOOGLE_CLIENT_ID?: string;
   DEV_LOGIN?: string;
+  /** Live updates (group_live_updates). Optional: without it nothing is signalled and the live endpoint answers 404. */
+  GROUP_LIVE?: DurableObjectNamespace;
 }
 
 export interface UserRow {
@@ -16,6 +20,7 @@ export interface UserRow {
   google_sub: string;
   email: string;
   name: string;
+  name_custom: number;
   bank_bin: string | null;
   account_no: string | null;
   account_name: string | null;
@@ -24,13 +29,17 @@ export interface UserRow {
 
 export type AppEnv = {
   Bindings: Env;
-  Variables: { user?: UserRow | null };
+  Variables: {
+    user?: UserRow | null;
+    /** Set by a read that changed the group (the member_email_invite auto-link), so live pages reload. */
+    groupChanged?: boolean;
+  };
 };
 export type Ctx = Context<AppEnv>;
 
 export class ApiError extends Error {
   constructor(
-    public status: 400 | 401 | 403 | 404 | 409 | 413 | 500,
+    public status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 500,
     public code: ErrorCode,
     message: string,
     public params?: ErrorParams,
@@ -61,6 +70,25 @@ export function optionalText(value: unknown, field: string, max: number): string
   return text(value, field, max);
 }
 
+/**
+ * An invite email: null for no email (undefined, null, '' or spaces only), else the trimmed lowercase address.
+ * Only the shape is checked (one `@`, text on both sides, no spaces, at most 254 characters). The value is never put
+ * into the error.
+ */
+export function optionalEmail(value: unknown, field: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') {
+    throw new ApiError(400, 'INVALID_EMAIL', `${field} must be an email address`, { field });
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const parts = trimmed.split('@');
+  const valid =
+    trimmed.length <= 254 && !/\s/.test(trimmed) && parts.length === 2 && parts[0] !== '' && parts[1] !== '';
+  if (!valid) throw new ApiError(400, 'INVALID_EMAIL', `${field} must be an email address`, { field });
+  return trimmed.toLowerCase();
+}
+
 export function amount(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0 || value > MAX_AMOUNT) {
     throw new ApiError(400, 'INVALID_AMOUNT', 'amount must be a positive integer in minor units', { max: MAX_AMOUNT });
@@ -85,7 +113,7 @@ export function weight(value: unknown): number {
       max: MAX_WEIGHT,
     });
   }
-  return n;
+  return roundWeight(n);
 }
 
 export function currency(value: unknown): CurrencyInfo {

@@ -14,6 +14,38 @@ test.describe('Saved bank details (SB-6, SB-7, SB-9)', () => {
     await expect(page.getByRole('menuitem', { name: t('account.bankDetails') })).toBeHidden();
   });
 
+  // TAL-44 saved_bank_dialog_keyboard
+  test('keyboard: focus starts in the dialog, Tab stays inside, Escape closes and refocuses the account menu', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop', 'keyboard check runs on desktop only');
+    await page.goto('/');
+    await page.locator('.account-menu__button').click();
+    await page.getByLabel(t('account.devEmail')).fill('kim@example.com');
+    await page
+      .locator('.account-menu__form')
+      .getByRole('button', { name: t('account.devSubmit') })
+      .click();
+
+    const menuBtn = page.getByRole('button', { name: t('account.menuLabel', { name: 'kim' }) });
+    await menuBtn.click();
+    await page.getByRole('menuitem', { name: t('account.bankDetails') }).click();
+
+    const dialog = page.getByRole('dialog', { name: t('savedBank.title') });
+    await expect(dialog.getByLabel(t('members.bank'))).toBeFocused();
+
+    const close = dialog.getByRole('button', { name: t('common.close') });
+    await close.focus();
+    await page.keyboard.press('Tab');
+    await expect(dialog.getByLabel(t('members.bank'))).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(close).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(menuBtn).toBeFocused();
+  });
+
   test('SB-6: dev sign-in, save details, join a VND group, another member opens Pay and sees QR and saved account', async ({
     browser,
   }) => {
@@ -115,7 +147,6 @@ test.describe('Saved bank details (SB-6, SB-7, SB-9)', () => {
     await page.getByLabel(t('home.create.yourName')).fill('Pat');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-    await page.getByRole('button', { name: t('ownerKey.done') }).click();
 
     // Open members tab
     await page.getByRole('tab', { name: t('group.tabs.members') }).click();

@@ -2,14 +2,4 @@
 
 .delete-account {
   max-width: 32rem;
-
-  &__danger-button {
-    border-color: var(--color-negative);
-    background: var(--color-negative);
-    color: var(--color-surface);
-
-    &:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-  }
 }

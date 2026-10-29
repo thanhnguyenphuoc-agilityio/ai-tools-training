@@ -1,11 +1,23 @@
-// Joining a group, adding people by name, claiming a name, bank details, removing a member.
+// Joining a group, adding people by name, claiming a name, releasing a claimed name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { loadActiveMember, loadGroup, loadMembers, memberSettlement, recordChange } from '../groupData';
-import { ApiError, bankDetails, isUniqueViolation, now, optionalText, readJson, text, type AppEnv } from '../http';
+import { loadActiveMember, loadGroup, loadMember, loadMembers, memberSettlement, recordChange } from '../groupData';
+import {
+  ApiError,
+  bankDetails,
+  isUniqueViolation,
+  now,
+  optionalEmail,
+  optionalText,
+  readJson,
+  text,
+  type AppEnv,
+} from '../http';
 import {
   requireCanEditMember,
+  requireCanReleaseMember,
   requireCanRemoveMember,
+  requireCanSetInviteEmail,
   requireMember,
   requireMemberLinkable,
   requireNotMember,
@@ -31,6 +43,9 @@ memberRoutes.post('/:code/members', async (c) => {
     requireNotMember(me);
   }
 
+  // Only a person added by name can carry an invite email; a joining device ignores the field.
+  const inviteEmail = claim ? null : optionalEmail(body.inviteEmail, 'inviteEmail');
+
   const members = await loadMembers(c.env.DB, group.code);
   if (members.some((m) => sameName(m.name, name)))
     throw new ApiError(409, 'DUPLICATE_NAME', 'a member with this name already exists');
@@ -40,9 +55,9 @@ memberRoutes.post('/:code/members', async (c) => {
   const userId = claim ? me.userId : null;
   try {
     await c.env.DB.prepare(
-      'INSERT INTO members (id, group_code, name, token_hash, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO members (id, group_code, name, token_hash, user_id, invite_email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     )
-      .bind(id, group.code, name, token ? await sha256Hex(token) : null, userId, now())
+      .bind(id, group.code, name, token ? await sha256Hex(token) : null, userId, inviteEmail, now())
       .run();
   } catch (err) {
     // Two simultaneous joins from one account both pass requireNotMember; the unique index stops the second.
@@ -67,7 +82,7 @@ memberRoutes.post('/:code/members/:id/claim', async (c) => {
   let result: D1Result;
   try {
     result = await c.env.DB.prepare(
-      'UPDATE members SET token_hash = ?, user_id = COALESCE(?, user_id) WHERE id = ? AND token_hash IS NULL',
+      'UPDATE members SET token_hash = ?, user_id = COALESCE(?, user_id), invite_email = NULL WHERE id = ? AND token_hash IS NULL',
     )
       .bind(await sha256Hex(token), me.userId, member.id)
       .run();
@@ -87,9 +102,12 @@ memberRoutes.post('/:code/members/:id/claim', async (c) => {
 memberRoutes.patch('/:code/members/:id', async (c) => {
   const { group, me } = await loadGroup(c);
   const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
+  const body = await readJson(c);
+  // The invite email is the owner's to set: a non-owner who sends it gets OWNER_ONLY, not EDIT_SELF_ONLY.
+  const setsEmail = body.inviteEmail !== undefined;
+  if (setsEmail) requireCanSetInviteEmail(me);
   requireCanEditMember(me, member.id);
 
-  const body = await readJson(c);
   const name = body.name === undefined ? member.name : text(body.name, 'name', 40);
   if (name !== member.name) {
     const others = (await loadMembers(c.env.DB, group.code)).filter((m) => m.id !== member.id);
@@ -102,9 +120,26 @@ memberRoutes.patch('/:code/members/:id', async (c) => {
     accountName: member.account_name,
   });
 
-  await c.env.DB.prepare('UPDATE members SET name = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ?')
-    .bind(name, bank.bankBin, bank.accountNo, bank.accountName, member.id)
-    .run();
+  // The invite email is written only when the body carries it, so other edits never touch it.
+  let inviteEmail: string | null = null;
+  if (setsEmail) {
+    if (member.token_hash !== null || member.user_id !== null) {
+      throw new ApiError(409, 'MEMBER_ALREADY_CLAIMED', 'this member is already used on another device');
+    }
+    inviteEmail = optionalEmail(body.inviteEmail, 'inviteEmail');
+  }
+
+  if (setsEmail) {
+    await c.env.DB.prepare(
+      'UPDATE members SET name = ?, bank_bin = ?, account_no = ?, account_name = ?, invite_email = ? WHERE id = ?',
+    )
+      .bind(name, bank.bankBin, bank.accountNo, bank.accountName, inviteEmail, member.id)
+      .run();
+  } else {
+    await c.env.DB.prepare('UPDATE members SET name = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ?')
+      .bind(name, bank.bankBin, bank.accountNo, bank.accountName, member.id)
+      .run();
+  }
   await recordChange(c.env.DB, group.code, me, 'member.update', member.id);
   return c.json({ ok: true });
 });
@@ -132,7 +167,7 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   // user_id is cleared so the account can join again as a new member.
   const removedAt = now();
   const result = await c.env.DB.prepare(
-    'UPDATE members SET removed_at = ?, removed_reason = ?, user_id = NULL WHERE id = ? AND removed_at IS NULL',
+    'UPDATE members SET removed_at = ?, removed_reason = ?, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL',
   )
     .bind(removedAt, reason, member.id)
     .run();
@@ -152,5 +187,31 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
   }
   await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
+  return c.json({ ok: true });
+});
+
+// The owner releases a name that was claimed by mistake (wrong_name_claim). The member keeps its name, expenses and
+// bank details; the device token, the account link and the invite email are cleared, so the device and the account
+// become guests and the name can be claimed again.
+memberRoutes.post('/:code/members/:id/release', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireCanReleaseMember(me);
+  const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
+  if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_RELEASE_OWNER', 'the group owner cannot be released');
+
+  // The guard is repeated in the UPDATE so that two simultaneous releases cannot both win.
+  const result = await c.env.DB.prepare(
+    'UPDATE members SET token_hash = NULL, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL AND (token_hash IS NOT NULL OR user_id IS NOT NULL)',
+  )
+    .bind(member.id)
+    .run();
+  if (result.meta.changes === 0) {
+    // Nothing changed: either a removal committed meanwhile, or the name was never claimed (or released already).
+    const current = await loadMember(c.env.DB, group.code, member.id);
+    if (current.removed_at)
+      throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+    throw new ApiError(409, 'MEMBER_NOT_CLAIMED', 'this name has not been claimed yet');
+  }
+  await recordChange(c.env.DB, group.code, me, 'member.release', member.id);
   return c.json({ ok: true });
 });
