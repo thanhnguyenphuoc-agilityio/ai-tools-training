@@ -31,11 +31,11 @@ describe('joined groups list API (JG-1 to JG-6)', () => {
     const m3 = (await other.call<{ id: string }>('POST', `/groups/${g3.code}/members`, { name: 'Charlie' })).json;
     await user.call('POST', `/groups/${g3.code}/members/${m3.id}/claim`);
 
-    // 4. Link while signed in (owner)
+    // 4. Attach while signed in (owner): the group was created anonymously on this device, then signed in
     const g4Owner = new Browser(env.env);
     const g4 = (await g4Owner.call<{ code: string }>('POST', '/groups', { name: 'Group 4', ownerName: 'David' })).json;
     await signIn(g4Owner, 'user@example.com');
-    const linkRes = await g4Owner.call('POST', `/groups/${g4.code}/link`);
+    const linkRes = await g4Owner.call('POST', `/groups/${g4.code}/owner/attach`);
     expect(linkRes.status).toBe(200);
 
     const res = await user.call<MyGroupsResponse>('GET', '/me/groups');

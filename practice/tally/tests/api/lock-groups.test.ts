@@ -119,26 +119,51 @@ describe('lock_groups API', () => {
   });
 
   // LG-4: group owned by account A, owner key used by signed-in B: 403 GROUP_OWNED_BY_OTHER_ACCOUNT
-  it('LG-4: lock a group owned by another account returns 403 GROUP_OWNED_BY_OTHER_ACCOUNT', async () => {
+  it('LG-4: lock and unlock of a group owned by another account answer OWNER_ONLY; the old key claim answers GROUP_OWNED_BY_OTHER_ACCOUNT', async () => {
+    // Created anonymously, so the group has an owner key that account A can claim
+    const guest = new Browser(env.env);
+    const g = await createGroup(guest);
+
     const ownerA = new Browser(env.env);
     await signIn(ownerA, 'a@example.com');
-    const g = await createGroup(ownerA);
+    const claimA = await ownerA.call('POST', `/groups/${g.code}/owner/claim`, { ownerKey: g.ownerKey });
+    expect(claimA.status).toBe(200);
 
-    // Browser B signs in as B, but claims owner with ownerKey of group A
+    // Browser B signs in and presents the old key of group A: the claim is refused
     const browserB = new Browser(env.env);
     await signIn(browserB, 'b@example.com');
-    const claimRes = await browserB.call('POST', `/groups/${g.code}/owner/claim`, { ownerKey: g.ownerKey });
-    expect(claimRes.status).toBe(200);
+    const claimRes = await browserB.call<ErrorBody>('POST', `/groups/${g.code}/owner/claim`, { ownerKey: g.ownerKey });
+    expect(claimRes.status).toBe(403);
+    expect(claimRes.json.code).toBe('GROUP_OWNED_BY_OTHER_ACCOUNT');
 
-    // Try to lock as B
+    // B holds no owner access, so lock and unlock are OWNER_ONLY
     const lockRes = await browserB.call<ErrorBody>('POST', `/groups/${g.code}/lock`);
     expect(lockRes.status).toBe(403);
-    expect(lockRes.json.code).toBe('GROUP_OWNED_BY_OTHER_ACCOUNT');
+    expect(lockRes.json.code).toBe('OWNER_ONLY');
 
-    // Try to unlock as B
     const unlockRes = await browserB.call<ErrorBody>('DELETE', `/groups/${g.code}/lock`);
     expect(unlockRes.status).toBe(403);
-    expect(unlockRes.json.code).toBe('GROUP_OWNED_BY_OTHER_ACCOUNT');
+    expect(unlockRes.json.code).toBe('OWNER_ONLY');
+  });
+
+  // LG-12: a signed-in member (not the owner) of an account-owned group gets OWNER_ONLY for lock and unlock
+  it('LG-12: a signed-in member of an account-owned group gets OWNER_ONLY for lock and unlock', async () => {
+    const owner = new Browser(env.env);
+    await signIn(owner, 'a@example.com');
+    const g = await createGroup(owner);
+
+    const member = new Browser(env.env);
+    await signIn(member, 'm@example.com');
+    const joined = await member.call('POST', `/groups/${g.code}/members`, { name: 'Member', claim: true });
+    expect(joined.status).toBe(201);
+
+    const lockRes = await member.call<ErrorBody>('POST', `/groups/${g.code}/lock`);
+    expect(lockRes.status).toBe(403);
+    expect(lockRes.json.code).toBe('OWNER_ONLY');
+
+    const unlockRes = await member.call<ErrorBody>('DELETE', `/groups/${g.code}/lock`);
+    expect(unlockRes.status).toBe(403);
+    expect(unlockRes.json.code).toBe('OWNER_ONLY');
   });
 
   // LG-5: unlock at a known time: expiresAt = unlock + 10 days, last_activity_at updated
@@ -247,7 +272,7 @@ describe('lock_groups API', () => {
     const { user } = await signIn(owner, 'newowner@example.com');
 
     const signedInDto = await owner.call<GroupDto>('GET', `/groups/${g.code}`);
-    expect(signedInDto.json.canLinkAccount).toBe(true);
+    expect(signedInDto.json.canLinkAccount).toBe(false); // the owner is never offered "Link to my account"
 
     // Lock the group
     const lockRes = await owner.call<{ ok: true; changed: boolean }>('POST', `/groups/${g.code}/lock`);

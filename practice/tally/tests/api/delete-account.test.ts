@@ -139,36 +139,38 @@ describe('delete account API', () => {
     expect(m2After?.accountName).toBe('ALEX GRP');
   }, 30_000);
 
-  // DA-4: Owned group: owner_user_id NULL, owner key still passes owner checks; linked members have user_id NULL
-  it('DA-4: owned group has owner_user_id cleared, owner key works, linked members detached', async () => {
+  // DA-4: Solo owned group: owner_user_id NULL, owner key revoked, group has no owner; linked members detached
+  it('DA-4: solo owned group is detached, its owner key stays revoked, linked members detached', async () => {
     const alex = new Browser(env.env);
     await signIn(alex, 'alex@example.com');
-    const gRes = await alex.call<{ code: string; ownerKey: string }>('POST', '/groups', {
+    const gRes = await alex.call<{ code: string; ownerKey: string | null }>('POST', '/groups', {
       name: 'Weekend',
       ownerName: 'Alex',
     });
     const { code } = gRes.json;
 
-    // Check before deletion
-    const rowBefore = await env.env.DB.prepare('SELECT owner_user_id FROM groups WHERE code = ?')
+    // Check before deletion: created while signed in, so the key is revoked from the start
+    const rowBefore = await env.env.DB.prepare('SELECT owner_user_id, owner_key_hash FROM groups WHERE code = ?')
       .bind(code)
-      .first<{ owner_user_id: string }>();
+      .first<{ owner_user_id: string; owner_key_hash: string }>();
     expect(rowBefore?.owner_user_id).not.toBeNull();
+    expect(rowBefore?.owner_key_hash).toBe('revoked');
 
     const memberBefore = await env.env.DB.prepare('SELECT user_id FROM members WHERE group_code = ? AND is_owner = 1')
       .bind(code)
       .first<{ user_id: string }>();
     expect(memberBefore?.user_id).not.toBeNull();
 
-    // Delete account
+    // Delete account (solo group: not refused)
     const delRes = await alex.call('DELETE', '/me');
     expect(delRes.status).toBe(200);
 
-    // owner_user_id is NULL
-    const rowAfter = await env.env.DB.prepare('SELECT owner_user_id FROM groups WHERE code = ?')
+    // owner_user_id is NULL, the key stays revoked
+    const rowAfter = await env.env.DB.prepare('SELECT owner_user_id, owner_key_hash FROM groups WHERE code = ?')
       .bind(code)
-      .first<{ owner_user_id: string | null }>();
+      .first<{ owner_user_id: string | null; owner_key_hash: string }>();
     expect(rowAfter?.owner_user_id).toBeNull();
+    expect(rowAfter?.owner_key_hash).toBe('revoked');
 
     // member user_id is NULL
     const memberAfter = await env.env.DB.prepare('SELECT user_id FROM members WHERE group_code = ? AND is_owner = 1')
@@ -176,9 +178,30 @@ describe('delete account API', () => {
       .first<{ user_id: string | null }>();
     expect(memberAfter?.user_id).toBeNull();
 
-    // Owner key still passes owner checks
+    // The group is ownerless: owner actions are refused (no account session, no key)
     const updateRes = await alex.call('PATCH', `/groups/${code}`, { name: 'Updated Weekend' });
-    expect(updateRes.status).toBe(200);
+    expect(updateRes.status).toBe(403);
+  });
+
+  // DA-7: Owned group with another active member: deletion refused, nothing changes
+  it('DA-7: deletion refused while an owned group has another active member; the group keeps its owner', async () => {
+    const alex = new Browser(env.env);
+    await signIn(alex, 'alex@example.com');
+    const { code } = (await alex.call<{ code: string }>('POST', '/groups', { name: 'Shared', ownerName: 'Alex' })).json;
+    const sam = new Browser(env.env);
+    await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
+
+    const refused = await alex.call<ErrorBody>('DELETE', '/me');
+    expect(refused.status).toBe(409);
+    expect(refused.json.code).toBe('ACCOUNT_OWNS_SHARED_GROUP');
+    expect(refused.json.params).toEqual({ count: 1 });
+
+    const row = await env.env.DB.prepare('SELECT owner_user_id FROM groups WHERE code = ?')
+      .bind(code)
+      .first<{ owner_user_id: string | null }>();
+    expect(row?.owner_user_id).not.toBeNull();
+    const session = await alex.call<MeResponse>('GET', '/me');
+    expect(session.json.user).not.toBeNull();
   });
 
   // DA-5: Kept group: locked: false, expiresAt = deletion + 10 days, audit group.unlock; purge at deletion + 10 days + 1 minute deletes it
@@ -297,9 +320,9 @@ describe('delete account API', () => {
     expect(user2.accountNo).toBeNull();
     expect(user2.accountName).toBeNull();
 
-    // Group is not linked to new user automatically, but can be linked because device holds owner key
+    // Group is not linked to new user automatically, and its owner key is revoked: no owner access and no button
     const g = await alex.call<GroupDto>('GET', `/groups/${code}`);
     expect(g.json.me.accountLinked).toBe(false);
-    expect(g.json.canLinkAccount).toBe(true);
+    expect(g.json.canLinkAccount).toBe(false);
   });
 });
