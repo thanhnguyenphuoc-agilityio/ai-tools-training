@@ -206,3 +206,24 @@ Commands and results, run in `practice/tally`:
   poisoned Miniflare stub; both passed on the rerun.
 - `npm run test:hooks`: 29 passed.
 - `npx playwright test --config playwright.local.config.ts`: 132 passed, 2 skipped.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `PATCH /groups/:code/expenses/:id` reuses the `POST` validation (`parseExpense`), checks `requireCanEditExpense` in
+  `worker/policy.ts` (author or owner; owner only when `created_by` is NULL), refuses an expense with a removed member
+  and repeats that guard inside the `UPDATE`. Shares are recomputed with the current `round_to` only when
+  `splitChanged` says so; a repeat of the stored values writes nothing. A real edit sets `edited_at` (migration
+  `0010_expense_edits.sql`) and records `expense.edit` with the previous values through `recordChange`. This matches
+  the answers and the acceptance criteria.
+- Tests: `tests/api/edit-expense.test.ts`, `tests/unit/expenseEdit.test.ts`, `formatAmountInput` round trips and
+  `e2e/edit-expense.spec.ts`.
+- Finding: `shared/expenseEdit.ts` kept its own copy of the hundredths rule, waiting for `stored_weight_rounding`.
+  Fix: it now uses `weightHundredths()` from `shared/money.ts`, which is on `develop`.
+- Finding: the branch predates `stale_language_messages`, `wrong_name_claim` and `owner_member_tools`. Fix: `develop`
+  merged into the branch with both sides kept: `ExpenseForm` and `ExpenseList` store a `UiMessage` in edit mode too,
+  both new error codes and `EDIT_NOT_ALLOWED` are in every locale (the Vietnamese text uses the same word for owner as
+  the other messages), and README no longer lists editing or owner tools as not built.
+- Checks after the fix: typecheck and lint clean, 515 unit and API tests, e2e `edit-expense`, `exact-split`,
+  `language-picker`, `remove-member`, `settle-up`, `ui-redesign`, `owner-member-tools` and `claim-member` 60 passed.
