@@ -56,7 +56,8 @@ describe('expenses', () => {
     expect((await owner.call('POST', `/groups/${code}/expenses`, { ...base, spentOn: '10/10/2026' })).status).toBe(400);
     expect((await owner.call('POST', `/groups/${code}/expenses`, { ...base, spentOn: '2026-02-30' })).status).toBe(400);
     const weighted = (weight: number) => ({ ...base, splitMode: 'weight', participants: [{ memberId: ids.sam, weight }] });
-    for (const weight of [0.001, 0.333]) {
+    // 1e-12 is within the tolerance of zero but rounds to a zero weight, so it is refused like 0.001.
+    for (const weight of [0.001, 0.333, 1e-12, 100.001]) {
       const res = await owner.call('POST', `/groups/${code}/expenses`, weighted(weight));
       expect(res.status).toBe(400);
       expect(res.json.code).toBe('INVALID_WEIGHT');
@@ -64,6 +65,30 @@ describe('expenses', () => {
     const ok = await owner.call('POST', `/groups/${code}/expenses`, weighted(0.25));
     expect(ok.status).toBe(201);
     await owner.call('DELETE', `/groups/${code}/expenses/${ok.json.id}`);
+  });
+
+  it('stores the two-decimal weight that the split used', async () => {
+    const res = await owner.call('POST', `/groups/${code}/expenses`, {
+      payerId: ids.alex,
+      amount: 330_000,
+      description: 'Groceries',
+      spentOn: today,
+      splitMode: 'weight',
+      participants: [
+        { memberId: ids.alex, weight: 2.299999999999 },
+        { memberId: ids.sam, weight: 1 },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const group = await getGroup(owner);
+    const expense = group.expenses.find((e) => e.id === res.json.id)!;
+    // The API does not promise an order for shares, so they are compared by member.
+    const byMember = Object.fromEntries(expense.shares.map((s) => [s.memberId, s]));
+    expect(expense.shares).toHaveLength(2);
+    expect(byMember[ids.alex].weight).toBe(2.3);
+    expect(byMember[ids.sam].weight).toBe(1);
+    expect(byMember[ids.alex].amount).toBe(230_000);
+    expect(byMember[ids.sam].amount).toBe(100_000);
   });
 
   it('accepts an expense shared by a 35-member group', async () => {
