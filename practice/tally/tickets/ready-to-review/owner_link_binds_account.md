@@ -178,3 +178,13 @@ Checks on the branch:
 - `npm test`: 36 files, 404 tests passed.
 - `npm run test:hooks`: 29 of 29 passed.
 - `npx playwright test --config playwright.local.config.ts`: 117 passed, 1 skipped (the existing saved bank keyboard test).
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- Owner key revocation uses the `'revoked'` sentinel in `groups.owner_key_hash` (migration `0007`); no SHA-256 hex value equals it, and `resolveIdentity` drops a stale owner cookie on the next request.
+- `attachOwnerGroup` moves the group and the owner member in one guarded batch and revokes the key in the same statement; refusals are read back. The lock route keeps the `lock_limit_race` guard.
+- `DELETE /api/me` refuses with `ACCOUNT_OWNS_SHARED_GROUP` while an owned group has another active member.
+- Fixed: the unused `ownerAccess.attached` message was removed from both locales.
+- Checks: typecheck and lint clean, 404 unit and API tests, 29 hook tests, e2e 117 passed and 1 skipped.
