@@ -29,6 +29,13 @@
     color: var(--color-accent);
   }
 
+  // Confirms a destructive action (delete, remove): solid red, so it stands apart from the accent buttons.
+  &--danger {
+    border-color: var(--color-negative);
+    background: var(--color-negative);
+    color: var(--color-surface);
+  }
+
   &--small {
     padding: space(1) space(2);
     font-size: font-size(sm);

@@ -47,7 +47,7 @@ export function ConfirmDialog({
         <p className="text text--muted">{message}</p>
         {error && <p className="text text--error">{renderMessage(error)}</p>}
         <div className="cluster">
-          <button className="button text--negative" onClick={onConfirm} disabled={busy}>
+          <button className="button button--danger" onClick={onConfirm} disabled={busy}>
             {confirmLabel}
           </button>
           <button className="button button--ghost" onClick={onCancel} disabled={busy}>
