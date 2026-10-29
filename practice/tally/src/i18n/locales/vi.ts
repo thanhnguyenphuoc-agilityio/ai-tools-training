@@ -103,6 +103,8 @@ export const vi: Messages = {
     description: 'Nội dung',
     descriptionPlaceholder: 'Ăn tối hôm đầu',
     date: 'Ngày',
+    session: 'Buổi sinh hoạt',
+    noSession: 'Không thuộc buổi nào',
     splitBetween: 'Chia cho',
     equal: 'Chia đều',
     byWeight: 'Theo hệ số',

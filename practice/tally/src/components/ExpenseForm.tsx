@@ -4,6 +4,7 @@ import { exactSplitDifference, splitAmount } from '../../shared/money';
 import type { ExpenseDto, GroupDto, SessionDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
+import { sessionLabel } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n, type UiMessage } from '../i18n';
 import { prepareReceipt, ReceiptTooLargeError } from '../receiptImage';
@@ -32,7 +33,7 @@ export function ExpenseForm({
   /** A session the cost belongs to (attendance_split): its present members, day and note are preselected. */
   session?: SessionDto;
 }) {
-  const { t, message } = useI18n();
+  const { t, day, message } = useI18n();
   const { currency, money, parseMoney, parseShareMoney, formatAmount } = useGroupMoney(group);
   const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
@@ -44,6 +45,9 @@ export function ExpenseForm({
   const [amountText, setAmountText] = useState(editing ? formatAmount(editing.amount) : '');
   const [description, setDescription] = useState(editing?.description ?? session?.note ?? '');
   const [spentOn, setSpentOn] = useState(editing?.spentOn ?? session?.day ?? todayLocal);
+  // The session the expense belongs to (expense_session_link): the edited expense's session, the session the form was
+  // opened from, or none. Empty means no session.
+  const [sessionId, setSessionId] = useState<string>(editing ? (editing.sessionId ?? '') : (session?.id ?? ''));
   const [mode, setMode] = useState<SplitMode>(editing?.splitMode ?? 'equal');
   const [selected, setSelected] = useState<Set<string>>(() => {
     if (editing) return new Set(editing.shares.map((s) => s.memberId));
@@ -112,6 +116,18 @@ export function ExpenseForm({
   // In exact mode the preview shows each typed amount as parsed (no rounding), e.g. what "150k" became.
   const preview = storedPreview ?? (mode === 'exact' ? typedShares : computed);
 
+  /** Picks the session. On a new expense it also preselects the present members and the session day. */
+  function chooseSession(value: string) {
+    setSessionId(value);
+    // A session change on a saved expense is a field change: it keeps the participants and the stored shares.
+    if (editing) return;
+    const chosenSession = group.sessions.find((s) => s.id === value);
+    if (!chosenSession) return;
+    setSelected(new Set(members.filter((m) => chosenSession.presentIds.includes(m.id)).map((m) => m.id)));
+    setSpentOn(chosenSession.day);
+    if (description.trim() === '') setDescription(chosenSession.note);
+  }
+
   function toggle(id: string) {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
@@ -143,11 +159,11 @@ export function ExpenseForm({
       let savedId: string;
       if (editing) {
         savedId = editing.id;
-        const { changed } = await api.updateExpense(group.code, editing.id, { ...input, sessionId: editing.sessionId });
+        const { changed } = await api.updateExpense(group.code, editing.id, { ...input, sessionId: sessionId || null });
         // A save that repeats the stored values is not an edit: say nothing rather than report a change.
         if (changed) notify('toast.expenseEdited');
       } else {
-        savedId = (await api.addExpense(group.code, { ...input, sessionId: session?.id ?? null })).id;
+        savedId = (await api.addExpense(group.code, { ...input, sessionId: sessionId || null })).id;
         setAmountText('');
         setDescription('');
         setShareTexts({});
@@ -256,6 +272,19 @@ export function ExpenseForm({
               required
             />
           </label>
+          {group.sessions.length > 0 && (
+            <label className="field">
+              <span className="field__label">{t('expenseForm.session')}</span>
+              <select className="field__control" value={sessionId} onChange={(e) => chooseSession(e.target.value)}>
+                <option value="">{t('expenseForm.noSession')}</option>
+                {group.sessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {sessionLabel(s, t, day)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <fieldset className="fieldset stack stack--tight">
