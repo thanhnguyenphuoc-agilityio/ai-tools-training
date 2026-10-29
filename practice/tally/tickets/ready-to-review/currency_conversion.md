@@ -116,3 +116,21 @@ with `npx playwright test --config playwright.local.config.ts`.
 - Self-review with the review-checklist skill: approve with nits. Nits: `docs/design.md` `currency_conversion` bullet
   on the audit and conversion rule is longer than the 120-column wrap used in the file; `tickets/README.md` still
   shows the next free ID as `TAL-50` until the batch's last merge sets it, which is intentionally not changed here.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- [nit] `docs/design.md` `### currency_conversion`: the bullets were longer than the 120-column wrap of the file and
+  had no blank line after the first sentence. Fixed: rewrapped, wording unchanged.
+- The decision follows both Answers: the rate is set by the owner for non-VND groups, audited as `group.update` with
+  the previous values, and balances stay in the group currency. The planned BigInt rule is needed because
+  `MAX_AMOUNT * rateE4` can exceed 2^53. The follow-up `vnd_settle_rate` (TAL-50) carries a new migration.
+
+Verdict: approve. Docs only; commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 44 files / 515 passed, `npm run test:hooks` 29
+passed, e2e 142 passed / 2 skipped (no code changed since that run). Typecheck and `npm test` rerun on `develop` after
+the merge.
