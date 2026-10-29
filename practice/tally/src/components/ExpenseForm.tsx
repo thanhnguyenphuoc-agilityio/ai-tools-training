@@ -352,7 +352,7 @@ export function ExpenseForm({
         {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">
           <button
-            className={editing ? 'button' : 'button button--block-mobile'}
+            className="button"
             disabled={busy || chosen.length === 0}
           >
             {t(editing ? 'expenseForm.editSubmit' : 'expenseForm.submit')}

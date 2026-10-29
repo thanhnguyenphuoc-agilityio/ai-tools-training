@@ -117,9 +117,11 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
               {t('home.create.roundCoarse', { unit: money(coarseUnit, currency) })}
             </label>
           )}
-          <button className="button button--block-mobile" disabled={busy}>
-            {t('home.create.submit')}
-          </button>
+          <div className="cluster">
+            <button className="button" disabled={busy}>
+              {t('home.create.submit')}
+            </button>
+          </div>
         </form>
       </section>
 

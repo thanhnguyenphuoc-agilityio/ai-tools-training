@@ -339,7 +339,7 @@ function BankForm({
         </div>
         {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">
-          <button className="button button--block-mobile">{t('common.save')}</button>
+          <button className="button">{t('common.save')}</button>
           {forOther && onCancel && (
             <button type="button" className="button button--ghost" onClick={onCancel}>
               {t('common.cancel')}
@@ -420,7 +420,9 @@ function OwnerSettings({ group, onSaved }: { group: GroupDto; onSaved: () => voi
           </label>
         )}
         {error && <p className="text text--error">{message(error)}</p>}
-        <button className="button button--block-mobile">{t('common.save')}</button>
+        <div className="cluster">
+          <button className="button">{t('common.save')}</button>
+        </div>
       </form>
       {group.ownedByAccount && <p className="text text--muted">{t('ownerAccess.tied')}</p>}
       <KeepGroup group={group} onSaved={onSaved} />
