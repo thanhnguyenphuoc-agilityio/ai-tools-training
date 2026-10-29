@@ -81,7 +81,6 @@ export const vi: Messages = {
     done: 'Tôi đã lưu',
   },
   ownerAccess: {
-    title: 'Quyền trưởng nhóm',
     tied: 'Quyền trưởng nhóm gắn với tài khoản của bạn.',
   },
   join: {

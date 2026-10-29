@@ -14,7 +14,7 @@ test.describe('owner_link_binds_account (OL-7, OL-8, OL-9)', () => {
     await expect(page.getByRole('button', { name: t('account.menuLabel', { name: email.split('@')[0] }) })).toBeVisible();
   };
 
-  test('OL-7: a group created while signed in shows the account note instead of a recovery link', async ({ page }) => {
+  test('OL-7: a group created while signed in shows no recovery link and no notice', async ({ page }) => {
     await page.goto('/');
     await signIn(page, `owner-${Date.now()}@example.com`);
 
@@ -22,12 +22,11 @@ test.describe('owner_link_binds_account (OL-7, OL-8, OL-9)', () => {
     await page.getByLabel(t('home.create.yourName')).fill('Alex');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
 
-    await expect(page.getByRole('heading', { name: t('ownerAccess.title') })).toBeVisible();
-    await expect(page.getByText(t('ownerAccess.tied'))).toBeVisible();
+    // hide_owner_access_note: no card to dismiss on the expenses tab
+    await expect(page.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();
     await expect(page.getByRole('heading', { name: t('ownerKey.title') })).toHaveCount(0);
-
-    await page.getByRole('button', { name: t('ownerKey.done') }).click();
-    await expect(page.getByRole('heading', { name: t('ownerAccess.title') })).toHaveCount(0);
+    await expect(page.getByText(t('ownerAccess.tied'))).toHaveCount(0);
+    await expect(page.getByRole('button', { name: t('ownerKey.done') })).toHaveCount(0);
 
     // The members tab of an account-owned group shows the tied line
     await page.getByRole('tab', { name: t('group.tabs.members') }).click();

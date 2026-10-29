@@ -63,7 +63,6 @@ test.describe('Account and Dev sign-in (GS-11, GS-15, GS-2)', () => {
 
     await expect(page1).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
     const groupUrl = page1.url();
-    await page1.getByRole('button', { name: t('ownerKey.done') }).click();
     await expect(page1.getByText(t('common.ownerBadge'))).toBeVisible();
 
     // Context 2: signed in with same email on a new browser context

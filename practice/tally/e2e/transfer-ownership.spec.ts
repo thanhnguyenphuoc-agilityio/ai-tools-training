@@ -26,13 +26,12 @@ test.describe('transfer_ownership (TO-E2E)', () => {
     const alex = await alexContext.newPage();
     const sam = await samContext.newPage();
 
-    // Alex creates a group while signed in; the owner access note replaces the recovery link.
+    // Alex creates a group while signed in; owner access is tied to the account, so no recovery link is shown.
     await signInAs(alex, `alex-${stamp}@example.com`);
     await alex.getByLabel(t('home.create.groupName')).fill('Transfer Trip');
     await alex.getByLabel(t('home.create.yourName')).fill('Alex');
     await alex.getByRole('button', { name: t('home.create.submit') }).click();
-    await expect(alex.getByRole('heading', { name: t('ownerAccess.title') })).toBeVisible();
-    await alex.getByRole('button', { name: t('ownerKey.done') }).click();
+    await expect(alex.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();
     const groupUrl = alex.url();
 
     // Sam signs in on another device and joins the group by name, as a signed-in member.
@@ -93,7 +92,7 @@ test.describe('transfer_ownership (TO-E2E)', () => {
     await alex.getByLabel(t('home.create.groupName')).fill('Escape Trip');
     await alex.getByLabel(t('home.create.yourName')).fill('Alex');
     await alex.getByRole('button', { name: t('home.create.submit') }).click();
-    await alex.getByRole('button', { name: t('ownerKey.done') }).click();
+    await expect(alex.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();
     const groupUrl = alex.url();
 
     await signInAs(sam, `sam-esc-${stamp}@example.com`);

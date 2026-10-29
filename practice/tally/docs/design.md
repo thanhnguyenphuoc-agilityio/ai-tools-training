@@ -582,7 +582,7 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 - **Migration `0007_owner_key_revoke.sql`:** `UPDATE groups SET owner_key_hash = 'revoked' WHERE owner_user_id IS NOT NULL`
   revokes every group that already has an account owner. It does not touch anonymous groups.
 - **Creation while signed in:** `POST /groups` stores the sentinel, sets no owner cookie and answers `ownerKey: null`.
-  The page shows `OwnerAccessNote` instead of the recovery banner; `HomePage` passes `created: true` in the navigate state.
+  The page shows no recovery banner and no notice (`hide_owner_access_note`); the members tab shows the tied line.
 - **Attach and claim:** `attachOwnerGroup` (`worker/accountLink.ts`) sets `owner_user_id`, `owner_key_hash` and the owner
   member's `user_id` in one `db.batch`, with the same `EXISTS` guards as before, then reads back to choose the refusal.
   `tryAttachOwnerGroup` maps `GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE` and `ACCOUNT_ALREADY_MEMBER` to
