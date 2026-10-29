@@ -53,3 +53,26 @@ Save and the Add expense button already sit in a `cluster`.
 6. `docs/design.md` section 5 Interface: buttons keep the width of their label at every size; a lone button in a
    `stack` sits in a `cluster` so it does not stretch. `button--block-mobile` was removed in
    `full_width_save_buttons`. No change to `docs/business-rules.md`.
+
+## Merge request
+
+- Branch: `feat/full_width_save_buttons` into `develop`.
+- Summary of changes:
+  - `button--block-mobile` is removed from `src/styles/blocks/_button.scss` and from the four buttons that used it.
+  - The Create group button (`HomePage.tsx`) and the group-settings Save (`MembersPanel.tsx`) are wrapped in a
+    `cluster`, because their form is a `stack` (a flex column) and would stretch a direct child at every width. The
+    bank-details Save and the Add expense button already sit in a `cluster` and only lose the modifier.
+  - `e2e/ui-redesign.spec.ts` checks at a 390 px viewport that the Create group button is narrower than its form.
+  - `docs/design.md` section 5 Interface notes that buttons keep the width of their label at every size. No change to
+    `docs/business-rules.md`.
+- Screenshots at 375 px, light and dark, of the home page, the expense form and the members tab (bank form and group
+  settings) are attached to the merge request.
+- Commands run and results (port 5193 for Playwright):
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean.
+  - `npm test`: 50 files, 614 tests passed.
+  - `npm run test:hooks`: 29 of 29 passed.
+  - `npx playwright test --config playwright.local.config.ts`: 149 passed, 2 skipped, 3 failed. The 3 failures
+    (`account.spec.ts` GS-2, `join-as-account.spec.ts` My name, `attendance.spec.ts` midnight session) were test
+    timeouts and a group that never opened; all three specs passed on one rerun (21 passed). The new width assertion
+    passed on both projects in the full run.
