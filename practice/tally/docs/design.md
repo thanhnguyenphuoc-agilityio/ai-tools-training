@@ -162,6 +162,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - Stacking order tokens in `abstracts/_tokens.scss`: tab bar, menu, toast, dialog.
   - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
     (`button--icon`) always has an `aria-label`.
+- Buttons keep the width of their label at every size. A lone button inside a `stack` sits in a `cluster`, because a
+  `stack` is a flex column and stretches a direct child. `button--block-mobile` was removed in `full_width_save_buttons`.
 - Modal dialogs use `useDialog` (`src/hooks/useDialog.ts`) for focus, `Tab` wrapping, `Escape` and focus return
   (`dialog_keyboard_focus`). A dialog opened from a menu item that unmounts (the account dialogs in `AccountMenu`)
   cannot return focus to its opener, so its `onClose` focuses the menu button instead.
@@ -456,6 +458,9 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - UI: `MembersPanel` shows an "Edit account" action per active member for the owner (not the owner's own member), opening
   `BankForm` under that row with `forOther`; `SettlePanel` shows "Record payment" on every suggested transfer the owner is
   not the payer of, opening `QrDialog` for the payer; `api.recordTransfer` gains an optional `fromId`.
+- A second `sent` transfer for the same payer and receiver is refused inside the `INSERT ... SELECT` (`NOT EXISTS` a
+  `sent` row for the pair), with one follow-up read to choose `TRANSFER_PENDING` or `PARTICIPANT_NOT_IN_GROUP`. Confirm
+  is a conditional `UPDATE` on `status = 'sent'`; zero changes answers `ALREADY_CONFIRMED` (`duplicate_sent_transfers`).
 
 ### edit_expense (built)
 
@@ -562,6 +567,9 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   StrictMode the effect cleanup focuses the opener before the effect runs again.
 - Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
+- Destructive confirmations (delete session, delete expense) use the shared `ConfirmDialog`
+  (`src/components/ConfirmDialog.tsx`) on `useDialog`; `window.confirm` is not used. The confirm button is disabled
+  while the request runs, and errors stay in the dialog.
 
 ### owner_link_binds_account (built)
 

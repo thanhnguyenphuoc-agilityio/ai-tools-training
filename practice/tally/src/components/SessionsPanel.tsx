@@ -1,13 +1,13 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { attendanceMatches, endsNextDay, sessionMinutes } from '../../shared/sessions';
 import type { ExpenseDto, GroupDto, SessionDto } from '../../shared/types';
 import { api } from '../api';
 import { todayLocal } from '../dates';
-import { useDialog } from '../hooks/useDialog';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n, type UiMessage } from '../i18n';
 import { involvesRemovedMember } from '../expenseRow';
 import { useToast } from '../toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
 import './SessionsPanel.scss';
 
@@ -326,69 +326,23 @@ export function SessionsPanel({
       )}
 
       {pendingDelete && (
-        <DeleteSessionDialog
-          session={pendingDelete}
+        <ConfirmDialog
+          title={t('sessions.deleteTitle')}
+          detail={
+            <>
+              {formatDay(pendingDelete.day)}
+              {t('common.separator')}
+              {t('sessions.range', { start: pendingDelete.startsAt, end: pendingDelete.endsAt })}
+            </>
+          }
+          message={t('sessions.confirmDelete')}
+          confirmLabel={t('sessions.confirmDeleteButton')}
           busy={busy}
           error={error}
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => confirmDelete(pendingDelete)}
         />
       )}
-    </div>
-  );
-}
-
-// The owner confirms a delete in a dialog (useDialog), not window.confirm.
-function DeleteSessionDialog({
-  session,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  session: SessionDto;
-  busy: boolean;
-  error: UiMessage | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { t, day, message } = useI18n();
-  const panel = useDialog(onCancel, { canClose: !busy });
-  const pressedOnBackdrop = useRef(false);
-
-  return (
-    <div
-      className="dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('sessions.deleteTitle')}
-      onMouseDown={(e) => {
-        pressedOnBackdrop.current = e.target === e.currentTarget;
-      }}
-      onClick={(e) => {
-        const onBackdrop = pressedOnBackdrop.current && e.target === e.currentTarget;
-        pressedOnBackdrop.current = false;
-        if (onBackdrop && !busy) onCancel();
-      }}
-    >
-      <div ref={panel} tabIndex={-1} className="dialog__panel card stack">
-        <h2 className="card__title">{t('sessions.deleteTitle')}</h2>
-        <p className="text text--muted text--small">
-          {day(session.day)}
-          {t('common.separator')}
-          {t('sessions.range', { start: session.startsAt, end: session.endsAt })}
-        </p>
-        <p className="text text--muted">{t('sessions.confirmDelete')}</p>
-        {error && <p className="text text--error">{message(error)}</p>}
-        <div className="cluster">
-          <button className="button text--negative" onClick={onConfirm} disabled={busy}>
-            {t('sessions.confirmDeleteButton')}
-          </button>
-          <button className="button button--ghost" onClick={onCancel} disabled={busy}>
-            {t('common.cancel')}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

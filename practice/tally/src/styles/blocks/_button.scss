@@ -49,13 +49,4 @@
       color: var(--color-negative);
     }
   }
-
-  // Full width on phones, natural width from `sm` up.
-  &--block-mobile {
-    width: 100%;
-
-    @include up(sm) {
-      width: auto;
-    }
-  }
 }

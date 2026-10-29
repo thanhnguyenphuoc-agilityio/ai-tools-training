@@ -59,6 +59,10 @@ test('owner edits a member account and records a payment for them', async ({ bro
   await expect(
     page.getByText(t('settle.pendingItem', { from: 'Sam', to: 'Jamie', amount: vnd(50_000) })),
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: t('settle.recordForLabel', { from: 'Sam', to: 'Jamie' }) }),
+  ).toHaveCount(0);
+  await expect(page.getByText(t('settle.waitingFor', { to: 'Jamie' }))).toBeVisible();
 
   // A second browser context joins as Taylor and sees no owner-only controls.
   const secondContext = await browser.newContext({ locale: 'vi-VN' });
