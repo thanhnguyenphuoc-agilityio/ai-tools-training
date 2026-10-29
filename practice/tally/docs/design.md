@@ -407,7 +407,7 @@ Built. Project conventions are checked automatically by `npm run lint`:
   `BankForm` under that row with `forOther`; `SettlePanel` shows "Record payment" on every suggested transfer the owner is
   not the payer of, opening `QrDialog` for the payer; `api.recordTransfer` gains an optional `fromId`.
 
-### edit_expense
+### edit_expense (built)
 
 Built. Rules in `docs/business-rules.md`, "Editing an expense".
 
