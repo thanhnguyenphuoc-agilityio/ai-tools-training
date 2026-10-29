@@ -360,6 +360,8 @@ export const vi: Messages = {
     LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
     OWNER_TRANSFER_NOT_LINKED: 'Thành viên này cần có tài khoản trước khi trở thành trưởng nhóm.',
     OWNER_TRANSFER_SELF: 'Thành viên này đã là trưởng nhóm.',
+    MEMBER_NOT_CLAIMED: 'Tên này chưa được nhận.',
+    CANNOT_RELEASE_OWNER: 'Không thể gỡ tên của trưởng nhóm.',
   },
 };
 

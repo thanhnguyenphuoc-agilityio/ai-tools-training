@@ -377,6 +377,8 @@ export const en = {
     LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
     OWNER_TRANSFER_NOT_LINKED: 'This member needs an account before they can become the owner.',
     OWNER_TRANSFER_SELF: 'This member is already the owner.',
+    MEMBER_NOT_CLAIMED: 'This name has not been claimed yet.',
+    CANNOT_RELEASE_OWNER: 'The group owner cannot be released.',
   } satisfies Record<ErrorCode, string>,
 };
 
