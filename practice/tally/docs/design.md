@@ -173,7 +173,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
     the RS256 signature using Google's public JWKS (`https://www.googleapis.com/oauth2/v3/certs`, cached in module
     scope per `Cache-Control`), checks issuer, `audience` (a string or an array) contains `GOOGLE_CLIENT_ID`,
     `email_verified` and expiry, upserts
-    `users` in one `INSERT ... ON CONFLICT(google_sub) DO UPDATE` and opens a 30-day session (`tally_session`).
+    `users` in one `INSERT ... ON CONFLICT(google_sub) DO UPDATE` (the name is kept when `name_custom = 1`, see
+    `join_as_account`) and opens a 30-day session (`tally_session`).
     `POST /api/auth/dev` shares the same upsert.
   - A token whose `kid` is not in the cached keys refetches the keys at most once per 60 seconds
     (`MIN_REFETCH_MS`): the endpoint is open to anyone, so forged tokens with random key ids must not cause one
@@ -469,6 +470,15 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   StrictMode the effect cleanup focuses the opener before the effect runs again.
 - Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
+
+### join_as_account (built)
+
+- **Migration:** `0008_user_name_custom.sql` adds `users.name_custom INTEGER NOT NULL DEFAULT 0`. Existing rows get 0.
+- **Upsert:** `upsertUser` in `worker/routes/account.ts` sets `name = CASE WHEN users.name_custom = 1 THEN users.name ELSE excluded.name END` on conflict; the email is always refreshed.
+- **`PATCH /api/me`:** accepts `name` (trimmed, 1 to 40 characters). A valid name sets `name_custom = 1`. When `name` is absent, `name` and `name_custom` keep their stored values, and bank fields work as before. One `UPDATE` writes both sets of fields.
+- **Client:** `api.updateMe` takes `Partial<BankDetails> & { name?: string }`. `AccountNameDialog` (block `account-name-dialog`) is opened from the "My name" item in `AccountMenu` and uses `useDialog`. `JoinPanel` prefills the field from `useAccount().user.name` (cut to 40 characters), keeps it editable, and refills it when the account loads later, until the person types.
+- **No group change:** the name write touches no group, member, `audit_log` row or `last_activity_at`.
+- **Tests:** `tests/api/account-name.test.ts` (AN-1 to AN-6, migration default on a pre-existing row).
 
 ## 7. Ticket workflow
 
