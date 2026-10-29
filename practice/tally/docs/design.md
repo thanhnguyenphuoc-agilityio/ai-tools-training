@@ -153,7 +153,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - Icons: `Icon.tsx` covers the tabs, copy, download, add and delete actions; an icon-only button
     (`button--icon`) always has an `aria-label`.
 - Modal dialogs use `useDialog` (`src/hooks/useDialog.ts`) for focus, `Tab` wrapping, `Escape` and focus return
-  (`dialog_keyboard_focus`).
+  (`dialog_keyboard_focus`). A dialog opened from a menu item that unmounts (the account dialogs in `AccountMenu`)
+  cannot return focus to its opener, so its `onClose` focuses the menu button instead.
 
 ## 6. Feature roadmap (designed up front, built per ticket)
 

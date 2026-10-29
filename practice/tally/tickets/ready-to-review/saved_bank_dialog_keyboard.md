@@ -5,7 +5,7 @@
 | ID | `TAL-44` |
 | Labels | `type::bug`, `priority::medium`, `area::ui` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `saved_bank_details`, `dialog_keyboard_focus` |
 
@@ -46,3 +46,17 @@ Actual: focus stays on the page behind, `Tab` walks into the header behind the b
    past the last button stays in the panel, `Escape` closes it and the account menu button is focused. Add the same
    `Escape` / focus-return check to `e2e/delete-account.spec.ts`.
 4. Verify: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e`.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `SavedBankDialog` uses `useDialog(onClose, { canClose: !saving })`: the panel has the ref and `tabIndex={-1}`,
+  the bank `select` has `data-autofocus`, and the buttons and backdrop are disabled while saving. Save and clear
+  share one `save` function.
+- Focus return lives in one place: `AccountMenu` focuses its menu button in the `onClose` of both account dialogs,
+  because the menu item that opened them is gone. `useDialog` is unchanged.
+- e2e: a new keyboard test in `e2e/saved-bank.spec.ts` (desktop) and an `Escape` / focus-return step in
+  `e2e/delete-account.spec.ts`; both failed before the change. `docs/design.md` notes the menu-button fallback.
+- Checks: `npm run typecheck` and `npm run lint` pass, `npm test` 389 passed, `npm run e2e` 111 passed and 1
+  skipped (the new keyboard test on the mobile project).
