@@ -115,7 +115,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - The currency can be changed only while the group has **no** expenses or transfers (`CURRENCY_LOCKED`), so no stored
   amount is ever reinterpreted.
 - VietQR is available only for VND groups. Other groups show the account number without a QR code. Currency
-  conversion is `currency_conversion`.
+  conversion is planned as `vnd_settle_rate` (backlog).
 - Adding a currency means one entry in `CURRENCIES`. A unit test checks `minorDigits` against `Intl`.
 
 ### Interface (SCSS + BEM)
@@ -482,8 +482,14 @@ Built. Rules in `docs/business-rules.md`, "Editing an expense".
 
 ### currency_conversion
 
-- Store the rate agreed by the group in `groups.settle_rate` (new migration); no external exchange-rate API.
-- The QR uses `amount * rate`, rounded to VND. The screen shows both amounts.
+Planned as TAL-50 (`vnd_settle_rate`, backlog).
+
+- Store the rate agreed by the group in `groups.settle_rate_e4` (integer scaled by 10,000, new migration); no external
+  exchange-rate API. Each change is audited as `group.update` with details (the values before and after).
+- The conversion is `vnd = roundHalfUp(amountMinor * rateE4 / (10^minorDigits * 10000))`, done in `BigInt` because
+  `MAX_AMOUNT * rateE4` can exceed 2^53. The result is whole dong, rounded half up.
+- The QR uses the converted VND amount. The pay screen shows the amount in the group currency, the agreed rate and the
+  VND amount. Balances and recorded transfers stay in the group currency.
 
 ### vietqr_code_style
 

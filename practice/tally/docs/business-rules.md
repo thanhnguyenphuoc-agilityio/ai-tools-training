@@ -223,7 +223,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   currency `704`, country `VN`, CRC-16/CCITT-FALSE at the end.
 - With an amount the QR is dynamic (`01` = `12`); without an amount it is static (`11`).
 - VietQR is **only for VND groups**. Groups in other currencies show the account number for manual transfer, without
-  a QR code. OPEN QUESTION: currency conversion when paying back a non-VND group (`currency_conversion`).
+  a QR code. Paying back a non-VND group in VND with an agreed rate is planned as `vnd_settle_rate` (backlog).
 - The transfer message is stripped of diacritics, upper-cased, limited to `A-Z 0-9` and spaces, and capped at
   50 characters. The screen shows **exactly** the message encoded in the QR.
 - The QR code is generated in the browser. Account numbers are never sent to a third-party service.
