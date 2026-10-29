@@ -6,9 +6,16 @@ import { expiresAt, MAX_LOCKED_GROUPS } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
 import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
 import { linkToAccount } from '../accountLink';
+import { linkInvitedMember } from '../inviteLink';
 import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { canLinkToAccount, requireGroupNotOwnedByOther, requireOwner, requireOwnerAccount } from '../policy';
+import {
+  canAutoLinkInvite,
+  canLinkToAccount,
+  requireGroupNotOwnedByOther,
+  requireOwner,
+  requireOwnerAccount,
+} from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -58,6 +65,18 @@ groupRoutes.post('/', async (c) => {
 groupRoutes.get('/:code', async (c) => {
   const { group, me } = await loadGroup(c);
   const db = c.env.DB;
+
+  // member_email_invite: a signed-in account with no member here is linked to the invited member that has its email.
+  // This is the only GET that writes, and only when a link happens (recorded as a change, like a claim).
+  if (canAutoLinkInvite(me)) {
+    const account = await resolveAccount(c);
+    const memberId = account ? await linkInvitedMember(db, group, me, account.email) : null;
+    if (memberId) {
+      await recordChange(db, group.code, { ...me, memberId }, 'member.link', memberId);
+      me.memberId = memberId;
+      me.accountMemberId = memberId;
+    }
+  }
 
   const [members, { expenses, transfers }] = await Promise.all([
     loadMembers(db, group.code),

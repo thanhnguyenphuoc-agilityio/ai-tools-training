@@ -47,9 +47,10 @@ export const api = {
   claimOwner: (code: string, ownerKey: string) => call('POST', `${g(code)}/owner/claim`, { ownerKey }),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),
-  addMember: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name }),
+  addMember: (code: string, name: string, inviteEmail?: string) =>
+    call<{ id: string }>('POST', `${g(code)}/members`, { name, inviteEmail }),
   claimMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/claim`),
-  updateMember: (code: string, id: string, patch: Partial<BankDetails> & { name?: string }) =>
+  updateMember: (code: string, id: string, patch: Partial<BankDetails> & { name?: string; inviteEmail?: string }) =>
     call('PATCH', `${g(code)}/members/${id}`, patch),
   removeMember: (code: string, id: string, reason: string) =>
     call('POST', `${g(code)}/members/${id}/remove`, { reason }),

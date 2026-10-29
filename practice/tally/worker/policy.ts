@@ -85,6 +85,16 @@ export function requireCanEditMember(me: Identity, memberId: string): void {
   if (me.memberId !== memberId && !me.isOwner) throw new ApiError(403, 'EDIT_SELF_ONLY', 'you can only edit yourself');
 }
 
+/** The invite email of a member: the owner only (member_email_invite). */
+export function requireCanSetInviteEmail(me: Identity): void {
+  requireOwner(me);
+}
+
+/** Whether a signed-in account without any member in the group may be linked to an invited member on GET. */
+export function canAutoLinkInvite(me: Identity): boolean {
+  return me.userId !== null && me.memberId === null && me.accountMemberId === null;
+}
+
 /**
  * Removing a member: the owner only (remove_member). A guest gets OWNER_ONLY too, since joining
  * would not help. Whether the target can be removed (not the owner, zero balance) is checked by the route.

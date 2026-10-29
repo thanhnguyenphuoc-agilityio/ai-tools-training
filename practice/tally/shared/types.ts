@@ -29,6 +29,8 @@ export interface MemberDto extends BankDetails {
   removed: boolean;
   removedReason: string | null;
   bankSource: 'group' | 'account' | null;
+  /** Active unclaimed member who has an invite email set. The email itself is never returned. */
+  invited: boolean;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */

@@ -4,17 +4,22 @@ import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/typ
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n } from '../i18n';
+import { canSetInviteEmail } from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
+import { InviteEmailDialog } from './InviteEmailDialog';
 import { KeepGroup } from './KeepGroup';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
+import './MembersPanel.scss';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, errorMessage } = useI18n();
   const notify = useToast();
   const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
+  const [invitingMember, setInvitingMember] = useState<MemberDto | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
   const active = group.members.filter((m) => !m.removed);
   const removed = group.members.filter((m) => m.removed);
@@ -50,11 +55,21 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                   <span className="text text--strong">{m.name}</span>
                   {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
                   {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
+                  {m.invited && <span className="badge">{t('memberInvite.badge')}</span>}
                 </span>
                 <span className="cluster">
                   <span className="text text--muted text--small">
                     {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
                   </span>
+                  {canSetInviteEmail(group.me, m) && (
+                    <button
+                      className="button button--ghost button--small"
+                      onClick={() => setInvitingMember(m)}
+                      aria-label={t('memberInvite.set')}
+                    >
+                      {t('memberInvite.set')}
+                    </button>
+                  )}
                   {group.me.isOwner && !m.isOwner && (
                     <button
                       className="button button--ghost button--small"
@@ -78,24 +93,35 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
         </ul>
         {group.me.memberId && (
           <form
-            className="cluster cluster--nowrap"
+            className="stack member-add"
             onSubmit={(e) => {
               e.preventDefault();
               const name = newName.trim();
-              run(api.addMember(group.code, name), () => {
+              const email = newEmail.trim();
+              run(api.addMember(group.code, name, email === '' ? undefined : email), () => {
                 setNewName('');
+                setNewEmail('');
                 notify('toast.memberAdded', { name });
               });
             }}
           >
             <input
-              className="field__control"
+              className="field__control member-add__input"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={t('members.addPlaceholder')}
               aria-label={t('members.addLabel')}
               required
               maxLength={40}
+            />
+            <input
+              type="email"
+              className="field__control member-add__input"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder={t('memberInvite.emailLabel')}
+              aria-label={t('memberInvite.emailLabel')}
+              maxLength={254}
             />
             <button className="button">
               <Icon name="plus" />
@@ -115,6 +141,18 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
           onClose={() => setRemovingMember(null)}
           onChanged={() => {
             notify('toast.memberRemoved', { name: removingMember.name });
+            onChanged();
+          }}
+        />
+      )}
+
+      {invitingMember && (
+        <InviteEmailDialog
+          group={group}
+          member={invitingMember}
+          onClose={() => setInvitingMember(null)}
+          onChanged={() => {
+            notify('memberInvite.saved');
             onChanged();
           }}
         />

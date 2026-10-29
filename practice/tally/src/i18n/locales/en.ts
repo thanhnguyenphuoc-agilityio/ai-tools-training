@@ -193,6 +193,17 @@ export const en = {
     removeReason: 'Reason (optional)',
     removed: 'removed',
   },
+  memberInvite: {
+    emailLabel: 'Email (optional)',
+    emailHint:
+      'When this person opens the group link while signed in with this email, they are recognised automatically.',
+    badge: 'Invited by email',
+    set: 'Set invite email',
+    title: 'Invite {name} by email',
+    save: 'Save email',
+    clear: 'Clear email',
+    saved: 'Invite email saved.',
+  },
   keepGroup: {
     title: 'Keep this group',
     label: 'Keep this group',
@@ -304,6 +315,7 @@ export const en = {
     CURRENCY_LOCKED: 'The currency cannot change once the group has expenses or transfers.',
     UNKNOWN_BANK: 'Please choose a bank from the list.',
     INVALID_ACCOUNT_NO: 'The account number must be 4 to 19 letters or digits.',
+    INVALID_EMAIL: 'Enter a valid email address.',
     GROUP_NOT_FOUND: 'Group not found.',
     MEMBER_NOT_FOUND: 'Member not found.',
     EXPENSE_NOT_FOUND: 'This expense no longer exists.',

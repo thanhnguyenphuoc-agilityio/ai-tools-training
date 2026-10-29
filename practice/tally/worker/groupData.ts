@@ -32,6 +32,8 @@ export interface MemberRow {
   created_at: string;
   removed_at: string | null;
   removed_reason: string | null;
+  /** Never copied into a DTO; only `invited` is derived from it. */
+  invite_email?: string | null;
 }
 
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
@@ -172,6 +174,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
       accountNo: null,
       accountName: null,
       bankSource: null,
+      invited: false,
     };
   }
 
@@ -192,17 +195,19 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
     bankSource = 'account';
   }
 
+  const claimed = m.token_hash !== null || m.user_id !== null;
   return {
     id: m.id,
     name: m.name,
     isOwner: m.is_owner === 1,
-    claimed: m.token_hash !== null || m.user_id !== null,
+    claimed,
     removed: false,
     removedReason: m.removed_reason,
     bankBin,
     accountNo,
     accountName,
     bankSource,
+    invited: !claimed && !!m.invite_email,
   };
 };
 
