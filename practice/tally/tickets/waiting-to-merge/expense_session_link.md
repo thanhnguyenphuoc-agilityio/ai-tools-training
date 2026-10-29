@@ -40,3 +40,17 @@ session of each expense on the Expenses page, and choose or change it when they 
 4. i18n: `expenseForm.session`, `expenseForm.noSession`, `expenseList.sessionBadge` in both locales.
 5. E2e in `attendance.spec.ts`: a group with no sessions shows no session select; after a session exists, an expense added from the Expenses tab with that session chosen shows the badge and the cost under the session, and editing it to "No session" removes both.
 6. Docs: `docs/business-rules.md` ("Sessions and attendance") and the `attendance_split` section of `docs/design.md`. No API change.
+
+## Merge request
+
+Branch `feat/expense_session_link` into `develop`.
+
+The expense form has a Session select (hidden when the group has no sessions) and the expense list shows a session badge. `sessionLabel` in `src/expenseRow.ts` builds the shared day and time-range text. No API or migration change: create and update already accept `sessionId`.
+
+Commands run in the worktree, all green:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm test` (616 tests; two full runs hit the known Miniflare timeout and poisoned-stub flake, and the three files that still failed passed alone)
+- `npm run test:hooks`
+- `npx playwright test --config playwright.local.config.ts` (152 passed)
