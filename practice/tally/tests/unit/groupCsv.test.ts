@@ -37,6 +37,7 @@ const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'a
   createdBy: e.payerId,
   createdAt: '2026-10-01T09:00:00.000Z',
   editedAt: null,
+  sessionId: null,
   ...e,
 });
 
@@ -73,6 +74,7 @@ function group(overrides: Partial<GroupDto> = {}): GroupDto {
     ownedByAccount: false,
     currencyLocked: true,
     members: [member('alex', 'Alex'), member('sam', 'Sam'), member('jamie', 'Jamie')],
+    sessions: [],
     // The API lists expenses and transfers newest first.
     expenses: [
       expense({

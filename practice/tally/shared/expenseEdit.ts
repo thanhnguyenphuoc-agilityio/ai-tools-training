@@ -55,11 +55,13 @@ export interface ExpenseFields {
   description: string;
   spentOn: string;
   splitMode: SplitMode;
+  /** The session the cost belongs to (attendance_split); null when none. */
+  sessionId: string | null;
 }
 
 /**
  * True when an edit changes one of the stored expense fields. The shares are compared separately, by `splitChanged`.
- * A later field (for example a session) is added here, in one place.
+ * A session change alone is a field change: it sets `edited_at`, but the stored shares are kept.
  */
 export function expenseFieldsChanged(previous: ExpenseFields, next: ExpenseFields): boolean {
   return (
@@ -67,6 +69,7 @@ export function expenseFieldsChanged(previous: ExpenseFields, next: ExpenseField
     previous.amount !== next.amount ||
     previous.description !== next.description ||
     previous.spentOn !== next.spentOn ||
-    previous.splitMode !== next.splitMode
+    previous.splitMode !== next.splitMode ||
+    previous.sessionId !== next.sessionId
   );
 }
