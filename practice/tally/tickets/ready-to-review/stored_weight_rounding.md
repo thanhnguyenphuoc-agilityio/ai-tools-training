@@ -127,3 +127,17 @@ How it was tested:
 - `npm test`: 40 files, 449 tests passed.
 - `npm run test:hooks`: 29 tests passed.
 - `npx playwright test --config playwright.local.config.ts` (port 5191): 128 passed, 2 skipped.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `weight()` in `worker/http.ts` returns `roundWeight(n)`, so the stored weight is the two-decimal value the split
+  uses; the 1e-9 tolerance is kept (0.29 accepted) and a weight that rounds to zero hundredths is refused with
+  `INVALID_WEIGHT`. This matches answers 1 and 2.
+- The failing-first test commit covers the stored weight, `1e-12` and `100.001`; shares are compared by member.
+- Answer 3 (compare weights in hundredths on edit) belongs to `edit_expense`; the batch review makes its comparison
+  use `weightHundredths()` once both are on `develop`.
+- No migration, error code, i18n key or UI change. No changes needed.
+- Checks: typecheck and lint clean, 449 unit and API tests, 29 hook tests, e2e 128 passed and 2 skipped (two specs
+  rerun once after browser-close timeouts under load).
