@@ -98,3 +98,21 @@ with `npx playwright test --config playwright.local.config.ts`.
 4. Run the checks, self-check with the review-checklist skill, then commit "docs(tickets): move currency_conversion to
    waiting-to-merge": `git mv` the ticket to `waiting-to-merge/` and add a `## Merge request` section with the branch,
    the changes, and the commands and results.
+
+## Merge request
+
+- Branch: `docs/currency_conversion` into `develop`.
+- Commits: the plan, the answers in `docs/business-rules.md` and `docs/design.md`, the `vnd_settle_rate` follow-up
+  ticket (TAL-50, `tickets/backlog/vnd_settle_rate.md`), and the move of this ticket to `waiting-to-merge/`.
+- Changes: the VietQR OPEN QUESTION in `docs/business-rules.md` now points to `vnd_settle_rate`. In `docs/design.md`,
+  the Currency section points to `vnd_settle_rate`, and `### currency_conversion` names TAL-50, `settle_rate_e4`, the
+  BigInt conversion rule and the `group.update` audit details. No code changes.
+- Commands and results (run in `practice/tally`):
+  - `npm run typecheck`: exit 0.
+  - `npm run lint`: exit 0.
+  - `npm test`: 44 test files passed, 515 tests passed.
+  - `npm run test:hooks`: 29 passed, 0 failed.
+  - `npx playwright test --config playwright.local.config.ts`: 142 passed, 2 skipped.
+- Self-review with the review-checklist skill: approve with nits. Nits: `docs/design.md` `currency_conversion` bullet
+  on the audit and conversion rule is longer than the 120-column wrap used in the file; `tickets/README.md` still
+  shows the next free ID as `TAL-50` until the batch's last merge sets it, which is intentionally not changed here.
