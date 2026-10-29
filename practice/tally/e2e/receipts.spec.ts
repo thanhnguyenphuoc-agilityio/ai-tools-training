@@ -19,6 +19,8 @@ test('attach a receipt photo to an expense, see the icon and open the photo', as
 
   await page.getByLabel(t('expenseForm.amount'), { exact: true }).fill('120k');
   await page.getByLabel(t('expenseForm.description')).fill('Groceries');
+  // No `capture` attribute: on a phone it opens the camera only, and a receipt saved from a chat could not be picked.
+  await expect(page.locator('input[type="file"]')).not.toHaveAttribute('capture');
   await page.setInputFiles('input[type="file"]', { name: 'receipt.png', mimeType: 'image/png', buffer: PNG });
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
 

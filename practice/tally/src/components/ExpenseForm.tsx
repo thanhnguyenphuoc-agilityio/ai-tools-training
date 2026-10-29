@@ -335,7 +335,6 @@ export function ExpenseForm({
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="field__control expense-form__file-input"
             onChange={(e) => {
               setReceiptFile(e.target.files?.[0] ?? null);
