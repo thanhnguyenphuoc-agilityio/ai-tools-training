@@ -164,6 +164,10 @@ waiting-to-merge with a merge request section.
   - `npm test`: 46 files, 535 tests passed. This includes the new `tests/api/receipts.test.ts` (13 tests) and `tests/unit/receipts.test.ts`.
   - `npm run test:hooks`: 29 passed.
   - `npx playwright test --config playwright.local.config.ts` (port 5193): 146 passed, 2 skipped. Includes both receipt e2e tests on desktop and mobile.
+- Self-review (review-checklist) found and fixed one issue before this section was written: removing a photo deleted the
+  row unconditionally, so an expense deleted between the check and the statement lost its photo row while the change
+  was still recorded. The removal is now gated on the expense still being live, and a test covers the race (it failed
+  with 200 before the fix).
 - Known notes:
   - `ExpenseForm.tsx` already failed `prettier --check` at `develop`; this branch does not reflow its unrelated lines.
   - Several existing API tests build `Env` for racing writes; they now spread `...env.env` so the `RECEIPTS` binding is kept.
