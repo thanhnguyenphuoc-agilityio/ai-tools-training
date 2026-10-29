@@ -116,3 +116,19 @@ Branch `feat/attendance_split` off `develop`, in its own worktree under `.scratc
 11. **Tests**: `tests/unit/sessions.test.ts`, `tests/unit/expenseEdit.test.ts` (session cases), `tests/api/sessions.test.ts` (matrix above), `e2e/attendance.spec.ts`. Synthetic names (Alex, Sam, Jamie) and fake bank accounts only; non-ASCII input as `\uXXXX`.
 12. **Docs**: `docs/design.md` "### attendance_split" becomes "(built)" with tables, migration 0012, endpoints, the midnight rule, `requireCanManageSessions`, `attendanceMatches`, idempotent PATCH and the race guards; section 4 hard-delete line gets the session exception; "### edit_expense (built)" notes `sessionId` in `expenseFieldsChanged`. `docs/business-rules.md` gets the section "Sessions and attendance" before "Balances and settling up", and session add, update and delete in "Changes that count as activity". `README.md` "Not in the MVP" drops attendance-based splits.
 13. **Checks before waiting-to-merge**: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:hooks`, and `npx playwright test --config playwright.local.config.ts` (port 5194). The remote D1 migration `0012_sessions.sql` must be applied before the feature works on a deployed environment.
+
+## Merge request
+
+- Branch: `feat/attendance_split` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- The remote D1 migration `0012_sessions.sql` must be applied before the feature works on a deployed environment.
+- What changed: the owner takes attendance for recurring sessions, and a cost added from a session is an ordinary
+  expense shared among the members present. Sessions that end after midnight belong to the day they start. Changing
+  attendance never changes saved shares. A session with live costs cannot be deleted.
+- Commands run and results:
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean.
+  - `npm test`: 46 files, 547 tests, 545 passed on the first run. Two timed out under load (`TO-11` in
+    `transfer-ownership.test.ts`, an existing test, and one new session test). Both passed on a rerun.
+  - `npm run test:hooks`: passed.
+  - `npx playwright test --config playwright.local.config.ts` (port 5194): 144 passed, 2 skipped.
