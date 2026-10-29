@@ -163,6 +163,7 @@ export const vi: Messages = {
     removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
     recordFor: 'Ghi nhận chuyển khoản',
     recordForLabel: 'Ghi nhận chuyển khoản: {from} trả {to}',
+    waitingFor: 'Đang chờ {to} xác nhận',
   },
   qr: {
     title: 'Trả {name} {amount}',
@@ -403,6 +404,7 @@ export const vi: Messages = {
     DUPLICATE_PARTICIPANT: 'Một người bị chọn hai lần.',
     SELF_TRANSFER: 'Không thể tự chuyển tiền cho chính mình.',
     ALREADY_CONFIRMED: 'Giao dịch này đã được xác nhận.',
+    TRANSFER_PENDING: 'Đã có một giao dịch giữa hai người này đang chờ xác nhận.',
     MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
     MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
     CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
