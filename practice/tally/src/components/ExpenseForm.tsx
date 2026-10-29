@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { splitChanged } from '../../shared/expenseEdit';
 import { exactSplitDifference, splitAmount } from '../../shared/money';
-import type { ExpenseDto, GroupDto, SplitMode } from '../../shared/types';
+import type { ExpenseDto, GroupDto, SessionDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
@@ -19,6 +19,7 @@ export function ExpenseForm({
   onStale,
   editing = null,
   onCancel,
+  session,
 }: {
   group: GroupDto;
   onSaved: () => void;
@@ -26,6 +27,8 @@ export function ExpenseForm({
   onStale: () => void;
   editing?: ExpenseDto | null;
   onCancel?: () => void;
+  /** A session the cost belongs to (attendance_split): its present members, day and note are preselected. */
+  session?: SessionDto;
 }) {
   const { t, message } = useI18n();
   const { currency, money, parseMoney, parseShareMoney, formatAmount } = useGroupMoney(group);
@@ -37,12 +40,15 @@ export function ExpenseForm({
   const fallbackPayerId = members.some((m) => m.id === group.me.memberId) ? group.me.memberId! : members[0].id;
   const payerId = members.some((m) => m.id === chosenPayerId) ? chosenPayerId : fallbackPayerId;
   const [amountText, setAmountText] = useState(editing ? formatAmount(editing.amount) : '');
-  const [description, setDescription] = useState(editing?.description ?? '');
-  const [spentOn, setSpentOn] = useState(editing?.spentOn ?? todayLocal);
+  const [description, setDescription] = useState(editing?.description ?? session?.note ?? '');
+  const [spentOn, setSpentOn] = useState(editing?.spentOn ?? session?.day ?? todayLocal);
   const [mode, setMode] = useState<SplitMode>(editing?.splitMode ?? 'equal');
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(editing ? editing.shares.map((s) => s.memberId) : members.map((m) => m.id)),
-  );
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    if (editing) return new Set(editing.shares.map((s) => s.memberId));
+    // A session cost starts with the members present; a removed member cannot be preselected.
+    if (session) return new Set(members.filter((m) => session.presentIds.includes(m.id)).map((m) => m.id));
+    return new Set(members.map((m) => m.id));
+  });
   const [weights, setWeights] = useState<Record<string, string>>(() =>
     Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, String(s.weight)])),
   );
@@ -123,12 +129,12 @@ export function ExpenseForm({
         participants: mode === 'exact' ? exactParts : participants,
       };
       if (editing) {
-        const { changed } = await api.updateExpense(group.code, editing.id, input);
+        const { changed } = await api.updateExpense(group.code, editing.id, { ...input, sessionId: editing.sessionId });
         // A save that repeats the stored values is not an edit: say nothing rather than report a change.
         if (changed) notify('toast.expenseEdited');
         onSaved();
       } else {
-        await api.addExpense(group.code, input);
+        await api.addExpense(group.code, { ...input, sessionId: session?.id ?? null });
         setAmountText('');
         setDescription('');
         setShareTexts({});
@@ -294,7 +300,7 @@ export function ExpenseForm({
           >
             {t(editing ? 'expenseForm.editSubmit' : 'expenseForm.submit')}
           </button>
-          {editing && onCancel && (
+          {(editing || session) && onCancel && (
             <button type="button" className="button button--ghost" onClick={onCancel} disabled={busy}>
               {t('common.cancel')}
             </button>

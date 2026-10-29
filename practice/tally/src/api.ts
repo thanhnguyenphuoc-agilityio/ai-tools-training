@@ -9,6 +9,7 @@ import type {
   MeResponse,
   MyGroupsResponse,
   NewExpense,
+  NewSession,
   UserDto,
 } from '../shared/types';
 
@@ -59,6 +60,11 @@ export const api = {
   removeMember: (code: string, id: string, reason: string) =>
     call('POST', `${g(code)}/members/${id}/remove`, { reason }),
   releaseMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/release`),
+
+  createSession: (code: string, session: NewSession) => call<{ id: string }>('POST', `${g(code)}/sessions`, session),
+  updateSession: (code: string, id: string, session: Partial<NewSession>) =>
+    call<{ ok: true; changed?: boolean }>('PATCH', `${g(code)}/sessions/${id}`, session),
+  deleteSession: (code: string, id: string) => call<{ ok: true }>('DELETE', `${g(code)}/sessions/${id}`),
 
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),

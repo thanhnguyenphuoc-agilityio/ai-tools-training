@@ -71,6 +71,7 @@ export const en = {
     },
     tabs: {
       expenses: 'Expenses',
+      sessions: 'Sessions',
       settle: 'Settle up',
       members: 'Members',
     },
@@ -250,6 +251,8 @@ export const en = {
     ownerTransferred: '{name} is now the owner.',
     expenseAdded: 'Expense added.',
     expenseEdited: 'Expense updated.',
+    sessionSaved: 'Session saved.',
+    sessionDeleted: 'Session deleted.',
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
@@ -345,6 +348,33 @@ export const en = {
       confirmed: 'Confirmed',
     },
   },
+  sessions: {
+    title: 'Sessions',
+    new: 'New session',
+    edit: 'Edit session',
+    delete: 'Delete session',
+    day: 'Date',
+    start: 'Start time',
+    end: 'End time',
+    note: 'Note',
+    present: 'Present members',
+    presentCount: '{count} present',
+    /** Present count followed by the names, joined with common.separator. */
+    presentList: '{count} present: {names}',
+    range: '{start} – {end}',
+    nextDay: '(+1 day)',
+    /** Duration of the session, in parentheses. */
+    duration: '({hours}h {minutes}m)',
+    /** Payer of a session cost, after its amount. */
+    paidBy: '({name})',
+    addCost: 'Add cost',
+    total: 'Total: {amount}',
+    mismatch: 'does not match attendance',
+    empty: 'No sessions yet.',
+    deleteTitle: 'Delete this session?',
+    confirmDelete: 'Its attendance is deleted too. Costs saved in it must be deleted first.',
+    confirmDeleteButton: 'Delete session',
+  },
   errors: {
     INTERNAL: 'Something went wrong. Please try again.',
     NOT_FOUND: 'Not found.',
@@ -402,6 +432,9 @@ export const en = {
     MEMBER_NOT_CLAIMED: 'This name has not been claimed yet.',
     CANNOT_RELEASE_OWNER: 'The group owner cannot be released.',
     EDIT_NOT_ALLOWED: 'Only the person who added this expense or the group owner can edit it.',
+    INVALID_SESSION_TIME: 'Session times must be in HH:mm format (00:00-23:59) and start time cannot equal end time.',
+    SESSION_NOT_FOUND: 'Session not found.',
+    SESSION_HAS_EXPENSES: 'Cannot delete a session that has expenses.',
   } satisfies Record<ErrorCode, string>,
 };
 
