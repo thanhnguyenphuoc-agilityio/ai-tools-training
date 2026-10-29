@@ -16,6 +16,7 @@ export interface UserRow {
   google_sub: string;
   email: string;
   name: string;
+  name_custom: number;
   bank_bin: string | null;
   account_no: string | null;
   account_name: string | null;
