@@ -170,3 +170,30 @@ Branch `fix/wrong_name_claim` off `develop`. No migration: a released member has
   - `README.md`, Concepts table, Member row: the owner can release a wrongly claimed name.
 - Verify: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:hooks`, and
   `npx playwright test --config playwright.local.config.ts`.
+
+## Merge request
+
+Branch `fix/wrong_name_claim` into `develop`. The merge request link is added when it exists.
+
+What changed:
+
+- `shared/errors.ts`: `MEMBER_NOT_CLAIMED` and `CANNOT_RELEASE_OWNER`, translated in `src/i18n/locales/en.ts` and `vi.ts`.
+- `worker/policy.ts`: `requireCanReleaseMember`, which is `requireOwner`.
+- `worker/routes/members.ts`: `POST /groups/:code/members/:id/release`, owner only. One guarded `UPDATE` clears
+  `token_hash`, `user_id` and `invite_email`; no row changed gives `MEMBER_REMOVED` or `MEMBER_NOT_CLAIMED`. Recorded
+  as `member.release` through `recordChange`. No migration.
+- `src/api.ts`: `releaseMember`. `src/ownerTools.ts`: `canReleaseMember`.
+- `src/components/ClaimMemberDialog.tsx`: "I am <name>" asks for confirmation before the claim is sent.
+- `src/components/ReleaseMemberDialog.tsx`: the owner confirms before releasing, then a toast shows the name.
+- `docs/business-rules.md`, `docs/design.md` and `README.md`: the release rules, the policy entry, the built design
+  and the Concepts row. The `member_email_invite` release note is marked done.
+- `tests/api/claim-member.test.ts`, `tests/unit/ownerTools.test.ts` and `e2e/claim-member.spec.ts` cover the matrix.
+
+Commands and results (run in the feature worktree; e2e on port 5193):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 41 files, 462 tests passed.
+- `npm run test:hooks`: 29 passed, 0 failed.
+- `npx playwright test --config playwright.local.config.ts`: 130 passed, 2 skipped (desktop-only keyboard checks on the
+  mobile project).
