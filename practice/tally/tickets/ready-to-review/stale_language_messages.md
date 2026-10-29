@@ -181,3 +181,17 @@ Branch: `fix/stale_language_messages` from `develop`. Assignee set; ticket moved
   - `npm test`: 41 files, 452 tests passed.
   - `npm run test:hooks`: 29 of 29 passed.
   - `npx playwright test --config playwright.local.config.ts`: 134 passed, 2 skipped (the existing saved-bank keyboard test and the existing My name Escape test, both on the mobile project).
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- Every component that kept a translated error in state now keeps a `UiMessage` (a key with variables, or the
+  thrown error) and renders it with `message()`, so a visible error follows a language change (answers 1 and 4).
+- Raw server text without a code goes through `errorMessage()` unchanged (answer 3). The nested amount examples
+  are a `MessageVar`, so no part of the sentence keeps the old language.
+- Tests: `tests/unit/uiMessage.test.ts` and three e2e cases in `e2e/language-picker.spec.ts`; the e2e cases fail on
+  the previous code (the error text stays Vietnamese).
+- Note for the batch: `wrong_name_claim`, `owner_member_tools` and `edit_expense` were branched before this fix; their
+  new or changed error states are moved to `UiMessage` when they are merged. No changes needed on this branch.
+- Checks: typecheck and lint clean, 452 unit and API tests, 29 hook tests, e2e 134 passed and 2 skipped.
