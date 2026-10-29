@@ -76,3 +76,25 @@ Commands and results, run in `practice/tally`:
 - `npm run test:hooks`: 29 passed.
 - `npx playwright test --config playwright.local.config.ts`: 150 passed, 2 skipped. The first run died when the dev
   server stopped answering (connection refused); the rerun passed.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Checked against the plan and the Acceptance criteria. `ConfirmDialog` takes the markup of the former
+  `DeleteSessionDialog` unchanged (`useDialog` with `canClose: !busy`, backdrop click that must start on the backdrop,
+  both buttons disabled while busy, error inside the dialog) and takes translated strings, so it hard-codes no text
+  other than `common.cancel`. The session delete renders the same dialog as before.
+- `ExpenseList` no longer calls `window.confirm`; the list-level error state is gone because only delete set it. The
+  dialog shows description, amount and day joined by `common.separator`. Deleting the expense under edit still returns
+  the form to adding through `onChanged`.
+- `expenseList.confirmDelete` lost its `{description}` variable; no other caller used it. `vi` keeps its diacritics.
+- No blocking findings, no fixes needed.
+
+Verdict: approve. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 50 files / 614 passed, `npm run test:hooks` 29
+passed, e2e `edit-expense` and `attendance` (port 5192) 6 passed; the builder's full e2e run was 150 passed / 2
+skipped. Typecheck and `npm test` rerun on `develop` after the merge.
