@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ErrorBody } from '../../shared/errors';
@@ -10,7 +10,16 @@ import { Browser, createTestEnv, signIn } from './helpers';
 // do not. The fake GROUP_LIVE binding records the group codes that were signalled.
 
 const ROUTES = join(import.meta.dirname, '../../worker/routes');
-const ROUTE_FILES = ['groups.ts', 'members.ts', 'expenses.ts', 'transfers.ts', 'link.ts'];
+// Every route file mounted under /groups, read from the folder so a new file is covered without editing this list.
+// account.ts and myGroups.ts are outside /groups/:code; live.ts has only the GET endpoint.
+const NOT_GROUP_WRITES = new Set(['account.ts', 'myGroups.ts', 'live.ts']);
+const ROUTE_FILES = readdirSync(ROUTES).filter((f) => f.endsWith('.ts') && !NOT_GROUP_WRITES.has(f));
+
+/** A 1x1 PNG: valid magic bytes for a receipt upload. */
+const PNG = Uint8Array.from(
+  atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='),
+  (ch) => ch.charCodeAt(0),
+);
 
 function fakeLive() {
   const signals: string[] = [];
@@ -54,6 +63,9 @@ interface World {
   jamieId: string;
   expenseId: string;
   transferId: string;
+  /** Set by the prepare step of a case that needs a session or a receipt photo. */
+  sessionId: string;
+  attachmentId: string;
   g: string;
 }
 
@@ -99,6 +111,8 @@ async function world(): Promise<World> {
     jamieId,
     expenseId,
     transferId: '',
+    sessionId: '',
+    attachmentId: '',
     g,
   };
 }
@@ -111,6 +125,9 @@ interface Case {
 }
 
 const SIGNED_IN_ALEX = 'alex@example.com';
+
+/** A session body with no one present, so it needs no member ids. */
+const SESSION = { day: '2026-10-10', startsAt: '19:00', endsAt: '21:00', presentIds: [] };
 
 /** Every group write, by "METHOD /groups/:code..." as it appears in worker/routes. Add a route here when it is added. */
 const CASES: Record<string, Case> = {
@@ -185,6 +202,31 @@ const CASES: Record<string, Case> = {
   'DELETE /groups/:code/expenses/:id': {
     write: (w) => w.owner.call('DELETE', `${w.g}/expenses/${w.expenseId}`),
   },
+  'POST /groups/:code/expenses/:id/attachments': {
+    write: (w) => w.owner.sendBytes('POST', `${w.g}/expenses/${w.expenseId}/attachments`, PNG, 'image/png'),
+  },
+  'DELETE /groups/:code/expenses/:id/attachments/:aid': {
+    prepare: async (w) => {
+      const sent = await w.owner.sendBytes('POST', `${w.g}/expenses/${w.expenseId}/attachments`, PNG, 'image/png');
+      w.attachmentId = sent.json.id;
+    },
+    write: (w) => w.owner.call('DELETE', `${w.g}/expenses/${w.expenseId}/attachments/${w.attachmentId}`),
+  },
+  'POST /groups/:code/sessions': {
+    write: (w) => w.owner.call('POST', `${w.g}/sessions`, SESSION),
+  },
+  'PATCH /groups/:code/sessions/:id': {
+    prepare: async (w) => {
+      w.sessionId = (await w.owner.call<{ id: string }>('POST', `${w.g}/sessions`, SESSION)).json.id;
+    },
+    write: (w) => w.owner.call('PATCH', `${w.g}/sessions/${w.sessionId}`, { endsAt: '22:00' }),
+  },
+  'DELETE /groups/:code/sessions/:id': {
+    prepare: async (w) => {
+      w.sessionId = (await w.owner.call<{ id: string }>('POST', `${w.g}/sessions`, SESSION)).json.id;
+    },
+    write: (w) => w.owner.call('DELETE', `${w.g}/sessions/${w.sessionId}`),
+  },
   'POST /groups/:code/transfers': {
     write: (w) => w.sam.call('POST', `${w.g}/transfers`, { toId: w.ownerId, amount: 500 }),
   },
@@ -236,7 +278,7 @@ describe('live updates: what does not signal', () => {
     const res = await w.sam.call<ErrorBody>('PATCH', w.g, { name: 'Nope' });
     expect(res.status).toBe(403);
     expect(w.live.signals).toEqual([]);
-  });
+  }, SLOW_TEST_MS);
 
   it('a refused expense (400 PAYER_NOT_IN_GROUP) does not signal', async () => {
     const w = await world();
@@ -245,7 +287,7 @@ describe('live updates: what does not signal', () => {
     expect(res.status).toBe(400);
     expect(res.json.code).toBe('PAYER_NOT_IN_GROUP');
     expect(w.live.signals).toEqual([]);
-  });
+  }, SLOW_TEST_MS);
 
   it('a plain GET of the group does not signal', async () => {
 
@@ -267,7 +309,7 @@ describe('live updates: what does not signal', () => {
     });
     expect(res.status).toBe(201);
     expect(w.live.signals).toEqual([]);
-  });
+  }, SLOW_TEST_MS);
 });
 
 describe('live updates: the invite auto-link GET signals', () => {
@@ -304,7 +346,7 @@ describe('live updates: account routes signal the groups that show the account',
     const res = await alex.call('PATCH', '/me', { name: 'Alexandra' });
     expect(res.status).toBe(200);
     expect([...w.live.signals].sort()).toEqual([owned, w.code].sort());
-  });
+  }, SLOW_TEST_MS);
 
   it('DELETE /me signals the affected groups once each', async () => {
     const w = await world();
@@ -316,7 +358,7 @@ describe('live updates: account routes signal the groups that show the account',
     const res = await alex.call('DELETE', '/me');
     expect(res.status).toBe(200);
     expect(w.live.signals).toEqual([owned]);
-  });
+  }, SLOW_TEST_MS);
 });
 
 describe('live updates: the optional binding and the live endpoint', () => {
