@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 
 // "I am <name>" needs one more click: nothing is sent until the visitor confirms.
 export function ClaimMemberDialog({
@@ -16,9 +16,9 @@ export function ClaimMemberDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const panel = useDialog(onClose, { canClose: !busy });
 
   async function confirm(e: React.FormEvent) {
@@ -30,7 +30,7 @@ export function ClaimMemberDialog({
       onClose();
       onDone();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setBusy(false);
     }
@@ -50,7 +50,7 @@ export function ClaimMemberDialog({
         <h2 className="card__title">{t('join.confirmClaimSubmit', { name: member.name })}</h2>
         <p className="text text--muted text--small">{t('join.confirmClaim', { name: member.name })}</p>
         <form onSubmit={confirm} className="stack">
-          {error && <p className="text text--error">{error}</p>}
+          {error && <p className="text text--error">{message(error)}</p>}
           <div className="cluster">
             <button className="button" type="submit" disabled={busy}>
               {t('join.confirmClaimSubmit', { name: member.name })}
