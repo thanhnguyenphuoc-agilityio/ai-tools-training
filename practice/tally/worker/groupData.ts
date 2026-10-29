@@ -1,7 +1,7 @@
 // Loading a group and its members, activity tracking and audit log.
 import { GROUP_CODE_RE } from '../shared/groupCode';
 import { computeBalances } from '../shared/settle';
-import type { ExpenseDto, MemberDto, TransferDto } from '../shared/types';
+import type { ExpenseDto, MemberDto, SessionDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
 
@@ -165,6 +165,7 @@ export async function loadLedger(
     createdAt: e.created_at as string,
     editedAt: (e.edited_at as string | null) ?? null,
     receipt: receiptByExpense.get(e.id as string) ?? null,
+    sessionId: (e.session_id as string | null) ?? null,
   }));
   const transfers: TransferDto[] = transferRows.map((t) => ({
     id: t.id as string,
@@ -176,6 +177,33 @@ export async function loadLedger(
     confirmedAt: t.confirmed_at as string | null,
   }));
   return { expenses, transfers };
+}
+
+/** The sessions of a group, newest day first, with the members present (attendance_split). */
+export async function loadSessions(db: D1Database, code: string): Promise<SessionDto[]> {
+  const [sessionRows, attendanceRows] = await Promise.all([
+    db
+      .prepare('SELECT * FROM group_sessions WHERE group_code = ? ORDER BY day DESC, starts_at DESC')
+      .bind(code)
+      .all<{ id: string; day: string; starts_at: string; ends_at: string; note: string }>()
+      .then((r) => r.results),
+    db
+      .prepare(
+        `SELECT a.session_id, a.member_id FROM attendance a
+         JOIN group_sessions s ON s.id = a.session_id WHERE s.group_code = ?`,
+      )
+      .bind(code)
+      .all<{ session_id: string; member_id: string }>()
+      .then((r) => r.results),
+  ]);
+  return sessionRows.map((s) => ({
+    id: s.id,
+    day: s.day,
+    startsAt: s.starts_at,
+    endsAt: s.ends_at,
+    note: s.note,
+    presentIds: attendanceRows.filter((a) => a.session_id === s.id).map((a) => a.member_id),
+  }));
 }
 
 /**

@@ -39,6 +39,7 @@ const fields = (overrides: Partial<ExpenseFields> = {}): ExpenseFields => ({
   description: 'Utilities',
   spentOn: '2026-10-10',
   splitMode: 'equal',
+  sessionId: null,
   ...overrides,
 });
 
@@ -109,5 +110,11 @@ describe('expenseFieldsChanged', () => {
     expect(expenseFieldsChanged(fields(), fields({ description: 'Groceries' }))).toBe(true);
     expect(expenseFieldsChanged(fields(), fields({ spentOn: '2026-10-11' }))).toBe(true);
     expect(expenseFieldsChanged(fields(), fields({ splitMode: 'exact' }))).toBe(true);
+  });
+
+  it('is true when only the session changes (attendance_split); the stored shares are kept by splitChanged', () => {
+    expect(expenseFieldsChanged(fields(), fields({ sessionId: 'session-1' }))).toBe(true);
+    expect(expenseFieldsChanged(fields({ sessionId: 'session-1' }), fields({ sessionId: null }))).toBe(true);
+    expect(expenseFieldsChanged(fields({ sessionId: 'session-1' }), fields({ sessionId: 'session-1' }))).toBe(false);
   });
 });

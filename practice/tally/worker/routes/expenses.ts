@@ -26,7 +26,25 @@ interface ParsedExpense {
   participants: { memberId: string; weight: number; amount: number }[];
   /** The share of each participant, from the group's rounding (or the typed amounts in exact mode). */
   shares: Map<string, number>;
+  /** The session of the group the cost belongs to (attendance_split); null when none. */
+  sessionId: string | null;
 }
+
+/** A session id from the body: null, empty or absent means none; otherwise it must be a session of this group. */
+async function parseSessionId(db: D1Database, code: string, value: unknown): Promise<string | null> {
+  if (value === undefined || value === null || value === '') return null;
+  const sessionId = text(value, 'sessionId', 64);
+  const found = await db
+    .prepare('SELECT 1 FROM group_sessions WHERE id = ? AND group_code = ?')
+    .bind(sessionId, code)
+    .first();
+  if (!found) throw new ApiError(400, 'SESSION_NOT_FOUND', 'session not found');
+  return sessionId;
+}
+
+/** D1 reports a foreign key failure when the session was removed after parseSessionId read it. */
+const isSessionGone = (err: unknown): boolean =>
+  err instanceof Error && err.message.includes('FOREIGN KEY constraint failed');
 
 /**
  * Reads and validates an expense body, the same way for a new expense and an edit (edit_expense).
@@ -43,6 +61,7 @@ async function parseExpense(c: Ctx, code: string, roundTo: number): Promise<Pars
   const description = text(body.description, 'description', 120);
   const spentOn = isoDate(body.spentOn);
   const splitMode: SplitMode = body.splitMode === 'weight' || body.splitMode === 'exact' ? body.splitMode : 'equal';
+  const sessionId = await parseSessionId(c.env.DB, code, body.sessionId);
 
   if (!Array.isArray(body.participants) || body.participants.length === 0) {
     throw new ApiError(400, 'NO_PARTICIPANTS', 'pick at least one participant');
@@ -69,7 +88,7 @@ async function parseExpense(c: Ctx, code: string, roundTo: number): Promise<Pars
     splitMode === 'exact'
       ? splitExact(total, participants)
       : splitAmount(total, participants, { roundTo, payerId });
-  return { payerId, total, description, spentOn, splitMode, participants, shares };
+  return { payerId, total, description, spentOn, splitMode, participants, shares, sessionId };
 }
 
 expenseRoutes.post('/:code/expenses', async (c) => {
@@ -80,29 +99,36 @@ expenseRoutes.post('/:code/expenses', async (c) => {
   // The member check is repeated inside the batch (one transaction): a member removed since loadActiveMemberIds
   // makes the expense INSERT write nothing, and the shares are only written next to an expense row.
   const named = JSON.stringify([parsed.payerId, ...parsed.participants.map((p) => p.memberId)]);
-  const [inserted] = await c.env.DB.batch([
-    c.env.DB.prepare(
-      `INSERT INTO expenses (id, group_code, payer_id, amount, description, spent_on, split_mode, created_by, created_at)
-       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9 WHERE ${noneRemovedSql(10)}`,
-    ).bind(
-      id,
-      group.code,
-      parsed.payerId,
-      parsed.total,
-      parsed.description,
-      parsed.spentOn,
-      parsed.splitMode,
-      author,
-      now(),
-      named,
-    ),
-    ...parsed.participants.map((p) =>
+  let inserted: D1Result;
+  try {
+    [inserted] = await c.env.DB.batch([
       c.env.DB.prepare(
-        `INSERT INTO expense_shares (expense_id, member_id, weight, amount)
-         SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM expenses WHERE id = ?1)`,
-      ).bind(id, p.memberId, p.weight, parsed.shares.get(p.memberId)!),
-    ),
-  ]);
+        `INSERT INTO expenses (id, group_code, payer_id, amount, description, spent_on, split_mode, session_id, created_by, created_at)
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10 WHERE ${noneRemovedSql(11)}`,
+      ).bind(
+        id,
+        group.code,
+        parsed.payerId,
+        parsed.total,
+        parsed.description,
+        parsed.spentOn,
+        parsed.splitMode,
+        parsed.sessionId,
+        author,
+        now(),
+        named,
+      ),
+      ...parsed.participants.map((p) =>
+        c.env.DB.prepare(
+          `INSERT INTO expense_shares (expense_id, member_id, weight, amount)
+           SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM expenses WHERE id = ?1)`,
+        ).bind(id, p.memberId, p.weight, parsed.shares.get(p.memberId)!),
+      ),
+    ]);
+  } catch (err) {
+    if (isSessionGone(err)) throw new ApiError(400, 'SESSION_NOT_FOUND', 'session not found');
+    throw err;
+  }
   if (inserted.meta.changes === 0) {
     const active = await loadActiveMemberIds(c.env.DB, group.code);
     if (!active.has(parsed.payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
@@ -119,7 +145,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
   const { group, me } = await loadGroup(c);
   const id = c.req.param('id');
   const expense = await c.env.DB.prepare(
-    'SELECT payer_id, amount, description, spent_on, split_mode, created_by FROM expenses WHERE id = ? AND group_code = ? AND deleted_at IS NULL',
+    'SELECT payer_id, amount, description, spent_on, split_mode, session_id, created_by FROM expenses WHERE id = ? AND group_code = ? AND deleted_at IS NULL',
   )
     .bind(id, group.code)
     .first<{
@@ -128,6 +154,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
       description: string;
       spent_on: string;
       split_mode: SplitMode;
+      session_id: string | null;
       created_by: string | null;
     }>();
   if (!expense) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
@@ -150,6 +177,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
     description: expense.description,
     spentOn: expense.spent_on,
     splitMode: expense.split_mode,
+    sessionId: expense.session_id ?? null,
     shares: previousShares,
   };
   const sharesChanged = splitChanged(previous, {
@@ -164,6 +192,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
     description: parsed.description,
     spentOn: parsed.spentOn,
     splitMode: parsed.splitMode,
+    sessionId: parsed.sessionId,
   });
   // A request that repeats the stored values is not an edit: nothing is written and the row is not marked.
   if (!fieldsChanged && !sharesChanged) return c.json({ id, sharesChanged: false, changed: false });
@@ -174,7 +203,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
     // The removed-member check is repeated here, so a removal committed after the reads above cannot be
     // followed by an edit that names the removed member. The member check is the same as in deletion.
     c.env.DB.prepare(
-      `UPDATE expenses SET payer_id = ?1, amount = ?2, description = ?3, spent_on = ?4, split_mode = ?5, edited_at = ?6
+      `UPDATE expenses SET payer_id = ?1, amount = ?2, description = ?3, spent_on = ?4, split_mode = ?5, edited_at = ?6, session_id = ?10
        WHERE id = ?7 AND group_code = ?8 AND deleted_at IS NULL
          AND ${noneRemovedSql(9)}
          AND NOT EXISTS (
@@ -193,6 +222,7 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
       id,
       group.code,
       named,
+      parsed.sessionId,
     ),
   ];
   if (sharesChanged) {
@@ -211,7 +241,13 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
       );
     }
   }
-  const [updated] = await c.env.DB.batch(statements);
+  let updated: D1Result;
+  try {
+    [updated] = await c.env.DB.batch(statements);
+  } catch (err) {
+    if (isSessionGone(err)) throw new ApiError(400, 'SESSION_NOT_FOUND', 'session not found');
+    throw err;
+  }
   if (updated.meta.changes === 0) {
     const stillThere = await c.env.DB.prepare('SELECT 1 FROM expenses WHERE id = ? AND deleted_at IS NULL')
       .bind(id)

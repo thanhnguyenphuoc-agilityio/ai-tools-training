@@ -60,6 +60,27 @@ export interface ExpenseDto {
   editedAt: string | null;
   /** The receipt photo, or null when the expense has none (receipt_photos). */
   receipt: ReceiptDto | null;
+  /** The session the cost belongs to (attendance_split); null when it has none. */
+  sessionId: string | null;
+}
+
+/** A recurring session with the members present (attendance_split). Times are HH:mm in group-local time. */
+export interface SessionDto {
+  id: string;
+  day: string; // YYYY-MM-DD, the day the session starts
+  startsAt: string;
+  endsAt: string;
+  note: string;
+  /** Members marked present, from attendance. */
+  presentIds: string[];
+}
+
+export interface NewSession {
+  day: string;
+  startsAt: string;
+  endsAt: string;
+  note?: string;
+  presentIds: string[];
 }
 
 export interface TransferDto {
@@ -99,6 +120,7 @@ export interface GroupDto {
   members: MemberDto[];
   expenses: ExpenseDto[];
   transfers: TransferDto[];
+  sessions: SessionDto[];
   me: Me;
 }
 
@@ -131,6 +153,8 @@ export interface NewExpense {
   splitMode: SplitMode;
   /** `weight` is read in weight mode; `amount` (minor units, zero allowed) in exact mode. */
   participants: { memberId: string; weight?: number; amount?: number }[];
+  /** The session the cost belongs to; null, empty or absent means none (attendance_split). */
+  sessionId?: string | null;
 }
 
 export interface MyGroupDto {

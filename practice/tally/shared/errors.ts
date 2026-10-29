@@ -61,6 +61,9 @@ export const ERROR_CODES = [
   'MEMBER_NOT_CLAIMED',
   'CANNOT_RELEASE_OWNER',
   'EDIT_NOT_ALLOWED',
+  'INVALID_SESSION_TIME',
+  'SESSION_NOT_FOUND',
+  'SESSION_HAS_EXPENSES',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

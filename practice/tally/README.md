@@ -60,8 +60,8 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Not in the MVP
 
-Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): attendance-based splits
-and currency conversion. `docs/design.md` holds a design for each of them.
+Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): currency conversion.
+`docs/design.md` holds a design for it.
 
 ### Who reports tickets
 

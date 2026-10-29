@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ExpenseDto, GroupDto } from '../../shared/types';
+import type { ExpenseDto, GroupDto, SessionDto } from '../../shared/types';
 import { useAccount } from '../account';
 import { api, ApiError } from '../api';
 import { copyText } from '../clipboard';
@@ -12,6 +12,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { JoinPanel } from '../components/JoinPanel';
 import { MembersPanel } from '../components/MembersPanel';
 import { OwnerAccessNote, OwnerKeyBanner } from '../components/OwnerKeyBanner';
+import { SessionsPanel } from '../components/SessionsPanel';
 import { SettlePanel } from '../components/SettlePanel';
 import { todayLocal } from '../dates';
 import { downloadTextFile } from '../download';
@@ -22,9 +23,10 @@ import type { MessageKey } from '../i18n/types';
 import { useToast } from '../toast';
 import './GroupPage.scss';
 
-type Tab = 'expenses' | 'settle' | 'members';
+type Tab = 'expenses' | 'sessions' | 'settle' | 'members';
 const TABS: [Tab, MessageKey, IconName][] = [
   ['expenses', 'group.tabs.expenses', 'receipt'],
+  ['sessions', 'group.tabs.sessions', 'calendar'],
   ['settle', 'group.tabs.settle', 'swap'],
   ['members', 'group.tabs.members', 'users'],
 ];
@@ -51,6 +53,8 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const { version } = useAccount();
   // The expense being edited (edit_expense); null while the form adds a new one.
   const [editing, setEditing] = useState<ExpenseDto | null>(null);
+  // The session a new cost is added to (attendance_split); null for a cost outside any session.
+  const [costSession, setCostSession] = useState<SessionDto | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -202,13 +206,20 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
           {group.me.memberId && (
             <ExpenseForm
               // Keyed by the edited expense, so the fields start from its stored values each time an edit begins.
-              key={editing?.id ?? 'new'}
+              key={editing?.id ?? (costSession ? `session-${costSession.id}` : 'new')}
               group={group}
               editing={editing}
-              onCancel={() => setEditing(null)}
+              session={editing ? undefined : (costSession ?? undefined)}
+              onCancel={() => {
+                setEditing(null);
+                setCostSession(null);
+              }}
               onSaved={(keepForm) => {
                 // A failed receipt upload keeps the edit open with its error; a new key would remount the form.
-                if (!keepForm) setEditing(null);
+                if (!keepForm) {
+                  setEditing(null);
+                  setCostSession(null);
+                }
                 reload();
               }}
               onStale={reload}
@@ -228,6 +239,24 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
             }
           />
         </div>
+      )}
+      {tab === 'sessions' && (
+        <SessionsPanel
+          group={group}
+          onChanged={reload}
+          onAddCost={(session) => {
+            setEditing(null);
+            setCostSession(session);
+            setTab('expenses');
+            window.scrollTo(0, 0);
+          }}
+          onEditCost={(expense) => {
+            setCostSession(null);
+            setEditing(expense);
+            setTab('expenses');
+            window.scrollTo(0, 0);
+          }}
+        />
       )}
       {tab === 'settle' && <SettlePanel group={group} onChanged={reload} />}
       {tab === 'members' && <MembersPanel group={group} onChanged={reload} />}

@@ -37,7 +37,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     because they stay in the history with their amounts in the original currency.
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
-  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, the automatic link of an invited member (`member_email_invite`), keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
+  - **Changes that count as activity:** adding, editing or deleting an expense, adding, editing or deleting a session
+    (`attendance_split`), recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, the automatic link of an invited member (`member_email_invite`), keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
   - **Changes that count as activity:** attaching a group to an account (`group.link`, from opening a recovery link while signed in, from the attach after sign-in, or from keeping the group) moves `last_activity_at` like "Link to my account" does.
   - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), a hand-over of a group that is not kept (`transfer_ownership`, recorded in `audit_log` as `owner.transfer`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
@@ -188,6 +189,27 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Deleting an expense deletes its photo. A purged group deletes all of its photos. Deleting an account does not, since
   it keeps group data.
 - Adding, replacing and removing a photo are changes: they move the deletion date.
+
+## Sessions and attendance
+
+- The owner creates sessions and edits attendance (`requireCanManageSessions`). Any member can add a cost to a session;
+  it is an ordinary expense with `session_id`. Its participants default to the members marked present, and the split is
+  equal by default. All split modes stay available.
+- A session belongs to the day it starts (`day`). If `ends_at` is earlier than `starts_at`, it ends the next day (for
+  example 21:00-00:30 is 3 h 30 min). Equal start and end times are rejected (`INVALID_SESSION_TIME`). A cost added
+  from a session defaults to the session day as `spentOn`, not the calendar day of the end time. The list shows
+  `21:00 - 00:30 (+1 day)` through the locale files.
+- Shares are computed once (split rule 4). Changing attendance never touches saved expenses. The session view flags a
+  cost whose participants differ from the current attendance ("does not match attendance") with an edit action for its
+  author or the owner, not offered when the cost involves a removed member, as in the expense list. A removed member
+  who is present but takes no part in the cost is ignored by the comparison, because a new cost can only include
+  active members.
+- There is no stored schedule. A new session form prefills the times and the attendance of the latest session, and the
+  date defaults to today.
+- A session can be deleted only when it has no live (non-deleted) costs. Otherwise it answers 409
+  `SESSION_HAS_EXPENSES`. Removed members stay in past attendance records, also when the owner edits such a session
+  later (the edit keeps them even though the form lists only active members), and cannot be newly marked present on
+  new or edited sessions (`PARTICIPANT_NOT_IN_GROUP`).
 
 ## Balances and settling up
 
