@@ -49,6 +49,8 @@ export interface ExpenseDto {
   shares: { memberId: string; weight: number; amount: number }[];
   createdBy: string | null; // member id of the author
   createdAt: string; // ISO timestamp (UTC)
+  /** Time of the last edit (edit_expense); null when the expense was never edited. */
+  editedAt: string | null;
 }
 
 export interface TransferDto {

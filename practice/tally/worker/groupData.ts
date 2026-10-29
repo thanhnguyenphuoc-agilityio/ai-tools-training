@@ -89,6 +89,25 @@ export const noneRemovedSql = (n: number) =>
   `NOT EXISTS (SELECT 1 FROM members WHERE removed_at IS NOT NULL AND id IN (SELECT value FROM json_each(?${n})))`;
 
 /**
+ * True when a removed member paid the expense or owes a share above zero. Such an expense can no longer be edited
+ * or deleted, the same rule as `involvesRemovedMember` in src/expenseRow.ts for the list.
+ */
+export async function involvesRemovedMember(db: D1Database, code: string, id: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT EXISTS (
+         SELECT 1 FROM members m
+         WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
+           AND (m.id = (SELECT payer_id FROM expenses WHERE id = ?1)
+                OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
+       ) AS removed`,
+    )
+    .bind(id, code)
+    .first<{ removed: number }>();
+  return !!row?.removed;
+}
+
+/**
  * The expenses (deleted ones left out, newest first) and transfers of a group, as the API returns them.
  * Balances are always computed from this with computeBalances (shared/settle.ts), never with a second formula.
  */
@@ -131,6 +150,7 @@ export async function loadLedger(
       .map((s) => ({ memberId: s.member_id, weight: s.weight, amount: s.amount })),
     createdBy: e.created_by as string | null,
     createdAt: e.created_at as string,
+    editedAt: (e.edited_at as string | null) ?? null,
   }));
   const transfers: TransferDto[] = transferRows.map((t) => ({
     id: t.id as string,
@@ -214,11 +234,19 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
 };
 
 /** Records an event in the audit log without changing last_activity_at. */
-export async function audit(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+export async function audit(
+  db: D1Database,
+  code: string,
+  me: Identity,
+  action: string,
+  target: string | null,
+  /** JSON-able values that explain the change, e.g. the values before an edit. */
+  details?: unknown,
+) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
   await db
-    .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-    .bind(code, actor, action, target, now())
+    .prepare('INSERT INTO audit_log (group_code, actor, action, target, details, at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(code, actor, action, target, details === undefined ? null : JSON.stringify(details), now())
     .run();
 }
 
@@ -226,13 +254,21 @@ export async function audit(db: D1Database, code: string, me: Identity, action: 
  * Use for every change listed in `docs/business-rules.md`; use `audit()` alone for events that are not changes.
  * Records the change in audit_log and pushes back the deletion date (last_activity_at) in one db.batch.
  */
-export async function recordChange(db: D1Database, code: string, me: Identity, action: string, target: string | null) {
+export async function recordChange(
+  db: D1Database,
+  code: string,
+  me: Identity,
+  action: string,
+  target: string | null,
+  /** JSON-able values that explain the change, e.g. the values before an edit. */
+  details?: unknown,
+) {
   const actor = me.memberId ?? (me.isOwner ? 'owner' : 'anonymous');
   const timestamp = now();
   await db.batch([
     db
-      .prepare('INSERT INTO audit_log (group_code, actor, action, target, at) VALUES (?, ?, ?, ?, ?)')
-      .bind(code, actor, action, target, timestamp),
+      .prepare('INSERT INTO audit_log (group_code, actor, action, target, details, at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(code, actor, action, target, details === undefined ? null : JSON.stringify(details), timestamp),
     db.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(timestamp, code),
   ]);
 }

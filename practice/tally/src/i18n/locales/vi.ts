@@ -347,7 +347,7 @@ export const vi: Messages = {
     MEMBER_REMOVED: 'Thành viên này đã bị xoá khỏi nhóm.',
     MEMBER_HAS_BALANCE: 'Thành viên này vẫn còn nợ hoặc còn được nhận tiền. Hãy thanh toán xong trước khi xoá.',
     CANNOT_REMOVE_OWNER: 'Không thể xoá chủ nhóm.',
-    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể xoá được nữa.',
+    EXPENSE_HAS_REMOVED_MEMBER: 'Khoản chi này có thành viên đã bị xoá khỏi nhóm nên không thể sửa hoặc xoá được nữa.',
     ALREADY_MEMBER: 'Thiết bị này đã là thành viên trong nhóm.',
     SIGN_IN_REQUIRED: 'Vui lòng đăng nhập trước.',
     INVALID_GOOGLE_TOKEN: 'Không thể xác thực đăng nhập Google.',
@@ -360,6 +360,7 @@ export const vi: Messages = {
     LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
     OWNER_TRANSFER_NOT_LINKED: 'Thành viên này cần có tài khoản trước khi trở thành trưởng nhóm.',
     OWNER_TRANSFER_SELF: 'Thành viên này đã là trưởng nhóm.',
+    EDIT_NOT_ALLOWED: 'Chỉ người đã thêm khoản chi này hoặc chủ nhóm mới được sửa.',
   },
 };
 

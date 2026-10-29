@@ -364,7 +364,7 @@ export const en = {
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
     EXPENSE_HAS_REMOVED_MEMBER:
-      'This expense involves a member who has been removed from the group, so it can no longer be deleted.',
+      'This expense involves a member who has been removed from the group, so it can no longer be edited or deleted.',
     ALREADY_MEMBER: 'This device is already a member of the group.',
     SIGN_IN_REQUIRED: 'Sign in first.',
     INVALID_GOOGLE_TOKEN: 'The Google sign-in could not be verified.',
@@ -377,6 +377,7 @@ export const en = {
     LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
     OWNER_TRANSFER_NOT_LINKED: 'This member needs an account before they can become the owner.',
     OWNER_TRANSFER_SELF: 'This member is already the owner.',
+    EDIT_NOT_ALLOWED: 'Only the person who added this expense or the group owner can edit it.',
   } satisfies Record<ErrorCode, string>,
 };
 

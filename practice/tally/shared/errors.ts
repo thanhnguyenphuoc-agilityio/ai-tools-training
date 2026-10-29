@@ -55,6 +55,7 @@ export const ERROR_CODES = [
   'LOCK_LIMIT_REACHED',
   'OWNER_TRANSFER_NOT_LINKED',
   'OWNER_TRANSFER_SELF',
+  'EDIT_NOT_ALLOWED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
