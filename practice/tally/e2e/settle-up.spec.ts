@@ -83,6 +83,10 @@ test('create a group, split an expense and settle with VietQR', async ({ page })
 
   await dialog.getByRole('button', { name: t('qr.sent') }).click();
 
+  // The suggestion waits for the receiver instead of offering Pay again.
+  await expect(page.getByRole('button', { name: t('settle.pay') })).toHaveCount(0);
+  await expect(page.getByText(t('settle.waitingFor', { to: 'Sam' }))).toBeVisible();
+
   // Still owed until the receiver (or the owner, which we are) confirms.
   await expect(page.getByText(owes)).toBeVisible();
   await page.getByRole('button', { name: t('settle.confirm') }).click();

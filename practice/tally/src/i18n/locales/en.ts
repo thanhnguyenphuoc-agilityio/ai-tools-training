@@ -171,6 +171,7 @@ export const en = {
     removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
     recordFor: 'Record payment',
     recordForLabel: 'Record payment: {from} to {to}',
+    waitingFor: 'Waiting for {to} to confirm',
   },
   qr: {
     title: 'Pay {name} {amount}',
@@ -422,6 +423,7 @@ export const en = {
     DUPLICATE_PARTICIPANT: 'A person was picked twice.',
     SELF_TRANSFER: 'You cannot transfer money to yourself.',
     ALREADY_CONFIRMED: 'This transfer is already confirmed.',
+    TRANSFER_PENDING: 'A transfer between these two members is already waiting for confirmation.',
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
