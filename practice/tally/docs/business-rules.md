@@ -117,6 +117,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Split modes:
   - **Equal** among the selected participants.
   - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
+    A weight within a tiny tolerance of two decimals is accepted and stored rounded to two decimals, the value the
+    split uses; a weight that rounds to zero is refused.
   - **Exact shares** (the ticket calls it a split by exact amounts): the total is typed first (as printed on the
     bill), then each participant's share.
     - Each share follows the same input conventions as the amount field (suffixes, separators, currency marks),

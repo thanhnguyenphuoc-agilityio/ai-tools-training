@@ -59,7 +59,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 ## 4. Data
 
 - Money: `INTEGER` in the **minor unit** of the group currency (dong, cent, yen). Weights: `REAL` with at most two
-  decimal places, converted to integer hundredths before calculation.
+  decimal places, converted to integer hundredths before calculation; `weight()` in `worker/http.ts` stores
+  `roundWeight()` so the stored value matches the split.
 - Timestamps: ISO-8601 UTC strings (`created_at`...). Expense dates: `YYYY-MM-DD` without a time zone.
 - Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts`.
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
