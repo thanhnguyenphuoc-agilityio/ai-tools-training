@@ -5,9 +5,24 @@ import { MAX_AMOUNT, type CurrencyInfo } from './currency';
 export { MAX_AMOUNT };
 export const MAX_WEIGHT = 100;
 
-/** A weight is > 0, at most MAX_WEIGHT and has at most two decimal places (it is split in hundredths). */
+/** Weight in integer hundredths, the unit the split works in. */
+export function weightHundredths(weight: number): number {
+  return Math.round(weight * 100);
+}
+
+/** The two-decimal value of a weight: what the split uses and what is stored. */
+export function roundWeight(weight: number): number {
+  return weightHundredths(weight) / 100;
+}
+
+/**
+ * A weight is at most MAX_WEIGHT and has at most two decimal places (it is split in hundredths).
+ * The tolerance lets weights such as 0.29 through (0.29 * 100 is 28.999999999999996); a weight that rounds to
+ * zero hundredths is refused, so the stored weight is always > 0.
+ */
 export function isValidWeight(weight: number): boolean {
-  return weight > 0 && weight <= MAX_WEIGHT && Math.abs(weight * 100 - Math.round(weight * 100)) < 1e-9;
+  const hundredths = weightHundredths(weight);
+  return hundredths >= 1 && weight <= MAX_WEIGHT && Math.abs(weight * 100 - hundredths) < 1e-9;
 }
 
 /** Formats minor units for display, using the locale's grouping and the currency sign. */
@@ -143,7 +158,7 @@ export function splitAmount(amount: number, parts: SplitPart[], opts: SplitOptio
 
   const hundredths = parts.map((p) => {
     if (!isValidWeight(p.weight)) throw new Error(`invalid weight for ${p.memberId}`);
-    return Math.round(p.weight * 100);
+    return weightHundredths(p.weight);
   });
   const totalWeight = hundredths.reduce((a, b) => a + b, 0);
 

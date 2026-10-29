@@ -27,7 +27,7 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 |---|---|
 | Group | One event or shared fund. Identified by a random code such as `x7kq-m2pz-9hfw`; anyone with the link can view it. Has one currency (VND, USD, THB...). |
 | Owner | The person who created the group. Proven by a secret owner key, shown once as a recovery link. Can rename the group, change rounding and currency, delete any expense, remove a member who has settled up; edit other members' bank details and record transfers for others. |
-| Member | A person in the group. Either joined from their own device, or added by name by someone else and claimed later ("I am <name>"). |
+| Member | A person in the group. Either joined from their own device, or added by name by someone else and claimed later ("I am <name>"). The owner can release a name that was claimed by mistake, so it can be claimed again. |
 | Guest | Someone who opened the link but has not joined. Can only view. |
 | Expense | One payment: who paid, how much, what for, on which date, and who shares it (equally, by weight or by exact shares). Only its author or the owner can delete it. |
 | Share | Each participant's part of an expense, computed once when the expense is saved. Shares always add up exactly to the amount. |

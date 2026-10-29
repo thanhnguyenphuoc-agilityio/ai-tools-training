@@ -8,7 +8,7 @@ import { QR_OPTIONS, VIETQR_MARK, VIETQR_WORDMARK, bankLogo } from '../qrCard';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import './QrDialog.scss';
 
 export function QrDialog({
@@ -22,11 +22,11 @@ export function QrDialog({
   onClose: () => void;
   onRecorded: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message: formatMessage } = useI18n();
   const { money } = useGroupMoney(group);
   const panel = useDialog(onClose);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const from = group.members.find((m) => m.id === settlement.fromId)!;
   const to = group.members.find((m) => m.id === settlement.toId)!;
   // The owner may open a transfer that another member pays; the title and the button then name the payer.
@@ -51,11 +51,11 @@ export function QrDialog({
         amount: settlement.amount,
         message,
       });
-      QRCode.toCanvas(canvas.current, payload, QR_OPTIONS).catch(() => setError(t('qr.renderError')));
+      QRCode.toCanvas(canvas.current, payload, QR_OPTIONS).catch(() => setError({ key: 'qr.renderError' }));
     } catch {
-      setError(t('qr.renderError'));
+      setError({ key: 'qr.renderError' });
     }
-  }, [qrSupported, bank, to.accountNo, settlement.amount, message, t]);
+  }, [qrSupported, bank, to.accountNo, settlement.amount, message]);
 
   async function recordSent() {
     try {
@@ -63,7 +63,7 @@ export function QrDialog({
       await api.recordTransfer(group.code, to.id, settlement.amount, isOther ? settlement.fromId : undefined);
       onRecorded();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -131,7 +131,7 @@ export function QrDialog({
             {qrSupported && <p className="text text--muted text--small">{t('qr.hint')}</p>}
           </>
         )}
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{formatMessage(error)}</p>}
         <div className="cluster">
           <button className="button" onClick={recordSent}>
             {isOther ? t('qr.sentFor', { name: from.name }) : t('qr.sent')}

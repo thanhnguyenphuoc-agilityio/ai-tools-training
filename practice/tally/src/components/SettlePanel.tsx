@@ -3,18 +3,18 @@ import type { Settlement } from '../../shared/settle';
 import type { GroupDto } from '../../shared/types';
 import { api } from '../api';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { payAction } from '../ownerTools';
 import { settleView } from '../settleView';
 import { useToast } from '../toast';
 import { QrDialog } from './QrDialog';
 
 export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
-  const { t, dateTime, errorMessage } = useI18n();
+  const { t, dateTime, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
 
   // A removed member has settled up (remove_member), so only current members are listed and suggested.
@@ -29,7 +29,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
       notify('toast.transferConfirmed');
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   }
 
@@ -89,7 +89,7 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
         ))}
       </section>
 
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
 
       {pending.length > 0 && (
         <section className="card">

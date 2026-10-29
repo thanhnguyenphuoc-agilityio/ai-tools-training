@@ -36,7 +36,7 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 | `worker/http.ts` | `Env`, `ApiError`, input validation | Add new bindings to `Env` |
 | `migrations/NNNN_*.sql` | Schema, numbered in order | **One new migration per feature**; existing migrations are never edited |
 | `src/api.ts` | Typed client for every endpoint | Add a function per new endpoint |
-| `src/i18n/` | `useI18n()`: `t`, `tp`, `money`, `parseMoney`, `day`, `errorMessage`. User-facing text lives only in `locales/*.ts` | Add keys to `en.ts` first (it defines the types), then to the other locales |
+| `src/i18n/` | `useI18n()`: `t`, `tp`, `money`, `parseMoney`, `day`, `errorMessage`, `message`. User-facing text lives only in `locales/*.ts` | Add keys to `en.ts` first (it defines the types), then to the other locales |
 | `src/styles/` | SCSS: `abstracts/` (tokens, mixins), `base/` (themes, reset), `blocks/` (shared BEM blocks) | Shared blocks go in `blocks/`; component-specific blocks sit next to the component |
 | `src/components/*` | One component per UI block, with a `.scss` file of the same name when it has its own block | |
 | `tests/unit`, `tests/api`, `e2e/` | Vitest (logic), Vitest + Miniflare (API), Playwright (UI) | A bug fix comes with a test that fails first |
@@ -52,15 +52,16 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`.
-The interface mirror of these rules for showing controls only is in `src/ownerTools.ts` (`canEditAccount`, `payAction`); the server enforces them.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
+The interface mirror of these rules for showing controls only is in `src/ownerTools.ts` (`canEditAccount`, `payAction`, `canReleaseMember`); the server enforces them.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
 ## 4. Data
 
 - Money: `INTEGER` in the **minor unit** of the group currency (dong, cent, yen). Weights: `REAL` with at most two
-  decimal places, converted to integer hundredths before calculation.
+  decimal places, converted to integer hundredths before calculation; `weight()` in `worker/http.ts` stores
+  `roundWeight()` so the stored value matches the split.
 - Timestamps: ISO-8601 UTC strings (`created_at`...). Expense dates: `YYYY-MM-DD` without a time zone.
 - Ids: `crypto.randomUUID()`. Group codes: `shared/groupCode.ts`.
 - Expenses are soft-deleted. Hard deletes (cascade) are reserved for purging a whole group (`purge_inactive_groups`).
@@ -92,6 +93,11 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   `setLocale()`, which writes the choice with `saveLocale()` to `localStorage` only; nothing is sent to the API.
   Flags are inline SVGs in `src/components/Flag.tsx`, typed `Record<Locale, ...>`: a new locale needs a flag
   there before it type-checks, then appears in the menu without other changes.
+- Messages kept in component state use `UiMessage` (`src/i18n/types.ts`): a message key with its variables (a
+  variable can itself be a `MessageVar`, for example the amount examples), and optionally the error for its
+  `{message}` placeholder; or just the error. Components store this, never the translated sentence, and render it with
+  `message(error)` from `useI18n()`. The text is then translated on render, so it follows a language change
+  (`stale_language_messages`).
 - Changing the language re-renders the app with the new translator. The "new group" form in `HomePage` keeps its
   selected currency in component state initialised once from `defaultCurrency`, so an open form keeps its currency
   and only a newly opened form takes the default of the current language.
@@ -450,7 +456,7 @@ Built. Project conventions are checked automatically by `npm run lint`:
 
 - Built; see section 5, Interface. Direction: keep the green accent and system fonts (no font download), quieter
   section titles in spaced capitals, figures in tabular numerals, icons only where they carry meaning.
-- Not done in this ticket: skeleton loading, and the remaining in-form status texts (`stale_language_messages`).
+- Not done in this ticket: skeleton loading. Messages kept in state follow the language: see section 5, Language.
 - Screenshots: 3 widths x 2 themes x (home + 3 tabs), before and after, in the merge request.
 
 ### currency_conversion
@@ -546,6 +552,27 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 - **No group change:** the name write touches no group, member, `audit_log` row or `last_activity_at`.
 - **Tests:** `tests/api/account-name.test.ts` (AN-1 to AN-6, migration default on a pre-existing row).
 
+### wrong_name_claim (built)
+
+- No migration. A released member has `token_hash`, `user_id` and `invite_email` set to NULL, the same state as a member
+  added by name.
+- Route: `POST /groups/:code/members/:id/release` in `worker/routes/members.ts`, after remove. Order: `loadGroup`,
+  `requireCanReleaseMember` (owner, `OWNER_ONLY`), `loadActiveMember` (`MEMBER_NOT_FOUND`, `MEMBER_REMOVED`), then
+  `CANNOT_RELEASE_OWNER` for the owner member.
+- Guarded `UPDATE members SET token_hash = NULL, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL
+  AND (token_hash IS NOT NULL OR user_id IS NOT NULL)`. When no row changes, the member is read again: removed gives
+  `MEMBER_REMOVED`, otherwise `MEMBER_NOT_CLAIMED`. Two simultaneous releases cannot both win.
+- Audit: `recordChange` with `member.release` and the released member as target, the owner member as actor. It moves
+  `last_activity_at`. No change to `worker/auth.ts`: a cleared token or `user_id` resolves to no member.
+- Claim audit: `member.claim` records `{ ...me, memberId }`, so the claimed member is the actor.
+- Policy: `requireCanReleaseMember(me)` in `worker/policy.ts`; the interface mirror is `canReleaseMember` in
+  `src/ownerTools.ts` (owner, not removed, not the owner member, claimed).
+- Dialogs (`useDialog`): `ClaimMemberDialog` opens from "I am <name>" in `JoinPanel` and sends the claim only on
+  confirm; `ReleaseMemberDialog` opens from the owner's "Release" button in `MembersPanel` and calls `api.releaseMember`.
+  After a release the toast `toast.memberReleased` shows.
+- Tests: `tests/api/claim-member.test.ts`, `tests/unit/ownerTools.test.ts` (`canReleaseMember`), and
+  `e2e/claim-member.spec.ts` (confirm, cancel, release through the dialog, claim again).
+
 ### member_email_invite (built)
 
 - Migration `0009_member_invite_email.sql`: `ALTER TABLE members ADD COLUMN invite_email TEXT`. Nullable, no index,
@@ -566,8 +593,8 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `me.memberId`.
 - Exposure: `MemberDto.invited` is derived in `toMemberDto`, which never spreads the row. No DTO or error param holds the
   email.
-- **Release note (future):** the release route (`wrong_name_claim`, not built) must clear `invite_email` when it
-  releases a member, as claim, link and remove already do.
+- **Release (done, `wrong_name_claim`):** the release route clears `invite_email` together with `token_hash` and
+  `user_id`, as claim, link and remove already do.
 - Tests: `tests/api/member-invite.test.ts`, `tests/unit/ownerTools.test.ts`, `e2e/member-invite.spec.ts`.
 
 ## 7. Ticket workflow

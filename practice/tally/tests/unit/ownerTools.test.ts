@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Settlement } from '../../shared/settle';
 import type { Me, MemberDto } from '../../shared/types';
-import { canEditAccount, canSetInviteEmail, canTransferTo, payAction } from '../../src/ownerTools';
+import { canEditAccount, canReleaseMember, canSetInviteEmail, canTransferTo, payAction } from '../../src/ownerTools';
 
 describe('canTransferTo', () => {
   const ownerMe: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
@@ -134,5 +134,42 @@ describe('payAction (owner_member_tools)', () => {
 
   it('null for a plain member on a debt that is not their own', () => {
     expect(payAction(plain, debt('m-jamie', 'm-alex'))).toBeNull();
+  });
+});
+
+describe('canReleaseMember (wrong_name_claim)', () => {
+  const owner: Me = { memberId: 'm-owner', isOwner: true, accountLinked: true };
+  const memberMe: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+  const guest: Me = { memberId: null, isOwner: false, accountLinked: false };
+
+  const member = (extra: Partial<MemberDto> = {}): MemberDto => ({
+    id: 'm-jamie',
+    name: 'Jamie',
+    isOwner: false,
+    claimed: true,
+    removed: false,
+    removedReason: null,
+    bankBin: null,
+    accountNo: null,
+    accountName: null,
+    bankSource: null,
+    hasAccount: false,
+    invited: false,
+    ...extra,
+  });
+
+  it('RM-1: the owner may release an active, claimed, non-owner member', () => {
+    expect(canReleaseMember(owner, member())).toBe(true);
+  });
+
+  it('RM-2: a plain member or a guest may not', () => {
+    expect(canReleaseMember(memberMe, member())).toBe(false);
+    expect(canReleaseMember(guest, member())).toBe(false);
+  });
+
+  it('RM-3: an unclaimed, removed or owner member is never released here', () => {
+    expect(canReleaseMember(owner, member({ claimed: false }))).toBe(false);
+    expect(canReleaseMember(owner, member({ removed: true }))).toBe(false);
+    expect(canReleaseMember(owner, member({ isOwner: true }))).toBe(false);
   });
 });

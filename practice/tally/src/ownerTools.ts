@@ -25,3 +25,8 @@ export function payAction(me: Me, s: Settlement): PayAction {
   if (me.isOwner) return 'recordFor';
   return null;
 }
+
+/** The owner may release the name of an active, claimed member who is not the owner (wrong_name_claim). */
+export function canReleaseMember(me: Me, member: MemberDto): boolean {
+  return me.isOwner && !member.removed && !member.isOwner && member.claimed;
+}

@@ -5,12 +5,12 @@ import type { MyGroupDto } from '../../shared/types';
 import { useAccount } from '../account';
 import { api } from '../api';
 import type { Navigate } from '../App';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { forgetGroup, readHistory } from '../history';
 import './HomePage.scss';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
-  const { t, errorMessage, money, currencyName, dateTime, defaultCurrency } = useI18n();
+  const { t, message, money, currencyName, dateTime, defaultCurrency } = useI18n();
   const { user, version } = useAccount();
   const [accountGroups, setAccountGroups] = useState<MyGroupDto[] | null>(null);
   const [name, setName] = useState('');
@@ -18,7 +18,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
   const [roundCoarse, setRoundCoarse] = useState(true);
   const [joinInput, setJoinInput] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState(readHistory);
 
@@ -58,7 +58,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
       // The owner key is shown once on the group page, then only the user has it.
       navigate(`/g/${code}`, { ownerKey, created: true });
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setBusy(false);
     }
@@ -67,7 +67,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   function join(e: React.FormEvent) {
     e.preventDefault();
     const code = normalizeGroupCode(joinInput);
-    if (!code) return setError(t('home.join.invalidCode'));
+    if (!code) return setError({ key: 'home.join.invalidCode' });
     navigate(`/g/${code}`);
   }
 
@@ -138,7 +138,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
           </form>
         </section>
 
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
 
         {user && (
           <section className="card home-page__account-groups">
