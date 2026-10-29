@@ -170,3 +170,13 @@ Commands and results (run in the feature worktree; e2e on port 5193):
 - `npx playwright test --config playwright.local.config.ts`: 116 passed, 2 skipped (desktop-only keyboard checks on the mobile project).
 
 The first full e2e run failed 4 older tests (`account.spec.ts` at 360px and `saved-bank.spec.ts` SB-6) because the new spec had saved a custom name for the shared dev email `sam@example.com` in the worktree's local dev database. The fix is in the spec, which now uses unique emails. The local `.wrangler/state` was cleared (git-ignored) and the full suite was rerun green.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `users.name_custom` (migration `0008`) keeps a name set by the person when Google sign-in runs again; the email is still refreshed.
+- `PATCH /api/me` accepts `name` (1 to 40 characters) and leaves the name alone for bank-only bodies.
+- The "My name" dialog uses `useDialog` with a saving state; the join field is prefilled from the account and stays editable.
+- No changes needed.
+- Checks: typecheck and lint clean, 397 unit and API tests, 29 hook tests, e2e 116 passed and 2 skipped.
