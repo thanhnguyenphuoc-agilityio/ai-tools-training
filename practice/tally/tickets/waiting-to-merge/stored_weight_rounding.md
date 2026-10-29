@@ -100,3 +100,30 @@ Branch `fix/stored_weight_rounding` from `develop`. Assignee set; ticket moved t
    - `docs/design.md`, section 4 Data, Weights bullet: `weight()` in `worker/http.ts` stores `roundWeight()`, so the stored value matches the split.
    - The edit_expense section of `docs/design.md` is not touched.
 7. Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:hooks`, and `npx playwright test --config playwright.local.config.ts` (port 5191).
+
+## Merge request
+
+Branch `fix/stored_weight_rounding` into `develop`. The merge request is opened on GitLab from this branch; its link
+is added when it exists.
+
+What changed:
+
+- `shared/money.ts`: `weightHundredths()` and `roundWeight()` added. `isValidWeight()` refuses a weight that rounds
+  to zero hundredths (for example `1e-12`); the 1e-9 tolerance is kept, so 0.29 is still accepted. `splitAmount()`
+  uses `weightHundredths()`. No other part of the file changes.
+- `worker/http.ts`: `weight()` returns `roundWeight(n)`, so the weight stored with each share is the two-decimal
+  value the split uses. `worker/routes/expenses.ts` is unchanged.
+- `tests/api/money-flow.test.ts`: new test "stores the two-decimal weight that the split used" (shares compared by
+  member, not by order); a `1e-12` and a `100.001` weight are asserted as `400 INVALID_WEIGHT`.
+- `tests/unit/money.test.ts`: `roundWeight()`, `weightHundredths()` and the `isValidWeight()` floor.
+- `docs/business-rules.md` (Expenses, "By weight") and `docs/design.md` (section 4, Weights) updated.
+- No migration, no error code, no i18n key, no UI change.
+
+How it was tested:
+
+- Failing tests first (`test: cover the stored weight of a weighted split`): 5 assertions failed before the fix.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed (oxlint and stylelint, no findings).
+- `npm test`: 40 files, 449 tests passed.
+- `npm run test:hooks`: 29 tests passed.
+- `npx playwright test --config playwright.local.config.ts` (port 5191): 128 passed, 2 skipped.
