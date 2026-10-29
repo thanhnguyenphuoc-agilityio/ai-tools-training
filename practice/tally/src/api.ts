@@ -63,8 +63,8 @@ export const api = {
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),
 
-  recordTransfer: (code: string, toId: string, amount: number) =>
-    call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount }),
+  recordTransfer: (code: string, toId: string, amount: number, fromId?: string) =>
+    call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount, fromId }),
   confirmTransfer: (code: string, id: string) => call('POST', `${g(code)}/transfers/${id}/confirm`),
 
   getConfig: () => call<ConfigResponse>('GET', '/config'),

@@ -113,3 +113,53 @@ describe('members', () => {
     expect(me.accountNo).toBe('0123456789');
   });
 });
+describe('owner acting for another member (owner_member_tools)', () => {
+  const bank = { bankBin: '970436', accountNo: '0123456789', accountName: 'JAMIE' };
+
+  // Sam claims a device; Jamie is added by name and never opens the app.
+  async function addSamAndJamie() {
+    const sam = new Browser(env.env);
+    const { json: samRes } = await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
+    const { json: jamieRes } = await owner.call('POST', `/groups/${code}/members`, { name: 'Jamie' });
+    const ownerId = (await getGroup(owner)).members[0].id;
+    return { sam, samId: samRes.id as string, jamieId: jamieRes.id as string, ownerId };
+  }
+
+  it('lets the owner edit another member bank: 200 and the account is stored', async () => {
+    const { jamieId } = await addSamAndJamie();
+    expect((await owner.call('PATCH', `/groups/${code}/members/${jamieId}`, bank)).status).toBe(200);
+    const jamie = (await getGroup(owner)).members.find((m) => m.id === jamieId)!;
+    expect(jamie.accountNo).toBe('0123456789');
+  });
+
+  it('refuses a plain member editing another member bank: 403 EDIT_SELF_ONLY', async () => {
+    const { sam, jamieId } = await addSamAndJamie();
+    const res = await sam.call('PATCH', `/groups/${code}/members/${jamieId}`, bank);
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('EDIT_SELF_ONLY');
+  });
+
+  it('lets the owner record a transfer between two other members and stores fromId', async () => {
+    const { samId, jamieId } = await addSamAndJamie();
+    const res = await owner.call('POST', `/groups/${code}/transfers`, { fromId: samId, toId: jamieId, amount: 50000 });
+    expect(res.status).toBe(201);
+    const transfer = (await getGroup(owner)).transfers.find((t) => t.id === res.json.id)!;
+    expect(transfer.fromId).toBe(samId);
+    expect(transfer.toId).toBe(jamieId);
+  });
+
+  it('refuses a plain member recording someone else transfer: 403 TRANSFER_SELF_ONLY', async () => {
+    const { sam, jamieId, ownerId } = await addSamAndJamie();
+    const res = await sam.call('POST', `/groups/${code}/transfers`, { fromId: jamieId, toId: ownerId, amount: 50000 });
+    expect(res.status).toBe(403);
+    expect(res.json.code).toBe('TRANSFER_SELF_ONLY');
+  });
+
+  it('refuses the owner editing a removed member: 409 MEMBER_REMOVED', async () => {
+    const { jamieId } = await addSamAndJamie();
+    expect((await owner.call('POST', `/groups/${code}/members/${jamieId}/remove`, {})).status).toBe(200);
+    const res = await owner.call('PATCH', `/groups/${code}/members/${jamieId}`, bank);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('MEMBER_REMOVED');
+  });
+});

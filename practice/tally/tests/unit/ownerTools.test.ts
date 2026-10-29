@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { Settlement } from '../../shared/settle';
 import type { Me, MemberDto } from '../../shared/types';
-import { canReleaseMember, canSetInviteEmail, canTransferTo } from '../../src/ownerTools';
+import { canEditAccount, canReleaseMember, canSetInviteEmail, canTransferTo, payAction } from '../../src/ownerTools';
 
 describe('canTransferTo', () => {
   const ownerMe: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
@@ -74,6 +75,65 @@ describe('canSetInviteEmail (member_email_invite)', () => {
     expect(canSetInviteEmail(owner, member({ claimed: true }))).toBe(false);
     expect(canSetInviteEmail(owner, member({ removed: true }))).toBe(false);
     expect(canSetInviteEmail(owner, member({ isOwner: true }))).toBe(false);
+  });
+});
+
+describe('canEditAccount (owner_member_tools)', () => {
+  const owner: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
+  const plain: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+
+  const member = (extra: Partial<MemberDto> = {}): MemberDto => ({
+    id: 'm-jamie',
+    name: 'Jamie',
+    isOwner: false,
+    claimed: false,
+    removed: false,
+    removedReason: null,
+    bankBin: null,
+    accountNo: null,
+    accountName: null,
+    bankSource: null,
+    hasAccount: false,
+    invited: false,
+    ...extra,
+  });
+
+  it('the owner may edit an unclaimed and a claimed member', () => {
+    expect(canEditAccount(owner, member())).toBe(true);
+    expect(canEditAccount(owner, member({ claimed: true, hasAccount: true }))).toBe(true);
+  });
+
+  it('the owner may not edit their own member or a removed member', () => {
+    expect(canEditAccount(owner, member({ id: 'm-alex', isOwner: true }))).toBe(false);
+    expect(canEditAccount(owner, member({ removed: true }))).toBe(false);
+  });
+
+  it('a plain member may edit nobody', () => {
+    expect(canEditAccount(plain, member({ id: 'm-sam' }))).toBe(false);
+    expect(canEditAccount(plain, member())).toBe(false);
+  });
+});
+
+describe('payAction (owner_member_tools)', () => {
+  const owner: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
+  const plain: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+  const debt = (fromId: string, toId: string): Settlement => ({ fromId, toId, amount: 50_000 });
+
+  it('pay when the current member is the payer', () => {
+    expect(payAction(plain, debt('m-sam', 'm-alex'))).toBe('pay');
+    expect(payAction(owner, debt('m-alex', 'm-jamie'))).toBe('pay');
+  });
+
+  it('recordFor for the owner on a debt between two other members', () => {
+    expect(payAction(owner, debt('m-sam', 'm-jamie'))).toBe('recordFor');
+  });
+
+  it('recordFor for the owner on a debt to the owner', () => {
+    expect(payAction(owner, debt('m-sam', 'm-alex'))).toBe('recordFor');
+  });
+
+  it('null for a plain member on a debt that is not their own', () => {
+    expect(payAction(plain, debt('m-jamie', 'm-alex'))).toBeNull();
   });
 });
 

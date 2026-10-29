@@ -153,6 +153,8 @@ export const en = {
     confirm: 'Confirm received',
     doneTitle: 'Paid',
     removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
+    recordFor: 'Record payment',
+    recordForLabel: 'Record payment: {from} to {to}',
   },
   qr: {
     title: 'Pay {name} {amount}',
@@ -172,6 +174,8 @@ export const en = {
       'VietQR only works for VND. Transfer {amount} with the details below, converted at the rate your group agreed.',
     sent: 'I have sent it',
     renderError: 'The QR code could not be created. Use the account details below instead.',
+    titleFor: 'Transfer from {from}: pay {name} {amount}',
+    sentFor: 'Mark as sent by {name}',
   },
   members: {
     bankTitle: 'Your receiving account',
@@ -201,6 +205,10 @@ export const en = {
     release: 'Release',
     releaseLabel: 'Release the name {name}',
     releaseConfirm: 'Release {name}? The device that uses this name becomes a guest, and the name can be claimed again.',
+    editAccount: 'Edit account',
+    editAccountLabel: 'Edit the receiving account of {name}',
+    bankTitleFor: 'Receiving account of {name}',
+    bankHintFor: 'Used to build the VietQR code when others pay this member. Anyone with the group link can see it.',
   },
   memberInvite: {
     emailLabel: 'Email (optional)',
@@ -251,6 +259,7 @@ export const en = {
     signedIn: 'Signed in.',
     signedOut: 'Signed out.',
     accountLinked: 'Linked to your account.',
+    bankSavedFor: 'Saved the receiving account of {name}.',
   },
   account: {
     signIn: 'Sign in',
@@ -299,7 +308,8 @@ export const en = {
     actionLabel: 'Make {name} the owner',
     title: 'Make {name} the owner?',
     body: 'Owner access moves to {name} at once. The recovery link of this group stops working, and owner access on your devices ends the next time they open the group. You stay in the group as a member, with your expenses and history.',
-    stopsKeeping: 'This group is kept now. After the hand-over it stops being kept and its 10 days start again; the new owner can keep it again.',
+    stopsKeeping:
+      'This group is kept now. After the hand-over it stops being kept and its 10 days start again; the new owner can keep it again.',
     confirm: 'Make owner',
     cancel: 'Cancel',
   },

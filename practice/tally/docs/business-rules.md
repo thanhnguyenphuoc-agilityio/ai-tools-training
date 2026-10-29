@@ -95,9 +95,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
   (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
-  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf (API only in the MVP; the interface is
-  `owner_member_tools`). Clearing the account
-  number clears all three fields.
+  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf from the
+  member list (`owner_member_tools`). Clearing the account number clears all three fields.
 - **Removing a member** (`remove_member`):
   - Only the **owner** can remove a member. The owner cannot be removed.
   - A member can be removed only when their balance is **zero** and no transfer to or from them is waiting for
@@ -170,8 +169,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
-- A member can record only **their own** transfers. The owner can record transfers on behalf of others (API only
-  in the MVP; the interface is `owner_member_tools`).
+- A member can record only **their own** transfers. The owner can record transfers on behalf of others: on each
+  suggested transfer that is not the owner's own debt, the owner records the payment from the suggestion (`owner_member_tools`).
 
 ## Spreadsheet export
 

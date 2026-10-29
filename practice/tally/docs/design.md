@@ -53,6 +53,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
 `requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
+The interface mirror of these rules for showing controls only is in `src/ownerTools.ts` (`canEditAccount`, `payAction`, `canReleaseMember`); the server enforces them.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
@@ -398,12 +399,13 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - **JavaScript/TypeScript:** `oxlint` parses TypeScript 7.x directly without needing `typescript-eslint` peer dependencies. A custom JS plugin (`practice/tally/lint/tally-plugin.mjs`, rule `tally/no-literal-ui-text`) ensures all user-facing JSX text and attributes (`aria-label`, `title`, `placeholder`, `alt`) come from `t()`/`tp()` in `src/i18n/locales`. The rule inspects bare JSX text, string literals in JSX expression containers (`{'...'}`), template literals, and conditional/logical expression branches, while allowing whitespace-only layout literals (`{' '}`) and non-target attributes (`className`, `key`, `href`). Built-in plugins `typescript` and `react` provide correctness checks and React hooks validation (`exhaustive-deps`).
 - **Styles:** `stylelint` with `stylelint-config-standard-scss` enforces BEM class selectors (`selector-class-pattern`) and forbids raw hex and named colors outside `src/styles/base/_themes.scss` (`color-no-hex`, `color-named`). Stylistic and layout rules managed by Prettier are turned off in `stylelint.config.mjs`.
 
-### owner_member_tools
+### owner_member_tools (built)
 
 - No API change: `PATCH /groups/:code/members/:id` and `POST /groups/:code/transfers` with `fromId` already allow the
   owner (`requireCanEditMember`, `requireCanRecordTransfer`).
-- UI: `MembersPanel` shows an edit action per member for the owner, reusing `BankForm`; `SettlePanel` shows the
-  "Pay" action on every suggested transfer for the owner, and `api.recordTransfer` gains an optional `fromId`.
+- UI: `MembersPanel` shows an "Edit account" action per active member for the owner (not the owner's own member), opening
+  `BankForm` under that row with `forOther`; `SettlePanel` shows "Record payment" on every suggested transfer the owner is
+  not the payer of, opening `QrDialog` for the payer; `api.recordTransfer` gains an optional `fromId`.
 
 ### edit_expense
 
