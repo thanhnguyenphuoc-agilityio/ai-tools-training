@@ -132,3 +132,26 @@ Branch `feat/attendance_split` off `develop`, in its own worktree under `.scratc
     `transfer-ownership.test.ts`, an existing test, and one new session test). Both passed on a rerun.
   - `npm run test:hooks`: passed.
   - `npx playwright test --config playwright.local.config.ts` (port 5194): 144 passed, 2 skipped.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- [minor] `src/components/SessionsPanel.tsx`: the session card and the delete dialog showed the stored day as
+  `YYYY-MM-DD`, while the expense list formats days with `day()` from `useI18n()`. Fixed: both use `day()`.
+  `e2e/attendance.spec.ts` now checks that no `YYYY-MM-DD` text is on the card; it failed on desktop and mobile
+  before the fix.
+- Checked against the Answers: sessions and attendance only through `requireCanManageSessions` in `worker/policy.ts`;
+  a cost is an ordinary expense with `session_id` and any member may add one; the end before the start means the
+  next day and equal times are refused; attendance changes never touch stored shares; delete is refused while a
+  live cost exists, in one race-safe statement; removed members stay in old attendance and cannot be added.
+  Repeated PATCH values answer `changed: false` and record nothing. Migration `0012_sessions.sql` follows
+  `0011_attachments.sql` from `receipt_photos`.
+- [nit] `loadSessions` filters attendance rows per session (quadratic in sessions); fine at group sizes.
+
+Verdict: approve after the fix. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 46 files / 547 passed, `e2e/attendance.spec.ts` and
+`e2e/ui-redesign.spec.ts` (port 5194) 18 passed. Typecheck and `npm test` rerun on `develop` after the merge.
