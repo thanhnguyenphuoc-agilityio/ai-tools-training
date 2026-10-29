@@ -145,8 +145,29 @@ waiting-to-merge with a merge request section.
 
 ## Merge request
 
-Pending. The merge request (branch `feat/receipt_photos` into `develop`) is filled in when the branch is ready for
-review.
+- Branch `feat/receipt_photos` into `develop`. The merge request is opened on GitLab from this branch.
+- What changed:
+  - Migration `0011_attachments.sql` adds `expense_attachments`, one photo per expense, with cascades from `groups` and `expenses`.
+  - R2 binding `RECEIPTS` (bucket `tally-receipts`) in `wrangler.jsonc` and `Env`.
+  - Routes `POST`, `DELETE` and `GET` under `/groups/:code/expenses/:id/attachments`, with the group, edit and removed-member rules.
+  - The global 16 KB body limit skips the upload route, which has its own 1 MB limit.
+  - Deleting an expense deletes its photo; a purge deletes the R2 prefix of each purged group; a locked group keeps its photos.
+  - Expense ledger rows carry `receipt: { id, contentType, size } | null`.
+  - Browser: photos are resized to at most 1600 px and re-encoded as WebP (JPEG fallback), with a typed too-large error.
+  - Expense form: optional photo, remove in edit mode, and a kept form with an error when the photo upload fails (`onSaved(true)`).
+  - Expense list: receipt icon link that opens the photo in a new tab.
+  - Docs: design.md (receipt_photos built, migration numbers, deletion), business-rules.md (Receipt photo, body limit, complete deletion), README.md (MVP list, Expense row).
+- Deployment: before a remote deploy, run `npx wrangler r2 bucket create tally-receipts` and `npx wrangler d1 migrations apply DB --remote`.
+- Commands and results (in `practice/tally`):
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean (oxlint and stylelint).
+  - `npm test`: 46 files, 535 tests passed. This includes the new `tests/api/receipts.test.ts` (13 tests) and `tests/unit/receipts.test.ts`.
+  - `npm run test:hooks`: 29 passed.
+  - `npx playwright test --config playwright.local.config.ts` (port 5193): 146 passed, 2 skipped. Includes both receipt e2e tests on desktop and mobile.
+- Known notes:
+  - `ExpenseForm.tsx` already failed `prettier --check` at `develop`; this branch does not reflow its unrelated lines.
+  - Several existing API tests build `Env` for racing writes; they now spread `...env.env` so the `RECEIPTS` binding is kept.
+  - One receipt API test runs longer than the default 5 s and has a 30 s timeout, as the other multi-group API tests do.
 
 Deployment note: before a remote deploy, run `npx wrangler r2 bucket create tally-receipts` and
 `npx wrangler d1 migrations apply DB --remote`.
