@@ -155,3 +155,5 @@ Verdict: approve after the fix. Commit authors and dates checked.
 
 Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 46 files / 547 passed, `e2e/attendance.spec.ts` and
 `e2e/ui-redesign.spec.ts` (port 5194) 18 passed. Typecheck and `npm test` rerun on `develop` after the merge.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

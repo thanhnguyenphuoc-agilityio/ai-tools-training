@@ -33,3 +33,5 @@ confirm" and the QR can no longer be opened, so the payer cannot finish the bank
 ## Review
 
 - Typecheck, lint, unit/API tests and e2e pass. Merged into `develop`.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

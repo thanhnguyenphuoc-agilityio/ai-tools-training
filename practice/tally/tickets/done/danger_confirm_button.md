@@ -30,3 +30,5 @@ contrast is poor and the button does not read as a destructive action.
 ## Review
 
 - Typecheck, lint, unit/API tests and e2e pass. Merged into `develop`.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

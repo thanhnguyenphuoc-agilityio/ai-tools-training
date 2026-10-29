@@ -227,3 +227,5 @@ Reviewed by Opus (AI team lead).
   the other messages), and README no longer lists editing or owner tools as not built.
 - Checks after the fix: typecheck and lint clean, 515 unit and API tests, e2e `edit-expense`, `exact-split`,
   `language-picker`, `remove-member`, `settle-up`, `ui-redesign`, `owner-member-tools` and `claim-member` 60 passed.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

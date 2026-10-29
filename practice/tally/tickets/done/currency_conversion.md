@@ -134,3 +134,5 @@ Verdict: approve. Docs only; commit authors and dates checked.
 Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 44 files / 515 passed, `npm run test:hooks` 29
 passed, e2e 142 passed / 2 skipped (no code changed since that run). Typecheck and `npm test` rerun on `develop` after
 the merge.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

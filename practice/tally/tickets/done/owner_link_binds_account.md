@@ -188,3 +188,5 @@ Reviewed by Opus (AI team lead).
 - `DELETE /api/me` refuses with `ACCOUNT_OWNS_SHARED_GROUP` while an owned group has another active member.
 - Fixed: the unused `ownerAccess.attached` message was removed from both locales.
 - Checks: typecheck and lint clean, 404 unit and API tests, 29 hook tests, e2e 117 passed and 1 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

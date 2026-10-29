@@ -216,3 +216,5 @@ Reviewed by Opus (AI team lead).
 - Checks after the fix: typecheck and lint clean, 483 unit and API tests, e2e `owner-member-tools`, `claim-member`,
   `member-invite`, `transfer-ownership`, `language-picker`, `remove-member`, `settle-up` and `saved-bank` 51 passed and
   1 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.
