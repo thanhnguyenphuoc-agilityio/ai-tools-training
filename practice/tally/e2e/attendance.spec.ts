@@ -60,3 +60,56 @@ test('a session that ends after midnight shows +1 day; its cost is shared among 
   const casey = page.locator('.list__item').filter({ hasText: 'Casey' });
   await expect(casey).toContainText(t('settle.even'));
 });
+
+// expense_session_link: the Expenses tab can put an expense into a session and take it out again.
+test('an expense added from the Expenses tab can be put in a session and taken out again', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel(t('home.create.groupName')).fill('Weekly sport');
+  await page.getByLabel(t('home.create.yourName')).fill('Alex');
+  await page.getByRole('button', { name: t('home.create.submit') }).click();
+  await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  await page.getByRole('button', { name: t('ownerKey.done') }).click();
+
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+  for (const name of ['Sam', 'Jamie']) {
+    await page.getByLabel(t('members.addLabel')).fill(name);
+    await page.getByRole('button', { name: t('members.add'), exact: true }).click();
+    await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  }
+
+  // A group with no sessions has no session select.
+  await page.getByRole('tab', { name: t('group.tabs.expenses') }).click();
+  await expect(page.getByLabel(t('expenseForm.session'))).toHaveCount(0);
+
+  // 19:00-21:00 with Alex and Sam present; Jamie is not.
+  await page.getByRole('tab', { name: t('group.tabs.sessions') }).click();
+  await page.getByRole('button', { name: t('sessions.new') }).first().click();
+  await page.getByLabel(t('sessions.start')).fill('19:00');
+  await page.getByLabel(t('sessions.end')).fill('21:00');
+  await page.getByRole('checkbox', { name: 'Jamie' }).uncheck();
+  await page.getByRole('button', { name: t('common.save') }).click();
+
+  await page.getByRole('tab', { name: t('group.tabs.expenses') }).click();
+  await page.getByLabel(t('expenseForm.session')).selectOption({ index: 1 });
+  await expect(page.getByRole('checkbox', { name: 'Sam' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Jamie' })).not.toBeChecked();
+  await page.getByLabel(t('expenseForm.amount'), { exact: true }).fill('200k');
+  await page.getByLabel(t('expenseForm.description')).fill('Drinks');
+  await page.getByRole('button', { name: t('expenseForm.submit') }).click();
+
+  const row = page.locator('.expense-list__item').first();
+  await expect(row).toContainText(t('sessions.range', { start: '19:00', end: '21:00' }));
+
+  await page.getByRole('tab', { name: t('group.tabs.sessions') }).click();
+  const card = page.locator('.sessions-panel__session');
+  await expect(card).toContainText(t('sessions.total', { amount: vnd(200_000) }));
+
+  await page.getByRole('tab', { name: t('group.tabs.expenses') }).click();
+  await row.getByRole('button', { name: t('expenseList.editLabel', { description: 'Drinks' }) }).click();
+  await page.getByLabel(t('expenseForm.session')).selectOption({ label: t('expenseForm.noSession') });
+  await page.getByRole('button', { name: t('expenseForm.editSubmit') }).click();
+
+  await expect(row).not.toContainText(t('sessions.range', { start: '19:00', end: '21:00' }));
+  await page.getByRole('tab', { name: t('group.tabs.sessions') }).click();
+  await expect(card).not.toContainText(t('sessions.total', { amount: vnd(200_000) }));
+});

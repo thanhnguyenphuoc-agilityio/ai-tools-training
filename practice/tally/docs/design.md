@@ -369,6 +369,10 @@ Built. Rules in `docs/business-rules.md`, "Sessions and attendance".
   only include active members. The session view flags a cost that differs and offers the edit action to its author or
   the owner, hidden when the cost involves a removed member.
 - **GET** `/groups/:code` returns `GroupDto.sessions` from `loadSessions`, sorted by day then start time, newest first.
+- **Session in the expense form** (`expense_session_link`): `ExpenseForm` has a session select, hidden when the group has
+  no sessions. Its options are "No session" plus the sessions already returned (newest first), labelled by
+  `sessionLabel` in `src/expenseRow.ts`, which the expense list badge shares. No API change: create and update already
+  accept `sessionId`.
 
 ### exact_amount_split
 

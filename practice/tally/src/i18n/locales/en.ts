@@ -110,6 +110,8 @@ export const en = {
     description: 'Description',
     descriptionPlaceholder: 'Dinner, first night',
     date: 'Date',
+    session: 'Session',
+    noSession: 'No session',
     splitBetween: 'Split between',
     equal: 'Equally',
     byWeight: 'By weight',
@@ -145,6 +147,7 @@ export const en = {
     edit: 'Edit',
     editLabel: 'Edit "{description}"',
     edited: 'Edited',
+    sessionBadge: 'Session {label}',
   },
   expenses: {
     receipt: {
