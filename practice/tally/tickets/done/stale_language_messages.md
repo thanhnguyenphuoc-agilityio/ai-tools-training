@@ -195,3 +195,5 @@ Reviewed by Opus (AI team lead).
 - Note for the batch: `wrong_name_claim`, `owner_member_tools` and `edit_expense` were branched before this fix; their
   new or changed error states are moved to `UiMessage` when they are merged. No changes needed on this branch.
 - Checks: typecheck and lint clean, 452 unit and API tests, 29 hook tests, e2e 134 passed and 2 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

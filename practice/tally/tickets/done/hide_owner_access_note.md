@@ -34,3 +34,5 @@ owner is signed in.
 ## Review
 
 - Typecheck, lint, unit/API tests and the affected e2e specs pass. Merged into `develop`.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

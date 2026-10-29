@@ -200,3 +200,5 @@ Reviewed by Opus (AI team lead).
 - The owner alone sets the email (`requireCanSetInviteEmail`); a claimed member answers `MEMBER_ALREADY_CLAIMED`. Claim, link and remove clear the email.
 - The invite dialog uses `useDialog`. No changes needed.
 - Checks: typecheck and lint clean, 404 unit and API tests, 29 hook tests, e2e 113 passed and 1 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

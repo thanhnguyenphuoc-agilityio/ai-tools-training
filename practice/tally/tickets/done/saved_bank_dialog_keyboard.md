@@ -60,3 +60,5 @@ Reviewed by Opus (AI team lead).
   `e2e/delete-account.spec.ts`; both failed before the change. `docs/design.md` notes the menu-button fallback.
 - Checks: `npm run typecheck` and `npm run lint` pass, `npm test` 389 passed, `npm run e2e` 111 passed and 1
   skipped (the new keyboard test on the mobile project).
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

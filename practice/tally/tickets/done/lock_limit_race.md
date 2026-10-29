@@ -52,3 +52,5 @@ Reviewed by Opus (AI team lead).
   check and the write; both fail on the old route. `docs/design.md` no longer lists the race as a known limit.
 - Checks: `npm run typecheck` and `npm run lint` pass, `npm test` 389 passed. No e2e run: the change is limited
   to the API and its responses are unchanged.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

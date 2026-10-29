@@ -215,3 +215,5 @@ Reviewed by Opus (AI team lead).
   `UiMessage` and render it with `message()`.
 - Checks after the fix: typecheck and lint clean, 471 unit and API tests, e2e `claim-member`, `language-picker` and
   `member-invite` 24 passed.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

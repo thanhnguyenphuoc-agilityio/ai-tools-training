@@ -215,3 +215,5 @@ Reviewed by Opus (AI team lead).
 - Only a boolean `hasAccount` is exposed per member. The dialog uses `useDialog` and starts on Cancel.
 - No changes needed. Known limits stay as listed above.
 - Checks: typecheck and lint clean, 423 unit and API tests, 29 hook tests, e2e 121 passed and 1 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

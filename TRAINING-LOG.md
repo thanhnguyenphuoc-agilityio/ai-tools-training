@@ -488,6 +488,20 @@ Open before the next day:
 - [x] Push `develop`, `main` and the tag
 - [ ] Day 14: port `owner_link_binds_account`, `transfer_ownership`, `join_as_account` and `member_email_invite`
 
+## Day 14: 2026-10-29
+
+Goal: port the remaining tickets, fix the reported issues and ship the tested work.
+Left over from the previous day: the Day 14 port.
+Shipped (merge requests, artifacts, screenshots):
+- Merged into `develop`, each through review by the AI team lead: the four account tickets, `owner_member_tools`,
+  `edit_expense`, `receipt_photos`, `attendance_split`, `expense_session_link`, `group_live_updates`, the two
+  question tickets, six bug fixes and five small UI improvements (`TAL-53`, `TAL-56` to `TAL-59`).
+- `release/2026-10-29`: the human tested the 23 tickets on local `develop` and confirmed them; the tickets moved to
+  `done/`, `develop` merged into `main` and deployed to Cloudflare.
+Observations (positive / negative):
+- Browser subagents passed part of the checklist first, which left the human the steps that needed a second
+  person or a phone.
+
 ## For the retro
 
 -

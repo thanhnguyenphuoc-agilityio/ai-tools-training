@@ -78,3 +78,5 @@ Verdict: approve. Commit authors and dates checked.
 Checks after merging `develop`: `npm run typecheck` and `npm run lint` passed, `npm test` 50 files / 625 passed,
 e2e `attendance`, `edit-expense` and `ui-redesign` (port 5194) 26 passed; the builder's full e2e run was 152 passed.
 Typecheck and `npm test` rerun on `develop` after the merge.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

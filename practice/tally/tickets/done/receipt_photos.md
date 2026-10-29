@@ -197,3 +197,5 @@ Verdict: approve after the fix. Commit authors and dates checked.
 
 Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 46 files / 536 passed, `e2e/receipts.spec.ts`
 (port 5193) 4 passed. Typecheck and `npm test` rerun on `develop` after the merge.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

@@ -180,3 +180,5 @@ Reviewed by Opus (AI team lead).
 - The "My name" dialog uses `useDialog` with a saving state; the join field is prefilled from the account and stays editable.
 - No changes needed.
 - Checks: typecheck and lint clean, 397 unit and API tests, 29 hook tests, e2e 116 passed and 2 skipped.
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.

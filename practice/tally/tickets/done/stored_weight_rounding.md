@@ -141,3 +141,5 @@ Reviewed by Opus (AI team lead).
 - No migration, error code, i18n key or UI change. No changes needed.
 - Checks: typecheck and lint clean, 449 unit and API tests, 29 hook tests, e2e 128 passed and 2 skipped (two specs
   rerun once after browser-close timeouts under load).
+
+Confirmed by the human on local `develop`. Released in release/2026-10-29.
