@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useAccount } from '../account';
 import { api } from '../api';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import type { GroupDto } from '../../shared/types';
 import './KeepGroup.scss';
 
 export function KeepGroup({ group, onSaved }: { group: Pick<GroupDto, 'code' | 'locked'>; onSaved: () => void }) {
   const { user, requestSignIn } = useAccount();
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const notify = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
 
   const toggle = async (checked: boolean) => {
     setLoading(true);
@@ -26,7 +26,7 @@ export function KeepGroup({ group, onSaved }: { group: Pick<GroupDto, 'code' | '
       }
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export function KeepGroup({ group, onSaved }: { group: Pick<GroupDto, 'code' | '
           </button>
         </div>
       )}
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
     </div>
   );
 }

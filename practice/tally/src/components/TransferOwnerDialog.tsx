@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { GroupDto, MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import './TransferOwnerDialog.scss';
 
 // One confirmation, then the hand-over takes effect at once (the new owner does not accept).
@@ -17,9 +17,9 @@ export function TransferOwnerDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const panel = useDialog(onClose, { canClose: !busy });
 
   async function confirm(e: React.FormEvent) {
@@ -31,7 +31,7 @@ export function TransferOwnerDialog({
       onClose();
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setBusy(false);
     }
@@ -52,7 +52,7 @@ export function TransferOwnerDialog({
         <p className="text text--muted text--small">{t('ownerTransfer.body', { name: member.name })}</p>
         {group.locked && <p className="text text--small">{t('ownerTransfer.stopsKeeping')}</p>}
         <form onSubmit={confirm} className="stack">
-          {error && <p className="text text--error">{error}</p>}
+          {error && <p className="text text--error">{message(error)}</p>}
           <div className="cluster">
             <button className="button transfer-owner-dialog__confirm" type="submit" disabled={busy}>
               {t('ownerTransfer.confirm')}

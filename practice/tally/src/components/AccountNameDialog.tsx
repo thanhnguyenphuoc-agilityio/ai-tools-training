@@ -2,17 +2,17 @@ import { useState, type FormEvent } from 'react';
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import './AccountNameDialog.scss';
 
 export function AccountNameDialog({ onClose }: { onClose: () => void }) {
   const { user, refresh } = useAccount();
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const notify = useToast();
 
   const [name, setName] = useState(user?.name.slice(0, 40) ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [saving, setSaving] = useState(false);
   const panel = useDialog(onClose, { canClose: !saving });
 
@@ -26,7 +26,7 @@ export function AccountNameDialog({ onClose }: { onClose: () => void }) {
       notify('accountName.saved');
       onClose();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
       setSaving(false);
     }
   }
@@ -61,7 +61,7 @@ export function AccountNameDialog({ onClose }: { onClose: () => void }) {
               required
             />
           </label>
-          {error && <p className="text text--error">{error}</p>}
+          {error && <p className="text text--error">{message(error)}</p>}
           <div className="cluster">
             <button type="submit" className="button" disabled={saving}>
               {t('accountName.save')}

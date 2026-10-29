@@ -211,6 +211,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   without leaving the current page.
 - The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
   keeps its own choice.
+- Messages already on screen (errors and confirmations) switch to the new language at once.
 - Changing the language does not change any group data, including the currency of an existing group.
 
 ## Accounts (optional sign-in)

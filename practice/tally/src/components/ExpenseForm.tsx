@@ -4,7 +4,7 @@ import type { GroupDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
@@ -18,7 +18,7 @@ export function ExpenseForm({
   /** Reloads the group when the API says a chosen member is no longer in it (removed on another device). */
   onStale: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
   const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
@@ -35,7 +35,7 @@ export function ExpenseForm({
   const [weights, setWeights] = useState<Record<string, string>>({});
   // Exact mode: the text typed per member. An empty field means the member owes nothing.
   const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [busy, setBusy] = useState(false);
 
   const amount = parseMoney(amountText);
@@ -74,12 +74,12 @@ export function ExpenseForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) {
-      const examples = t(currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples');
-      return setError(t('expenseForm.invalidAmount', { examples }));
+      const examplesKey = currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples';
+      return setError({ key: 'expenseForm.invalidAmount', vars: { examples: { key: examplesKey } } });
     }
     if (mode === 'exact') {
-      if (invalidShare) return setError(t('expenseForm.invalidShare', { name: invalidShare.name }));
-      if (difference !== 0) return setError(t('expenseForm.exactMismatch'));
+      if (invalidShare) return setError({ key: 'expenseForm.invalidShare', vars: { name: invalidShare.name } });
+      if (difference !== 0) return setError({ key: 'expenseForm.exactMismatch' });
     }
     setBusy(true);
     setError(null);
@@ -98,7 +98,7 @@ export function ExpenseForm({
       notify('toast.expenseAdded');
       onSaved();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
       if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
         onStale();
       }
@@ -246,7 +246,7 @@ export function ExpenseForm({
           )}
         </fieldset>
 
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
         <button className="button button--block-mobile" disabled={busy || chosen.length === 0}>
           {t('expenseForm.submit')}
         </button>

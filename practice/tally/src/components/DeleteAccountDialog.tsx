@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { useAccount } from '../account';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import './DeleteAccountDialog.scss';
 
 export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   const { deleteAccount } = useAccount();
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const notify = useToast();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [deleting, setDeleting] = useState(false);
   const panel = useDialog(onClose, { canClose: !deleting });
 
@@ -21,7 +21,7 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
       notify('deleteAccount.done');
       onClose();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
       setDeleting(false);
     }
   }
@@ -46,7 +46,7 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
         <p className="text">{t('deleteAccount.deleted')}</p>
         <p className="text">{t('deleteAccount.kept')}</p>
         <p className="text text--muted text--small">{t('deleteAccount.ownerWarning')}</p>
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">
           <button
             type="button"
