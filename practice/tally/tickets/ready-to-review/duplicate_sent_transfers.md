@@ -112,3 +112,25 @@ Commands, run in `practice/tally`:
 - `npm run test:hooks`: 29 passed.
 - `npx playwright test --config playwright.local.config.ts e2e/settle-up.spec.ts e2e/owner-member-tools.spec.ts`:
   12 passed.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Checked against the plan and the Acceptance criteria. The pending check is part of the single `INSERT ... SELECT`
+  (`NOT EXISTS` a `sent` row for the group, payer and receiver), so two concurrent requests cannot both insert. The
+  follow-up read only chooses the error code. Confirm is a conditional `UPDATE ... AND status = 'sent'`; zero changes
+  answers 409 `ALREADY_CONFIRMED` before `recordChange`, so a transfer is confirmed and audited once.
+- The failing-first tests were rerun against the `develop` version of `worker/routes/transfers.ts`: the four new
+  pending and race tests fail there, and the removed-receiver guard passes, as planned.
+- No policy change; `TRANSFER_PENDING` is translated in `en` and `vi` (Vietnamese with diacritics). `payAction` keeps
+  `null` for a plain member on others' debts. `tickets/README.md` names `TAL-57` as the next free ID.
+- No blocking findings, no fixes needed.
+
+Verdict: approve. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 50 files / 623 passed, `npm run test:hooks` 29
+passed, e2e `settle-up` and `owner-member-tools` (port 5191) 12 passed. Typecheck and `npm test` rerun on `develop`
+after the merge.
