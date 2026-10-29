@@ -147,7 +147,6 @@ test.describe('Saved bank details (SB-6, SB-7, SB-9)', () => {
     await page.getByLabel(t('home.create.yourName')).fill('Pat');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-    await page.getByRole('button', { name: t('ownerKey.done') }).click();
 
     // Open members tab
     await page.getByRole('tab', { name: t('group.tabs.members') }).click();

@@ -11,7 +11,7 @@ import { GroupSummaryBar } from '../components/GroupSummaryBar';
 import { Icon, type IconName } from '../components/Icon';
 import { JoinPanel } from '../components/JoinPanel';
 import { MembersPanel } from '../components/MembersPanel';
-import { OwnerAccessNote, OwnerKeyBanner } from '../components/OwnerKeyBanner';
+import { OwnerKeyBanner } from '../components/OwnerKeyBanner';
 import { SessionsPanel } from '../components/SessionsPanel';
 import { SettlePanel } from '../components/SettlePanel';
 import { todayLocal } from '../dates';
@@ -46,11 +46,8 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const [error, setError] = useState<UiMessage | null>(null);
   const [tab, setTab] = useState<Tab>('expenses');
   const notify = useToast();
+  // A group created while signed in has no owner key (owner access is tied to the account), so nothing is shown.
   const [newOwnerKey, setNewOwnerKey] = useState<string | null>(() => history.state?.ownerKey ?? null);
-  // Shown after creating a group while signed in: owner access is tied to the account, no recovery link.
-  const [showOwnerNote, setShowOwnerNote] = useState<boolean>(
-    () => !!history.state?.created && history.state?.ownerKey == null,
-  );
   const { version } = useAccount();
   // The expense being edited (edit_expense); null while the form adds a new one.
   const [editing, setEditing] = useState<ExpenseDto | null>(null);
@@ -137,7 +134,6 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   const dismissKey = () => {
     history.replaceState(null, '', location.pathname);
     setNewOwnerKey(null);
-    setShowOwnerNote(false);
   };
 
   if (error && !group) {
@@ -197,7 +193,6 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       {newOwnerKey && group.me.isOwner && (
         <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />
       )}
-      {showOwnerNote && group.me.isOwner && !newOwnerKey && <OwnerAccessNote onDismiss={dismissKey} />}
       {error && <p className="text text--error">{message(error)}</p>}
       {!group.me.memberId && <JoinPanel group={group} onDone={reload} />}
 

@@ -88,7 +88,6 @@ export const en = {
     done: 'I saved it',
   },
   ownerAccess: {
-    title: 'Owner access',
     tied: 'Owner access is tied to your account.',
   },
   join: {
