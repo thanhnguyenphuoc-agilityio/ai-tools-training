@@ -61,8 +61,21 @@ test('deleting the expense that is being edited returns the form to adding', asy
 
   await page.getByRole('button', { name: t('expenseList.editLabel', { description: 'Groceries' }) }).click();
   await expect(page.getByRole('heading', { name: t('expenseForm.editTitle') })).toBeVisible();
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: t('expenseList.deleteLabel', { description: 'Groceries' }) }).click();
+
+  // Cancel keeps the expense. No browser confirm: a stray native dialog would be dismissed and fail this test.
+  const deleteLabel = t('expenseList.deleteLabel', { description: 'Groceries' });
+  await page.getByRole('button', { name: deleteLabel }).click();
+  const dialog = page.getByRole('dialog', { name: t('expenseList.deleteTitle') });
+  await expect(dialog).toContainText('Groceries');
+  await dialog.getByRole('button', { name: t('common.cancel') }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.expense-list__item')).toHaveCount(1);
+
+  await page.getByRole('button', { name: deleteLabel }).click();
+  await page
+    .getByRole('dialog', { name: t('expenseList.deleteTitle') })
+    .getByRole('button', { name: t('expenseList.confirmDeleteButton') })
+    .click();
   await expect(page.locator('.expense-list__item')).toHaveCount(0);
 
   // The form no longer edits an expense that is gone: it adds a new one, with empty fields.
