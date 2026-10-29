@@ -113,3 +113,21 @@ Checks run in `practice/tally` on this branch:
 - `npm run test:hooks`: passed.
 - `npx playwright test --config playwright.local.config.ts` (port 5191): 142 passed, 2 skipped. The first run failed at
   web server start with a known flaky "bad port" error and passed on the rerun.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- [minor] The analysis said every recovery link of an attached group answers 403, but `POST /groups/:code/owner/claim`
+  answers `200 { ok: true, attached: false }` to the owning account itself. Fixed: the sentence now names that case.
+- [nit] The symbol `G` in the probability paragraph is kept; it is defined where it is used.
+- The entropy figures match `shared/groupCode.ts` (31^12, about 59.5 bits) and `randomToken()` (32 bytes). The
+  follow-up `rate_limit_guessing` (TAL-51) follows Answer 1, and no code changed, as Answer 2 requires.
+
+Verdict: approve. Docs only; commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 44 files / 515 passed, `npm run test:hooks` passed,
+e2e 142 passed / 2 skipped (no code changed since that run). Typecheck and `npm test` rerun on `develop` after the
+merge.
