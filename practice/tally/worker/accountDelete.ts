@@ -1,6 +1,22 @@
 // Account deletion: deletes the user row and sessions, detaches owned groups and members,
 // and unlocks kept groups with an audit entry. Runs in one atomic batch.
 
+/** Owned groups that still have another active member (not the owner). Deletion is refused while this is above 0. */
+export async function countSharedOwnedGroups(db: D1Database, userId: string): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS total FROM groups g
+       WHERE g.owner_user_id = ?1
+       AND EXISTS (
+         SELECT 1 FROM members m
+         WHERE m.group_code = g.code AND m.is_owner = 0 AND m.removed_at IS NULL
+       )`,
+    )
+    .bind(userId)
+    .first<{ total: number }>();
+  return row?.total ?? 0;
+}
+
 export async function deleteAccount(db: D1Database, userId: string, now: string): Promise<void> {
   await db.batch([
     db

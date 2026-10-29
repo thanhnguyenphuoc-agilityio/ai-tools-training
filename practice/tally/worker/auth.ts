@@ -9,6 +9,8 @@ const SESSION_MAX_AGE = SESSION_DAYS * 24 * 60 * 60;
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export const sessionCookieName = 'tally_session';
+/** Stored in groups.owner_key_hash once the owner access is tied to an account. No SHA-256 hex value equals it. */
+export const REVOKED_OWNER_KEY = 'revoked';
 
 /** 32 random bytes, base64url. Used for owner keys and device tokens. */
 export function randomToken(): string {
@@ -36,6 +38,11 @@ export function setGroupCookie(c: Context, code: string, name: string, value: st
     secure: new URL(c.req.url).protocol === 'https:',
     maxAge: ONE_YEAR,
   });
+}
+
+/** Drops the owner cookie of one group in the browser. */
+export function clearOwnerCookie(c: Context, code: string): void {
+  deleteCookie(c, ownerCookieName(code), { path: `/api/groups/${code}` });
 }
 
 export function clearSessionCookie(c: Context<AppEnv>): void {
@@ -121,7 +128,12 @@ export async function resolveIdentity(
   const userId = account?.id ?? null;
 
   const ownerKey = getCookie(c, ownerCookieName(code));
-  const hasOwnerKey = !!ownerKey && (await sha256Hex(ownerKey)) === group.owner_key_hash;
+  // A revoked key grants nothing; the stale cookie is dropped on this request.
+  if (ownerKey && group.owner_key_hash === REVOKED_OWNER_KEY) {
+    clearOwnerCookie(c, code);
+  }
+  const hasOwnerKey =
+    !!ownerKey && group.owner_key_hash !== REVOKED_OWNER_KEY && (await sha256Hex(ownerKey)) === group.owner_key_hash;
   const isOwner = hasOwnerKey || (userId !== null && group.owner_user_id === userId);
 
   let deviceMemberId: string | null = null;

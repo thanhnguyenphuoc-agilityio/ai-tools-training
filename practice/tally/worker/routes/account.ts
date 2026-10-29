@@ -2,10 +2,10 @@
 import { Hono } from 'hono';
 import type { BankDetails, ConfigResponse, MeResponse, UserDto } from '../../shared/types';
 import { clearSessionCookie, createSession, endSession, resolveAccount } from '../auth';
-import { deleteAccount } from '../accountDelete';
+import { countSharedOwnedGroups, deleteAccount } from '../accountDelete';
 import { verifyGoogleIdToken } from '../google';
 import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv, type UserRow } from '../http';
-import { requireSignedIn } from '../policy';
+import { requireNoSharedOwnedGroups, requireSignedIn } from '../policy';
 
 export const accountRoutes = new Hono<AppEnv>();
 
@@ -118,6 +118,7 @@ accountRoutes.patch('/me', async (c) => {
 
 accountRoutes.delete('/me', async (c) => {
   const userId = requireSignedIn(await resolveAccount(c));
+  requireNoSharedOwnedGroups(await countSharedOwnedGroups(c.env.DB, userId));
   await deleteAccount(c.env.DB, userId, now());
   clearSessionCookie(c);
   return c.json({ ok: true });

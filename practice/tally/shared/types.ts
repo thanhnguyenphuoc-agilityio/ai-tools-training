@@ -76,6 +76,8 @@ export interface GroupDto {
   expiresAt: string | null;
   /** A kept group is exempt from inactivity deletion (lock_groups). */
   locked: boolean;
+  /** True when the group belongs to a signed-in account (owner_link_binds_account). */
+  ownedByAccount: boolean;
   /** True once the group has any expense (deleted ones included) or transfer; the currency can no longer change. */
   currencyLocked: boolean;
   canLinkAccount: boolean;
@@ -87,8 +89,8 @@ export interface GroupDto {
 
 export interface CreateGroupResponse {
   code: string;
-  /** Shown once. The server only stores its hash. */
-  ownerKey: string;
+  /** Shown once. The server only stores its hash. Null when created by a signed-in account. */
+  ownerKey: string | null;
 }
 
 export interface UserDto extends BankDetails {

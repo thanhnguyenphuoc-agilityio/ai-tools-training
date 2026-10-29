@@ -4,11 +4,26 @@ import { DEFAULT_CURRENCY, getCurrency } from '../../shared/currency';
 import { generateGroupCode } from '../../shared/groupCode';
 import { expiresAt, MAX_LOCKED_GROUPS } from '../../shared/rules';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
-import { memberCookieName, ownerCookieName, randomToken, resolveAccount, setGroupCookie, sha256Hex } from '../auth';
-import { linkToAccount } from '../accountLink';
+import {
+  clearOwnerCookie,
+  memberCookieName,
+  ownerCookieName,
+  randomToken,
+  resolveAccount,
+  REVOKED_OWNER_KEY,
+  setGroupCookie,
+  sha256Hex,
+} from '../auth';
+import { attachOwnerGroup, tryAttachOwnerGroup } from '../accountLink';
 import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
-import { canLinkToAccount, requireGroupNotOwnedByOther, requireOwner, requireOwnerAccount } from '../policy';
+import {
+  canLinkToAccount,
+  requireAccount,
+  requireGroupNotOwnedByOther,
+  requireOwner,
+  requireOwnerAccount,
+} from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
 
@@ -35,7 +50,9 @@ groupRoutes.post('/', async (c) => {
   const userId = account?.id ?? null;
 
   const code = generateGroupCode();
-  const ownerKey = randomToken();
+  // A group created while signed in is owned by the account: no owner key is issued (owner_link_binds_account).
+  const ownerKey = userId ? null : randomToken();
+  const ownerKeyHash = ownerKey ? await sha256Hex(ownerKey) : REVOKED_OWNER_KEY;
   const memberId = crypto.randomUUID();
   const memberToken = randomToken();
   const at = now();
@@ -43,13 +60,15 @@ groupRoutes.post('/', async (c) => {
   await c.env.DB.batch([
     c.env.DB.prepare(
       'INSERT INTO groups (code, name, currency, round_to, owner_key_hash, owner_user_id, last_activity_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).bind(code, name, groupCurrency.code, rounding, await sha256Hex(ownerKey), userId, at, at),
+    ).bind(code, name, groupCurrency.code, rounding, ownerKeyHash, userId, at, at),
     c.env.DB.prepare(
       'INSERT INTO members (id, group_code, name, token_hash, user_id, is_owner, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
     ).bind(memberId, code, ownerName, await sha256Hex(memberToken), userId, at),
   ]);
 
-  setGroupCookie(c, code, ownerCookieName(code), ownerKey);
+  if (ownerKey) {
+    setGroupCookie(c, code, ownerCookieName(code), ownerKey);
+  }
   setGroupCookie(c, code, memberCookieName(code), `${memberId}.${memberToken}`);
   return c.json({ code, ownerKey } satisfies CreateGroupResponse, 201);
 });
@@ -63,9 +82,8 @@ groupRoutes.get('/:code', async (c) => {
     loadMembers(db, group.code),
     loadLedger(db, group.code),
   ]);
-  const ownerMember = members.find((m) => m.is_owner === 1 && !m.removed_at) ?? null;
   const deviceMember = me.deviceMemberId ? (members.find((m) => m.id === me.deviceMemberId) ?? null) : null;
-  const canLinkAccount = canLinkToAccount(me, group, ownerMember, deviceMember);
+  const canLinkAccount = canLinkToAccount(me, deviceMember);
 
   const locked = group.locked_at !== null;
   const dto: GroupDto = {
@@ -77,6 +95,7 @@ groupRoutes.get('/:code', async (c) => {
     lastActivityAt: group.last_activity_at,
     expiresAt: locked ? null : expiresAt(group.last_activity_at),
     locked,
+    ownedByAccount: group.owner_user_id !== null,
     currencyLocked: await isCurrencyLocked(db, group.code),
     canLinkAccount,
     members: members.map(toMemberDto),
@@ -133,10 +152,49 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
   const body = await readJson(c);
   const { group, me } = await loadGroup(c);
   const key = text(body.ownerKey, 'ownerKey', 200);
+
+  // A revoked key matches nothing: the group is tied to an account (owner_link_binds_account).
+  if (group.owner_key_hash === REVOKED_OWNER_KEY) {
+    if (me.userId && group.owner_user_id === me.userId) {
+      return c.json({ ok: true, attached: false });
+    }
+    if (me.userId && group.owner_user_id !== null) {
+      throw new ApiError(403, 'GROUP_OWNED_BY_OTHER_ACCOUNT', 'group belongs to another account');
+    }
+    throw new ApiError(403, 'OWNER_KEY_REVOKED', 'this recovery link was revoked because the group is now linked to an account');
+  }
+
   if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+
+  if (me.userId) {
+    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
+    clearOwnerCookie(c, group.code);
+    if (changed) {
+      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+    }
+    return c.json({ ok: true, attached: true });
+  }
+
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
   await audit(c.env.DB, group.code, { ...me, isOwner: true }, 'owner.claim', null);
-  return c.json({ ok: true });
+  return c.json({ ok: true, attached: false });
+});
+
+// Attaches the group from the owner cookie of this device after sign-in (called for each device group).
+groupRoutes.post('/:code/owner/attach', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireAccount(me);
+
+  if (!me.hasOwnerKey) {
+    return c.json({ ok: true, attached: false });
+  }
+
+  const { attached, memberId } = await tryAttachOwnerGroup(c.env.DB, group, me);
+  if (attached) {
+    clearOwnerCookie(c, group.code);
+    await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+  }
+  return c.json({ ok: true, attached });
 });
 
 // Lock a group: exempt it from inactivity deletion.
@@ -146,7 +204,8 @@ groupRoutes.post('/:code/lock', async (c) => {
 
   if (group.owner_user_id !== me.userId) {
     requireGroupNotOwnedByOther(me, group);
-    const { changed, memberId } = await linkToAccount(c.env.DB, group, me);
+    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
+    clearOwnerCookie(c, group.code);
     if (changed) {
       await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
     }
