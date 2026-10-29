@@ -14,6 +14,18 @@ async function createGroup(page: Page) {
 // The visible toast cards; the screen reader copy is in a separate live region (role="status").
 const toasts = (page: Page) => page.locator('.toasts');
 
+test('the create group button keeps the width of its label on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/');
+  const form = page.locator('form').first();
+  const button = page.getByRole('button', { name: t('home.create.submit') });
+  await expect(button).toBeVisible();
+  const formWidth = (await form.boundingBox())?.width ?? 0;
+  const buttonWidth = (await button.boundingBox())?.width ?? 0;
+  expect(buttonWidth).toBeGreaterThan(0);
+  expect(buttonWidth).toBeLessThan(formWidth);
+});
+
 test('saving an expense shows a toast and updates the summary', async ({ page }) => {
   await createGroup(page);
   const summary = page
