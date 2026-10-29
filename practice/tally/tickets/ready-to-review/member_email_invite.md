@@ -190,3 +190,13 @@ From the product owner (human):
   - `npm test`: 36 files, 404 tests passed (MEI-12 migration included).
   - `npm run test:hooks`: 29 passed.
   - `npx playwright test --config playwright.local.config.ts` (port 5194): 113 passed, 1 skipped.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `members.invite_email` (migration `0009`) is never returned; the DTO exposes only `invited` for an active unclaimed member.
+- `GET /api/groups/:code` writes only when a link happens: one guarded `UPDATE` links the oldest matching unclaimed member, refuses when the account already has a member, and records `member.link` through `recordChange`.
+- The owner alone sets the email (`requireCanSetInviteEmail`); a claimed member answers `MEMBER_ALREADY_CLAIMED`. Claim, link and remove clear the email.
+- The invite dialog uses `useDialog`. No changes needed.
+- Checks: typecheck and lint clean, 404 unit and API tests, 29 hook tests, e2e 113 passed and 1 skipped.
