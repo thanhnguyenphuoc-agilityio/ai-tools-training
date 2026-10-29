@@ -143,6 +143,16 @@ export const en = {
     editLabel: 'Edit "{description}"',
     edited: 'Edited',
   },
+  expenses: {
+    receipt: {
+      label: 'Receipt photo (optional)',
+      saved: 'A receipt photo is saved.',
+      remove: 'Remove photo',
+      view: 'View receipt photo',
+      tooLarge: 'The photo is still too large after resizing. Try a smaller photo.',
+      failed: 'The expense is saved, but the receipt photo could not be uploaded. Try again or remove the photo.',
+    },
+  },
   settle: {
     balancesTitle: 'Balances',
     gets: 'gets {amount}',
@@ -402,6 +412,9 @@ export const en = {
     MEMBER_NOT_CLAIMED: 'This name has not been claimed yet.',
     CANNOT_RELEASE_OWNER: 'The group owner cannot be released.',
     EDIT_NOT_ALLOWED: 'Only the person who added this expense or the group owner can edit it.',
+    RECEIPT_TOO_LARGE: 'The receipt photo is larger than 1 MB.',
+    RECEIPT_TYPE_NOT_ALLOWED: 'The receipt must be a JPEG, PNG or WebP image.',
+    ATTACHMENT_NOT_FOUND: 'This receipt photo no longer exists.',
   } satisfies Record<ErrorCode, string>,
 };
 

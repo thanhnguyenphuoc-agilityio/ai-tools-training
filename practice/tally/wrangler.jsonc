@@ -15,6 +15,14 @@
   "triggers": {
     "crons": ["0 19 * * *"]
   },
+  // Receipt photos (receipt_photos). Create the bucket once before a remote deploy:
+  // `npx wrangler r2 bucket create tally-receipts`. Local dev uses an emulated bucket.
+  "r2_buckets": [
+    {
+      "binding": "RECEIPTS",
+      "bucket_name": "tally-receipts"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
