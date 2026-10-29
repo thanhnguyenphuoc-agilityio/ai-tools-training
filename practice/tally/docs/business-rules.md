@@ -389,6 +389,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - **Group summary and deletion date:** above the tabs, the group page shows the total spent, the number of current members and, for
   a member, their own balance ("you are owed", "you owe" or "settled", with the amount). Only confirmed transfers
   count, as in the balances. A visitor who has not joined sees no personal balance. Directly below the summary bar, the deletion date line shows when the group will be deleted if no changes are made, highlighted during the last 72 hours.
+- **Live updates:** an open group page refreshes silently when another member changes the group (joins, adds,
+  edits or deletes an expense, records or confirms a transfer, changes settings or members, links an account). Values
+  the person is typing are kept, and no message is shown. After a lost connection, or when the tab returns to the
+  foreground, the page reconnects and reloads once. A signal carries no group data and is not activity: it does not
+  move the deletion date.
 - **Phones:** below 768px wide, the group tabs are a bar at the bottom of the screen.
 
 ## Planned (in the backlog)

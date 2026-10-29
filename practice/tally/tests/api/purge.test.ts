@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { expiresAt, INACTIVE_MS } from '../../shared/rules';
 import type { GroupDto } from '../../shared/types';
-import { purgeInactiveGroups } from '../../worker/cleanup';
-import worker from '../../worker/index';
+import { purgeInactiveGroups, runDailyJobs } from '../../worker/cleanup';
 import { Browser, createTestEnv } from './helpers';
 
 describe('purge_inactive_groups API', () => {
@@ -392,16 +391,15 @@ describe('purge_inactive_groups API', () => {
     expect(res.json.code).toBe('GROUP_NOT_FOUND');
   });
 
-  // PG-8: scheduled handler calls the purge (worker export)
-  it('PG-8: worker.scheduled triggers purge', async () => {
+  // PG-8: the daily job (what the worker scheduled handler runs) triggers the purge.
+  // The handler itself is a one-line call to runDailyJobs; importing worker/index here would also load the Durable
+  // Object class, which needs the Workers runtime and is not available in Node.
+  it('PG-8: the daily job triggers purge', async () => {
     const scheduledTime = Date.parse('2026-10-25T19:00:00.000Z');
     // Group active on 2026-10-14 (11 days before 2026-10-25)
     await setGroupActivity(code, '2026-10-14T19:00:00.000Z');
 
-    const controller = { scheduledTime, cron: '0 19 * * *', noRetry: () => {} } as any;
-    const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as any;
-
-    await worker.scheduled(controller, testEnv.env, ctx);
+    await runDailyJobs(testEnv.env, new Date(scheduledTime));
 
     // Group should be deleted
     const res = await owner.call('GET', `/groups/${code}`);

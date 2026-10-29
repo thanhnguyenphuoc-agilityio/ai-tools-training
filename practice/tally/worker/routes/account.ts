@@ -6,6 +6,7 @@ import { countSharedOwnedGroups, deleteAccount } from '../accountDelete';
 import { verifyGoogleIdToken } from '../google';
 import { ApiError, bankDetails, now, optionalText, readJson, text, type AppEnv, type UserRow } from '../http';
 import { requireNoSharedOwnedGroups, requireSignedIn } from '../policy';
+import { afterResponse, groupCodesForAccount, signalGroups } from '../live';
 
 export const accountRoutes = new Hono<AppEnv>();
 
@@ -110,18 +111,24 @@ accountRoutes.patch('/me', async (c) => {
     accountName: account!.account_name,
   };
   const patch = bankDetails(body, current);
+  // Read before the write: the groups that show this account (live updates).
+  const affected = await groupCodesForAccount(c.env.DB, userId);
   const updated = await c.env.DB.prepare(
     'UPDATE users SET name = ?, name_custom = ?, bank_bin = ?, account_no = ?, account_name = ? WHERE id = ? RETURNING *',
   )
     .bind(name, nameCustom, patch.bankBin, patch.accountNo, patch.accountName, userId)
     .first<UserRow>();
+  await afterResponse(c, signalGroups(c.env, affected));
   return c.json({ user: toUserDto(updated!) });
 });
 
 accountRoutes.delete('/me', async (c) => {
   const userId = requireSignedIn(await resolveAccount(c));
   requireNoSharedOwnedGroups(await countSharedOwnedGroups(c.env.DB, userId));
+  // Read before the delete: deleting the account unlocks kept groups and detaches its members (live updates).
+  const affected = await groupCodesForAccount(c.env.DB, userId);
   await deleteAccount(c.env.DB, userId, now());
   clearSessionCookie(c);
+  await afterResponse(c, signalGroups(c.env, affected));
   return c.json({ ok: true });
 });

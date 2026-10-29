@@ -21,6 +21,7 @@ import { forgetGroup, rememberGroup } from '../history';
 import { useI18n, type UiMessage } from '../i18n';
 import type { MessageKey } from '../i18n/types';
 import { useToast } from '../toast';
+import { useGroupLive } from '../liveUpdates';
 import './GroupPage.scss';
 
 type Tab = 'expenses' | 'sessions' | 'settle' | 'members';
@@ -104,6 +105,24 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   useEffect(() => {
     if (version > 0) reload();
   }, [version, reload]);
+
+  // Live updates: another member changed the group. The refresh is silent: no toast, and a failed refresh keeps the
+  // page as it is (a 404 keeps the not-found handling of reload).
+  const refresh = useCallback(async () => {
+    try {
+      const g = await api.getGroup(code);
+      setGroup(g);
+      setEditing((current) => (current && g.expenses.some((e) => e.id === current.id) ? current : null));
+      setError(null);
+      rememberGroup(g.code, g.name);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        forgetGroup(code);
+        setError({ key: 'group.notFound' });
+      }
+    }
+  }, [code]);
+  useGroupLive(code, refresh);
 
   const linkAccount = async () => {
     try {
