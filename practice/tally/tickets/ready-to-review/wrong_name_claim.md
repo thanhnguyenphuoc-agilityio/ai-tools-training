@@ -197,3 +197,21 @@ Commands and results (run in the feature worktree; e2e on port 5193):
 - `npm run test:hooks`: 29 passed, 0 failed.
 - `npx playwright test --config playwright.local.config.ts`: 130 passed, 2 skipped (desktop-only keyboard checks on the
   mobile project).
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+- `POST /groups/:code/members/:id/release` checks `requireCanReleaseMember` in `worker/policy.ts`, refuses the owner
+  member, a removed member and an unclaimed member, and clears `token_hash`, `user_id` and `invite_email` in one
+  guarded `UPDATE`, so two simultaneous releases cannot both win. It is recorded as `member.release` through
+  `recordChange` with the owner member as actor. The claim audit now names the claimed member. This matches
+  answers 1 to 5.
+- `tests/api/claim-member.test.ts` failed before the route existed; the claim confirmation and the release are
+  covered in `e2e/claim-member.spec.ts`. Both dialogs use `useDialog`.
+- Finding: the branch predates `stale_language_messages`. `ClaimMemberDialog` and `ReleaseMemberDialog` kept the
+  translated error text in state, which breaks the rule now in `docs/design.md`. Fix: `develop` merged into the
+  branch (conflicts in `JoinPanel` and `MembersPanel` resolved with both sides kept), and both dialogs store a
+  `UiMessage` and render it with `message()`.
+- Checks after the fix: typecheck and lint clean, 471 unit and API tests, e2e `claim-member`, `language-picker` and
+  `member-invite` 24 passed.
