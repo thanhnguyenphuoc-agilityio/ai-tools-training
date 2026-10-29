@@ -146,3 +146,35 @@ From the product owner (human):
     - Unit: new `tests/unit/ownerAttach.test.ts`; `GroupDto` fixture in `tests/unit/groupCsv.test.ts` gets `ownedByAccount`.
     - E2E: new `e2e/owner-link-binds-account.spec.ts` (OL-7 sign-in attaches, OL-8 recovery link opened while signed in shows the toast, OL-9 revoked link shows the translated message after the group loads); `e2e/account.spec.ts`, `delete-account.spec.ts` and `lock-groups.spec.ts` updated where they rely on the old flow. Dev sign-in and synthetic emails only.
 11. Docs in the same branch: `docs/business-rules.md` (Groups owner key, "Not changes", lock link bullet, Accounts "Link to my account", "Deleting the account", data and safety); `docs/design.md` (section 3 identity table and policy list, `google_sign_in` account linking bullets, `delete_account` section, purge recovery link bullet, `lock_groups` link bullet), and a new subsection `owner_link_binds_account (built)` before section 7 with the sentinel decision, migration `0007` and the known limit.
+
+## Merge request
+
+Branch `feat/owner_link_binds_account` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed:
+
+- `migrations/0007_owner_key_revoke.sql` (new): revokes the owner key of every group that already has an account owner,
+  by setting `groups.owner_key_hash` to the sentinel `'revoked'`.
+- `worker/accountLink.ts`: `attachOwnerGroup` binds an owner group and its owner member to an account in one batch, with
+  read-back refusals; `tryAttachOwnerGroup` skips the attach without an error for the expected refusals.
+- `worker/routes/groups.ts`: groups created while signed in are owned by the account (no owner key); the claim route
+  answers `attached` and refuses revoked keys; new `POST /api/groups/:code/owner/attach`; the lock route attaches an
+  unowned group before it locks.
+- `worker/routes/account.ts` and `worker/accountDelete.ts`: `DELETE /api/me` refuses with `ACCOUNT_OWNS_SHARED_GROUP`
+  while an owned group has another active member; solo owned groups are detached and stay revoked.
+- `worker/policy.ts`: `canLinkToAccount` (device member only, never the owner) and `requireNoSharedOwnedGroups`.
+- Frontend: attach on sign-in from the device history (`src/ownerAttach.ts`), the attach toast, the owner access note
+  after creating a group while signed in, and the "tied to your account" line in the Members tab.
+- i18n: `ownerAccess.*`, `toast.ownerAttached`, `OWNER_KEY_REVOKED` and `ACCOUNT_OWNS_SHARED_GROUP` in `en` and `vi`.
+- Tests: `tests/api/owner-link-binds-account.test.ts` (OL-1 to OL-9), `tests/unit/ownerAttach.test.ts`,
+  `e2e/owner-link-binds-account.spec.ts` (OL-7 to OL-9); updated the legacy owner link expectations in the account,
+  delete account, joined groups and lock groups tests (LG-4, LG-10, LG-12).
+- Docs: `docs/business-rules.md` and `docs/design.md`.
+
+Checks on the branch:
+
+- `npm run typecheck`, `npm run lint`: clean.
+- `npm test`: 36 files, 404 tests passed.
+- `npm run test:hooks`: 29 of 29 passed.
+- `npx playwright test --config playwright.local.config.ts`: 117 passed, 1 skipped (the existing saved bank keyboard test).
