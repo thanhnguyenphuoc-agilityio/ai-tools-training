@@ -17,7 +17,7 @@ import { todayLocal } from '../dates';
 import { downloadTextFile } from '../download';
 import { buildGroupCsv, csvFileName } from '../groupCsv';
 import { forgetGroup, rememberGroup } from '../history';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import type { MessageKey } from '../i18n/types';
 import { useToast } from '../toast';
 import './GroupPage.scss';
@@ -38,9 +38,9 @@ function takeOwnerKeyFromHash(): string | null {
 }
 
 export function GroupPage({ code, navigate }: { code: string; navigate: Navigate }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const [group, setGroup] = useState<GroupDto | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [tab, setTab] = useState<Tab>('expenses');
   const notify = useToast();
   const [newOwnerKey, setNewOwnerKey] = useState<string | null>(() => history.state?.ownerKey ?? null);
@@ -63,17 +63,17 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         forgetGroup(code);
-        setError(t('group.notFound'));
+        setError({ key: 'group.notFound' });
       } else {
-        setError(errorMessage(err));
+        setError({ error: err });
       }
     }
-  }, [code, t, errorMessage]);
+  }, [code]);
 
   useEffect(() => {
     const key = takeOwnerKeyFromHash();
     // reload() clears the error on success, so a refused link message is kept and set again after the reload.
-    let refusal: string | null = null;
+    let refusal: UiMessage | null = null;
     const claim = key
       ? api
           .claimOwner(code, key)
@@ -83,9 +83,9 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
           .catch((err) => {
             if (err instanceof ApiError && err.status === 404) {
               forgetGroup(code);
-              setError(t('group.notFound'));
+              setError({ key: 'group.notFound' });
             } else {
-              refusal = t('group.badRecoveryLink', { message: errorMessage(err) });
+              refusal = { key: 'group.badRecoveryLink', error: err };
             }
           })
       : Promise.resolve();
@@ -107,7 +107,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
       notify('toast.accountLinked');
       await reload();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     }
   };
 
@@ -120,7 +120,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
   if (error && !group) {
     return (
       <div className="card stack">
-        <p className="text text--error">{error}</p>
+        <p className="text text--error">{message(error)}</p>
         <button className="button" onClick={() => navigate('/')}>
           {t('common.backHome')}
         </button>
@@ -175,7 +175,7 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
         <OwnerKeyBanner code={group.code} ownerKey={newOwnerKey} onDismiss={dismissKey} />
       )}
       {showOwnerNote && group.me.isOwner && !newOwnerKey && <OwnerAccessNote onDismiss={dismissKey} />}
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
       {!group.me.memberId && <JoinPanel group={group} onDone={reload} />}
 
       {/* Below md the tab list is a bottom bar within thumb reach (ui_redesign); from md up it sits above the content. */}

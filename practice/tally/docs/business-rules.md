@@ -61,6 +61,19 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   A signed-in person sees the account name prefilled in the join field; the field stays editable and joining stays one step (`join_as_account`).
 - A member can **add other people by name** (people who do not use the app). Such a person can later open the link
   and click "I am <name>" to claim the name, if nobody has claimed it yet.
+- **Claiming a name** (`wrong_name_claim`):
+  - Anyone with the link may claim an unclaimed name; no approval step is needed. "I am <name>" first asks for a
+    confirmation ("You are about to join as <name>"). Cancel sends nothing; the visitor stays a guest.
+  - The claim is audited as `member.claim` with the claimed member as actor (not `anonymous`).
+  - **Releasing a name:** the owner may release a claimed member (`POST /groups/:code/members/:id/release`). Not the
+    owner's own member, not a removed member, and not a member who is not claimed (`MEMBER_NOT_CLAIMED`). The owner
+    gets a confirmation first.
+  - A release keeps the member's name, expenses, history and bank details. It clears the device token, the account
+    link and the invite email. The device and the account become guests (view only); the group leaves their
+    "Your groups" list; the name can be claimed again with "I am <name>".
+  - Refusals: `403 OWNER_ONLY` for a member or a guest; `409 CANNOT_RELEASE_OWNER`; `409 MEMBER_REMOVED`; `404
+    MEMBER_NOT_FOUND`. A release is recorded as `member.release` with the owner member as actor, and it moves
+    `last_activity_at`.
 - A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
   or joining again. The rule extends to accounts: one account is at most one member per group; if the account already has
   a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
@@ -78,14 +91,12 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     moves `last_activity_at`. If nothing matches, or the account already has a member, nothing is written and no error
     is shown. A second GET writes nothing.
   - The invite email is also cleared when the member is claimed, linked through the device account link, or removed.
-    **Known limit:** no release route exists yet (`wrong_name_claim` is in the backlog). When it lands, releasing a
-    member must clear `invite_email` as well.
+    Releasing a member clears `invite_email` as well.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
   (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
-  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf (API only in the MVP; the interface is
-  `owner_member_tools`). Clearing the account
-  number clears all three fields.
+  of the linked member (`saved_bank_details`), never for removed members. The owner can edit it on their behalf from the
+  member list (`owner_member_tools`). Clearing the account number clears all three fields.
 - **Removing a member** (`remove_member`):
   - Only the **owner** can remove a member. The owner cannot be removed.
   - A member can be removed only when their balance is **zero** and no transfer to or from them is waiting for
@@ -117,6 +128,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Split modes:
   - **Equal** among the selected participants.
   - **By weight**: each participant has a weight > 0 and <= 100, with at most 2 decimal places (for example 0.8).
+    A weight within a tiny tolerance of two decimals is accepted and stored rounded to two decimals, the value the
+    split uses; a weight that rounds to zero is refused.
   - **Exact shares** (the ticket calls it a split by exact amounts): the total is typed first (as printed on the
     bill), then each participant's share.
     - Each share follows the same input conventions as the amount field (suffixes, separators, currency marks),
@@ -174,8 +187,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
-- A member can record only **their own** transfers. The owner can record transfers on behalf of others (API only
-  in the MVP; the interface is `owner_member_tools`).
+- A member can record only **their own** transfers. The owner can record transfers on behalf of others: on each
+  suggested transfer that is not the owner's own debt, the owner records the payment from the suggestion (`owner_member_tools`).
 
 ## Spreadsheet export
 
@@ -227,6 +240,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   without leaving the current page.
 - The choice is remembered **on this device only** (in the browser) and is not sent to the server; another device
   keeps its own choice.
+- Messages already on screen (errors and confirmations) switch to the new language at once.
 - Changing the language does not change any group data, including the currency of an existing group.
 
 ## Accounts (optional sign-in)
@@ -317,7 +331,6 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Request bodies are limited to 16 KB.
 - The API returns errors with a stable `code`. The interface translates the `code` into the user's language.
 - OPEN QUESTION: should attempts at guessing group codes or owner keys be rate-limited? (`group_link_guessing`)
-- OPEN QUESTION: anyone with the link can claim an unclaimed name. Is this risk acceptable? (`wrong_name_claim`)
 
 ## Interface preferences
 
@@ -328,7 +341,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   so the page does not flash in the other theme on load. Choosing "same as the device" forgets the stored choice.
 
 - **Confirmation messages:** a save that does not visibly change the page (an expense added or deleted, a member
-  added or removed, bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
+  added, removed or released (a name released), bank details or group settings saved, a transfer recorded or confirmed, a link copied, joining
   the group) shows a short message that disappears after six seconds and can be closed. At most three messages are
   shown at once (two on phones, so they do not cover the middle of the screen). Errors are shown next to the form
   that caused them and stay until the next attempt. Saving group settings that are identical to the stored ones changes

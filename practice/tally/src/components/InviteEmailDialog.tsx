@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { GroupDto, MemberDto } from '../../shared/types';
 import { api } from '../api';
 import { useDialog } from '../hooks/useDialog';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import './InviteEmailDialog.scss';
 
 export function InviteEmailDialog({
@@ -16,10 +16,10 @@ export function InviteEmailDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const panel = useDialog(onClose, { canClose: !busy });
   // True when the current press started on the backdrop itself, so a drag that starts in the panel does not close it.
   const pressedOnBackdrop = useRef(false);
@@ -32,7 +32,7 @@ export function InviteEmailDialog({
       onClose();
       onChanged();
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
     } finally {
       setBusy(false);
     }
@@ -75,7 +75,7 @@ export function InviteEmailDialog({
               data-autofocus
             />
           </label>
-          {error && <p className="text text--error">{error}</p>}
+          {error && <p className="text text--error">{message(error)}</p>}
           <div className="cluster">
             <button className="button" type="submit" disabled={busy}>
               {t('memberInvite.save')}

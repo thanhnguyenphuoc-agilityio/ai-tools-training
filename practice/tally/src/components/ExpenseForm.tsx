@@ -5,7 +5,7 @@ import type { ExpenseDto, GroupDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
@@ -27,7 +27,7 @@ export function ExpenseForm({
   editing?: ExpenseDto | null;
   onCancel?: () => void;
 }) {
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const { currency, money, parseMoney, parseShareMoney, formatAmount } = useGroupMoney(group);
   const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
@@ -50,7 +50,7 @@ export function ExpenseForm({
   const [shareTexts, setShareTexts] = useState<Record<string, string>>(() =>
     Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, formatAmount(s.amount)])),
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [busy, setBusy] = useState(false);
 
   const amount = parseMoney(amountText);
@@ -104,12 +104,12 @@ export function ExpenseForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) {
-      const examples = t(currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples');
-      return setError(t('expenseForm.invalidAmount', { examples }));
+      const examplesKey = currency.minorDigits > 0 ? 'expenseForm.amountExamplesDecimal' : 'expenseForm.amountExamples';
+      return setError({ key: 'expenseForm.invalidAmount', vars: { examples: { key: examplesKey } } });
     }
     if (mode === 'exact') {
-      if (invalidShare) return setError(t('expenseForm.invalidShare', { name: invalidShare.name }));
-      if (difference !== 0) return setError(t('expenseForm.exactMismatch'));
+      if (invalidShare) return setError({ key: 'expenseForm.invalidShare', vars: { name: invalidShare.name } });
+      if (difference !== 0) return setError({ key: 'expenseForm.exactMismatch' });
     }
     setBusy(true);
     setError(null);
@@ -136,7 +136,7 @@ export function ExpenseForm({
         onSaved();
       }
     } catch (err) {
-      setError(errorMessage(err));
+      setError({ error: err });
       if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
         onStale();
       }
@@ -286,7 +286,7 @@ export function ExpenseForm({
           )}
         </fieldset>
 
-        {error && <p className="text text--error">{error}</p>}
+        {error && <p className="text text--error">{message(error)}</p>}
         <div className="cluster">
           <button
             className={editing ? 'button' : 'button button--block-mobile'}

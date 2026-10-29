@@ -6,7 +6,9 @@ import { formatAmountInput, formatMoney, parseAmount, parseShareAmount } from '.
 import { ApiError } from '../api';
 import { enLocale } from './locales/en';
 import { viLocale } from './locales/vi';
-import type { LocaleBundle, MessageKey, PluralKey, Vars } from './types';
+import type { LocaleBundle, MessageKey, PluralKey, UiMessage, Vars } from './types';
+
+export type { MessageVar, MessageVars, UiMessage } from './types';
 
 export const LOCALES = {
   vi: viLocale,
@@ -93,12 +95,25 @@ export function createTranslator(locale: Locale) {
     return err instanceof Error ? err.message : String(err);
   };
 
+  /** Formats a message kept in state. Runs on render, so it follows the active language. */
+  const message = (m: UiMessage): string => {
+    if (m.key === undefined) return errorMessage(m.error);
+    // A variable can be a message itself (for example the amount examples), so it translates with the sentence.
+    const vars: Vars = {};
+    for (const [name, value] of Object.entries(m.vars ?? {})) {
+      vars[name] = typeof value === 'object' ? t(value.key, value.vars) : value;
+    }
+    if (m.error !== undefined) vars.message = errorMessage(m.error);
+    return t(m.key, vars);
+  };
+
   return {
     locale,
     intl: bundle.intl,
     t,
     tp,
     errorMessage,
+    message,
     defaultCurrency: bundle.defaultCurrency in CURRENCIES ? bundle.defaultCurrency : Object.keys(CURRENCIES)[0],
     /** Minor units of `currency` -> display string. */
     money: (amount: number, currency: CurrencyInfo) => formatMoney(amount, currency, bundle.intl),

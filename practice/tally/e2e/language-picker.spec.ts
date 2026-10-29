@@ -121,3 +121,55 @@ test('Tab closes the language menu and moves on to the theme control', async ({ 
   await expect(page.getByRole('listbox')).toBeHidden();
   await expect(page.getByRole('radio', { name: t('theme.options.system') })).toBeFocused();
 });
+
+test('a visible error message follows a language change', async ({ page }) => {
+  await page.goto('/');
+  await page.getByPlaceholder(t('home.join.label')).fill('bad');
+  await page.getByRole('button', { name: t('home.join.submit') }).click();
+  await expect(page.locator('.text--error')).toHaveText(t('home.join.invalidCode'));
+
+  await chooseLanguage(page, 'en');
+  await expect(page.getByRole('heading', { name: en.home.create.title })).toBeVisible();
+  await expect(page.locator('.text--error')).toHaveText(en.home.join.invalidCode);
+});
+
+test('a server error from the members tab follows a language change', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel(t('home.create.groupName')).fill('Shared house');
+  await page.getByLabel(t('home.create.yourName')).fill('Jamie');
+  await page.getByRole('button', { name: t('home.create.submit') }).click();
+  await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  await page.getByRole('button', { name: t('ownerKey.done') }).click();
+
+  await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+  await page.getByPlaceholder(t('members.addPlaceholder')).fill('Jamie');
+  await page.getByRole('button', { name: t('members.add') }).click();
+  await expect(page.locator('.text--error')).toHaveText(t('errors.DUPLICATE_NAME'));
+
+  await chooseLanguage(page, 'en');
+  await expect(page.getByRole('tab', { name: en.group.tabs.members })).toBeVisible();
+  await expect(page.locator('.text--error')).toHaveText(en.errors.DUPLICATE_NAME);
+});
+
+test('an invalid amount error follows a language change, examples included', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel(t('home.create.groupName')).fill('Shared house');
+  await page.getByLabel(t('home.create.yourName')).fill('Jamie');
+  await page.getByRole('button', { name: t('home.create.submit') }).click();
+  await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+  await page.getByRole('button', { name: t('ownerKey.done') }).click();
+
+  // The group keeps VND, so the examples are the zero-digit ones in both languages.
+  const invalidAmount = (messages: typeof en, examples: string) =>
+    messages.expenseForm.invalidAmount.replace('{examples}', examples);
+  await page.getByLabel(t('expenseForm.amount')).fill('abc');
+  await page.getByLabel(t('expenseForm.description')).fill('Snacks');
+  await page.getByRole('button', { name: t('expenseForm.submit') }).click();
+  await expect(page.locator('.text--error')).toHaveText(
+    invalidAmount(viLocale.messages, viLocale.messages.expenseForm.amountExamples),
+  );
+
+  await chooseLanguage(page, 'en');
+  await expect(page.getByRole('tab', { name: en.group.tabs.expenses })).toBeVisible();
+  await expect(page.locator('.text--error')).toHaveText(invalidAmount(en, en.expenseForm.amountExamples));
+});

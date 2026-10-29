@@ -88,6 +88,8 @@ export const vi: Messages = {
     iAm: 'Tôi là {name}',
     yourName: 'Tên của bạn',
     submit: 'Tham gia',
+    confirmClaim: 'Bạn sắp tham gia với tên {name}. Chỉ tiếp tục nếu đúng là bạn.',
+    confirmClaimSubmit: 'Đúng, tôi là {name}',
   },
   expenseForm: {
     title: 'Thêm khoản chi',
@@ -148,6 +150,8 @@ export const vi: Messages = {
     confirm: 'Xác nhận đã nhận',
     doneTitle: 'Đã thanh toán',
     removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
+    recordFor: 'Ghi nhận chuyển khoản',
+    recordForLabel: 'Ghi nhận chuyển khoản: {from} trả {to}',
   },
   qr: {
     title: 'Trả {name} {amount}',
@@ -166,6 +170,8 @@ export const vi: Messages = {
       'VietQR chỉ dùng cho VND. Hãy chuyển {amount} theo thông tin bên dưới, quy đổi theo tỷ giá nhóm đã thống nhất.',
     sent: 'Tôi đã chuyển',
     renderError: 'Không tạo được mã QR. Hãy chuyển khoản theo thông tin bên dưới.',
+    titleFor: 'Chuyển khoản từ {from}: trả {name} {amount}',
+    sentFor: 'Đánh dấu {name} đã chuyển',
   },
   members: {
     bankTitle: 'Tài khoản nhận tiền của bạn',
@@ -192,6 +198,13 @@ export const vi: Messages = {
     removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
     removeReason: 'Lý do (không bắt buộc)',
     removed: 'đã bị xoá khỏi nhóm',
+    release: 'Gỡ tên',
+    releaseLabel: 'Gỡ tên {name}',
+    releaseConfirm: 'Gỡ tên {name}? Thiết bị đang dùng tên này sẽ thành khách, và tên có thể được nhận lại.',
+    editAccount: 'Sửa tài khoản',
+    editAccountLabel: 'Sửa tài khoản nhận tiền của {name}',
+    bankTitleFor: 'Tài khoản nhận tiền của {name}',
+    bankHintFor: 'Dùng để tạo mã VietQR khi người khác trả tiền cho thành viên này. Ai có link nhóm đều xem được.',
   },
   memberInvite: {
     emailLabel: 'Email (không bắt buộc)',
@@ -227,6 +240,7 @@ export const vi: Messages = {
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
+    memberReleased: '{name} có thể được nhận lại.',
     ownerAttached: 'Đã gắn nhóm vào tài khoản của bạn.',
     bankSaved: 'Đã lưu tài khoản nhận tiền.',
     settingsSaved: 'Đã lưu cài đặt nhóm.',
@@ -238,6 +252,7 @@ export const vi: Messages = {
     signedIn: 'Đã đăng nhập.',
     signedOut: 'Đã đăng xuất.',
     accountLinked: 'Đã liên kết với tài khoản của bạn.',
+    bankSavedFor: 'Đã lưu tài khoản nhận tiền của {name}.',
   },
   account: {
     signIn: 'Đăng nhập',
@@ -286,7 +301,8 @@ export const vi: Messages = {
     actionLabel: 'Chuyển quyền trưởng nhóm cho {name}',
     title: 'Chuyển quyền trưởng nhóm cho {name}?',
     body: 'Quyền trưởng nhóm chuyển cho {name} ngay. Link khôi phục của nhóm này sẽ không dùng được nữa, và quyền trưởng nhóm trên các thiết bị của bạn sẽ mất khi lần mở nhóm tiếp theo. Bạn vẫn là thành viên của nhóm, cùng với các khoản chi và lịch sử.',
-    stopsKeeping: 'Nhóm đang được giữ. Sau khi chuyển quyền, nhóm ngừng được giữ và 10 ngày được tính lại; trưởng nhóm mới có thể giữ lại nhóm.',
+    stopsKeeping:
+      'Nhóm đang được giữ. Sau khi chuyển quyền, nhóm ngừng được giữ và 10 ngày được tính lại; trưởng nhóm mới có thể giữ lại nhóm.',
     confirm: 'Chuyển quyền',
     cancel: 'Huỷ',
   },
@@ -366,7 +382,9 @@ export const vi: Messages = {
     LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
     OWNER_TRANSFER_NOT_LINKED: 'Thành viên này cần có tài khoản trước khi trở thành trưởng nhóm.',
     OWNER_TRANSFER_SELF: 'Thành viên này đã là trưởng nhóm.',
-    EDIT_NOT_ALLOWED: 'Chỉ người đã thêm khoản chi này hoặc chủ nhóm mới được sửa.',
+    MEMBER_NOT_CLAIMED: 'Tên này chưa được nhận.',
+    CANNOT_RELEASE_OWNER: 'Không thể gỡ tên của trưởng nhóm.',
+    EDIT_NOT_ALLOWED: 'Chỉ người đã thêm khoản chi này hoặc trưởng nhóm mới được sửa.',
   },
 };
 

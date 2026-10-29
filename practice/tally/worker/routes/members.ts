@@ -1,7 +1,7 @@
-// Joining a group, adding people by name, claiming a name, bank details, removing a member.
+// Joining a group, adding people by name, claiming a name, releasing a claimed name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { loadActiveMember, loadGroup, loadMembers, memberSettlement, recordChange } from '../groupData';
+import { loadActiveMember, loadGroup, loadMember, loadMembers, memberSettlement, recordChange } from '../groupData';
 import {
   ApiError,
   bankDetails,
@@ -15,6 +15,7 @@ import {
 } from '../http';
 import {
   requireCanEditMember,
+  requireCanReleaseMember,
   requireCanRemoveMember,
   requireCanSetInviteEmail,
   requireMember,
@@ -186,5 +187,31 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
     throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
   }
   await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
+  return c.json({ ok: true });
+});
+
+// The owner releases a name that was claimed by mistake (wrong_name_claim). The member keeps its name, expenses and
+// bank details; the device token, the account link and the invite email are cleared, so the device and the account
+// become guests and the name can be claimed again.
+memberRoutes.post('/:code/members/:id/release', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireCanReleaseMember(me);
+  const member = await loadActiveMember(c.env.DB, group.code, c.req.param('id'));
+  if (member.is_owner === 1) throw new ApiError(409, 'CANNOT_RELEASE_OWNER', 'the group owner cannot be released');
+
+  // The guard is repeated in the UPDATE so that two simultaneous releases cannot both win.
+  const result = await c.env.DB.prepare(
+    'UPDATE members SET token_hash = NULL, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL AND (token_hash IS NOT NULL OR user_id IS NOT NULL)',
+  )
+    .bind(member.id)
+    .run();
+  if (result.meta.changes === 0) {
+    // Nothing changed: either a removal committed meanwhile, or the name was never claimed (or released already).
+    const current = await loadMember(c.env.DB, group.code, member.id);
+    if (current.removed_at)
+      throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+    throw new ApiError(409, 'MEMBER_NOT_CLAIMED', 'this name has not been claimed yet');
+  }
+  await recordChange(c.env.DB, group.code, me, 'member.release', member.id);
   return c.json({ ok: true });
 });

@@ -7,9 +7,12 @@ import {
   MAX_AMOUNT,
   parseAmount,
   parseShareAmount,
+  roundWeight,
   splitAmount,
   splitExact,
   toDecimalString,
+  weightHundredths,
+  isValidWeight,
 } from '../../shared/money';
 import { enLocale } from '../../src/i18n/locales/en';
 import { viLocale } from '../../src/i18n/locales/vi';
@@ -233,7 +236,22 @@ describe('splitAmount', () => {
     // At most two decimals: 0.001 would round to a zero weight, 0.333 would be split as 0.33.
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.001 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, [{ memberId: 'a', weight: 0.333 }], { roundTo: 1, payerId: 'a' })).toThrow();
+    expect(() => splitAmount(1000, [{ memberId: 'a', weight: 1e-12 }], { roundTo: 1, payerId: 'a' })).toThrow();
     expect(() => splitAmount(1000, equal(['a']), { roundTo: 0, payerId: 'a' })).toThrow();
+  });
+});
+
+describe('roundWeight, weightHundredths and isValidWeight', () => {
+  it('rounds valid weights to two decimals and computes hundredths', () => {
+    expect(roundWeight(2.299999999999)).toBe(2.3);
+    expect(roundWeight(0.29)).toBe(0.29);
+    expect(weightHundredths(0.29)).toBe(29);
+  });
+
+  it('refuses a tiny weight that rounds to zero hundredths and keeps the tolerance for two decimals', () => {
+    expect(isValidWeight(1e-12)).toBe(false);
+    expect(isValidWeight(0.01)).toBe(true);
+    expect(isValidWeight(0.29)).toBe(true);
   });
 });
 

@@ -28,6 +28,22 @@ export type PluralKey<T = Messages, P extends string = ''> = {
 
 export type Vars = Record<string, string | number>;
 
+/** A variable whose own text is a message, so it is translated when rendered too. */
+export interface MessageVar {
+  key: MessageKey;
+  vars?: Vars;
+}
+
+/** Variables of a stored message; a value can itself be a message (for example a list of examples). */
+export type MessageVars = Record<string, string | number | MessageVar>;
+
+/**
+ * A message kept in component state: translated when rendered, so it follows a language change.
+ * Either a message key (with its variables, and optionally an error for its `{message}` placeholder) or an error.
+ */
+export type UiMessage =
+  { key: MessageKey; vars?: MessageVars; error?: unknown } | { key?: undefined; vars?: never; error: unknown };
+
 export interface LocaleBundle {
   /** BCP 47 tag used for Intl formatting. */
   intl: string;
