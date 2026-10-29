@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CreateGroupResponse, ExpenseDto, GroupDto } from '../../shared/types';
 import { purgeInactiveGroups } from '../../worker/cleanup';
-import { Browser, createTestEnv, signIn } from './helpers';
+import { Browser, createTestEnv, interleave, signIn } from './helpers';
 
 // receipt_photos: one optional photo per expense. Bytes live in R2 (binding RECEIPTS); rows in expense_attachments.
 // Fake data only: synthetic names (Alex, Sam, Jamie) and fake accounts.
@@ -180,6 +180,34 @@ describe('receipt photo upload and download', () => {
       .bind(code)
       .first<{ n: number }>();
     expect(audit!.n).toBe(1);
+  });
+
+  it('keeps the photo row when the expense is deleted between the check and the removal', async () => {
+    const { json: expense } = await addExpense(owner, ids.owner, [ids.owner]);
+    const up = await owner.sendBytes('POST', attachmentsUrl(expense.id), image(PNG_HEADER), 'image/png');
+    const activity = (await env.env.DB.prepare('SELECT last_activity_at FROM groups WHERE code = ?')
+      .bind(code)
+      .first<{ last_activity_at: string }>())!.last_activity_at;
+
+    // The expense is deleted after the route's checks, just before the attachment row is removed.
+    const raced = owner.withEnv({
+      ...env.env,
+      DB: interleave(env.env.DB, /DELETE FROM expense_attachments/, () =>
+        env.env.DB.prepare('UPDATE expenses SET deleted_at = ? WHERE id = ?')
+          .bind(new Date().toISOString(), expense.id)
+          .run(),
+      ),
+    });
+    const res = await raced.call('DELETE', `${attachmentsUrl(expense.id)}/${up.json.id}`);
+    expect(res.status).toBe(404);
+    expect(res.json.code).toBe('EXPENSE_NOT_FOUND');
+
+    const row = await env.env.DB.prepare('SELECT id FROM expense_attachments WHERE id = ?').bind(up.json.id).first();
+    expect(row).not.toBeNull();
+    const after = (await env.env.DB.prepare('SELECT last_activity_at FROM groups WHERE code = ?')
+      .bind(code)
+      .first<{ last_activity_at: string }>())!.last_activity_at;
+    expect(after).toBe(activity);
   });
 
   it('removes the photo object together with the expense', async () => {

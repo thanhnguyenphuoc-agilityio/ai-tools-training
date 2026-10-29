@@ -99,7 +99,15 @@ attachmentRoutes.delete('/:code/expenses/:id/attachments/:aid', async (c) => {
     .first<{ r2_key: string }>();
   if (!att) throw new ApiError(404, 'ATTACHMENT_NOT_FOUND', 'attachment not found');
 
-  await c.env.DB.prepare('DELETE FROM expense_attachments WHERE id = ?').bind(aid).run();
+  // Repeated inside the statement: an expense deleted since the check above must not lose its photo row while the
+  // change is still recorded, which would move the group's deletion date for an expense that is gone.
+  const removed = await c.env.DB.prepare(
+    `DELETE FROM expense_attachments WHERE id = ?1
+     AND EXISTS (SELECT 1 FROM expenses WHERE id = ?2 AND group_code = ?3 AND deleted_at IS NULL)`,
+  )
+    .bind(aid, id, group.code)
+    .run();
+  if (removed.meta.changes === 0) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
   await deleteReceiptObject(c.env.RECEIPTS, att.r2_key);
 
   await recordChange(c.env.DB, group.code, me, 'expense.receipt.remove', id);
