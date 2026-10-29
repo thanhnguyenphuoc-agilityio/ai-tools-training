@@ -36,7 +36,8 @@ Guessing it requires a known group code and 2^256 tries through `POST /groups/:c
 
 **Owner key revocation.** Once a group is tied to an account (`owner_link_binds_account`), `groups.owner_key_hash` is
 set to `'revoked'` (`REVOKED_OWNER_KEY`). Every recovery link then answers `403 OWNER_KEY_REVOKED`, or
-`403 GROUP_OWNED_BY_OTHER_ACCOUNT` for a signed-in account other than the owner. Owner access then comes only from the
+`403 GROUP_OWNED_BY_OTHER_ACCOUNT` for a signed-in account other than the owner. Only the owning account itself gets
+`200 { ok: true, attached: false }`, which grants nothing it does not already have. Owner access then comes only from the
 Google session, whose token also comes from `randomToken()` (256 bits). A revoked link therefore cannot be brute-forced.
 
 Side effect: once a group code is known, `OWNER_KEY_REVOKED` versus `WRONG_OWNER_KEY` reveals whether the group is
