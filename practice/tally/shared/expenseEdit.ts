@@ -1,5 +1,6 @@
 // Which part of an edit makes the stored shares stale, and which stored fields changed (edit_expense).
 // Pure, so the API and the tests share one rule.
+import { weightHundredths } from './money';
 import type { SplitMode } from './types';
 
 export interface StoredShare {
@@ -24,12 +25,6 @@ export interface ExpenseSplit {
 }
 
 /**
- * Weights are compared in hundredths, the precision they are stored and validated with, so 2.3 and
- * 2.3000000000001 are the same weight. This is the rule of `weightHundredths` (TAL-26); switch to it once that lands.
- */
-const hundredths = (weight: number) => Math.round(weight * 100);
-
-/**
  * True when an edit changes something the stored shares are computed from: the amount, the payer, the split mode,
  * the set of participants, their weights (weight mode) or their typed amounts (exact mode).
  * An edit to the date or the description alone keeps the stored shares as they are.
@@ -46,10 +41,11 @@ export function splitChanged(
   return next.participants.some((participant) => {
     const share = stored.get(participant.memberId);
     if (!share) return true;
-    // Exact mode stores the typed amount; the other modes store the weight (always 1 in equal mode).
+    // Exact mode stores the typed amount; the other modes store the weight (always 1 in equal mode). Weights are
+    // compared in hundredths, the unit the split uses, so 2.3 and 2.3000000000001 are the same weight.
     return next.splitMode === 'exact'
       ? share.amount !== participant.amount
-      : hundredths(share.weight) !== hundredths(participant.weight);
+      : weightHundredths(share.weight) !== weightHundredths(participant.weight);
   });
 }
 
