@@ -92,7 +92,7 @@ test('the tabs are a bottom bar on a phone and sit above the content on a deskto
   const tablist = page.getByRole('tablist');
 
   await page.setViewportSize({ width: 390, height: 800 });
-  await expect(tablist.getByRole('tab')).toHaveCount(3);
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
   await expect(tablist).toHaveCSS('position', 'fixed');
   await expect
     .poll(async () =>
