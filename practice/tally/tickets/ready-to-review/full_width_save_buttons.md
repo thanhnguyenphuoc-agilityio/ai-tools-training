@@ -76,3 +76,24 @@ Save and the Add expense button already sit in a `cluster`.
     (`account.spec.ts` GS-2, `join-as-account.spec.ts` My name, `attendance.spec.ts` midnight session) were test
     timeouts and a group that never opened; all three specs passed on one rerun (21 passed). The new width assertion
     passed on both projects in the full run.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Checked against the plan and the Acceptance criteria. `button--block-mobile` is gone from `_button.scss` and from
+  all four buttons; no usage remains in `src`, `e2e`, `tests` or `scripts`. Create group and the group-settings Save
+  are direct children of a `stack` form, so they are wrapped in a `cluster` as planned; the bank Save and Add expense
+  were already in one. Layout from `sm` up is unchanged.
+- The new e2e assertion (Create group narrower than its form at 390 px) fails with the old full-width modifier and
+  passes now, on desktop and mobile projects.
+- The Add member button stays full width; it never used the modifier and is out of scope.
+- No blocking findings, no fixes needed.
+
+Verdict: approve. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 50 files / 614 passed, `npm run test:hooks` 29
+passed, e2e `ui-redesign`, `account`, `edit-expense` and `settle-up` (port 5193) 46 passed. Typecheck and `npm test`
+rerun on `develop` after the merge.
