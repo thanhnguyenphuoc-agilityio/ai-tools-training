@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ExpenseDto, GroupDto } from '../../shared/types';
 import { api } from '../api';
-import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
+import { involvesRemovedMember, memberName, payerName, sessionLabel } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
@@ -59,6 +59,7 @@ export function ExpenseList({
             ...(e.splitMode === 'weight' ? [t('expenseList.byWeight')] : []),
             ...(e.splitMode === 'exact' ? [t('expenseList.exact')] : []),
           ].join(t('common.separator'));
+          const session = e.sessionId ? group.sessions.find((s) => s.id === e.sessionId) : undefined;
           return (
             <li key={e.id} className="list__item expense-list__item">
               <div className="expense-list__row">
@@ -103,6 +104,13 @@ export function ExpenseList({
                 </span>
               </div>
               <div className="text text--muted text--small">{meta}</div>
+              {session && (
+                <div>
+                  <span className="badge expense-list__session">
+                    {t('expenseList.sessionBadge', { label: sessionLabel(session, t, day) })}
+                  </span>
+                </div>
+              )}
               {e.editedAt && (
                 <span className="text text--muted text--small expense-list__edited">{t('expenseList.edited')}</span>
               )}

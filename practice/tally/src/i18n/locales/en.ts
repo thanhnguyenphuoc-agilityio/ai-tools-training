@@ -145,6 +145,7 @@ export const en = {
     edit: 'Edit',
     editLabel: 'Edit "{description}"',
     edited: 'Edited',
+    sessionBadge: 'Session {label}',
   },
   expenses: {
     receipt: {

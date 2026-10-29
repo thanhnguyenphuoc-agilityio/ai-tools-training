@@ -137,6 +137,7 @@ export const vi: Messages = {
     edit: 'Sửa',
     editLabel: 'Sửa khoản "{description}"',
     edited: 'Đã sửa',
+    sessionBadge: 'Buổi {label}',
   },
   expenses: {
     receipt: {
