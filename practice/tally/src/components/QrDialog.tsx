@@ -59,7 +59,8 @@ export function QrDialog({
 
   async function recordSent() {
     try {
-      await api.recordTransfer(group.code, to.id, settlement.amount, settlement.fromId);
+      // Only an owner recording for someone else names the payer; the member's own transfer omits fromId.
+      await api.recordTransfer(group.code, to.id, settlement.amount, isOther ? settlement.fromId : undefined);
       onRecorded();
     } catch (err) {
       setError(errorMessage(err));
