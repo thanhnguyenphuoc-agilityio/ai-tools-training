@@ -52,7 +52,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `requireCanSetInviteEmail`, `canAutoLinkInvite`.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
@@ -469,6 +469,30 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   StrictMode the effect cleanup focuses the opener before the effect runs again.
 - Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
+
+### member_email_invite (built)
+
+- Migration `0009_member_invite_email.sql`: `ALTER TABLE members ADD COLUMN invite_email TEXT`. Nullable, no index,
+  because every lookup is inside one group.
+- Validation: `optionalEmail(value, field)` in `worker/http.ts` returns null or a trimmed lowercase address. Errors use
+  `400 INVALID_EMAIL` and never carry the value.
+- Policies in `worker/policy.ts`: `requireCanSetInviteEmail(me)` (owner) and `canAutoLinkInvite(me)` (account set, no
+  member on this device or account).
+- Routes: `POST /groups/:code/members` (`claim: false` only, stores `invite_email`); `PATCH /groups/:code/members/:id`
+  writes `invite_email` only when the body carries `inviteEmail`, so other edits leave it unchanged. Claim, device
+  account link (`worker/accountLink.ts`) and remove clear `invite_email` in their guarded `UPDATE`s.
+- Auto-link: `linkInvitedMember(db, group, me, email)` in `worker/inviteLink.ts` runs one guarded
+  `UPDATE ... RETURNING id`. The matching query picks the oldest (`created_at`, `id`) active unclaimed member
+  (`token_hash` and `user_id` NULL) with `lower(invite_email) = lower(?)`, and requires that the account has no active
+  member in the group. A unique-index violation counts as no match.
+- **The GET write exception:** `GET /groups/:code` is the only GET that writes. It writes only when a link actually
+  happens, through `recordChange` (`member.link`, the linked member as target). The response then shows the member as
+  `me.memberId`.
+- Exposure: `MemberDto.invited` is derived in `toMemberDto`, which never spreads the row. No DTO or error param holds the
+  email.
+- **Release note (future):** the release route (`wrong_name_claim`, not built) must clear `invite_email` when it
+  releases a member, as claim, link and remove already do.
+- Tests: `tests/api/member-invite.test.ts`, `tests/unit/ownerTools.test.ts`, `e2e/member-invite.spec.ts`.
 
 ## 7. Ticket workflow
 
