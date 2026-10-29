@@ -561,6 +561,9 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   StrictMode the effect cleanup focuses the opener before the effect runs again.
 - Payment dialog: **Close** gets focus, so an immediate `Enter` does not record a transfer. Remove member: the
   reason field; `Escape` is ignored while the removal request runs.
+- Destructive confirmations (delete session, delete expense) use the shared `ConfirmDialog`
+  (`src/components/ConfirmDialog.tsx`) on `useDialog`; `window.confirm` is not used. The confirm button is disabled
+  while the request runs, and errors stay in the dialog.
 
 ### owner_link_binds_account (built)
 

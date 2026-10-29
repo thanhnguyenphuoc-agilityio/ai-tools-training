@@ -5,6 +5,7 @@ import { involvesRemovedMember, memberName, payerName } from '../expenseRow';
 import { useGroupMoney } from '../hooks/useGroupMoney';
 import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
 import './ExpenseList.scss';
 
@@ -18,22 +19,26 @@ export function ExpenseList({
   /** Opens the expense in the form for editing (edit_expense). Omitted: no edit action. */
   onEdit?: (expense: ExpenseDto) => void;
 }) {
-  const { t, tp, day, message } = useI18n();
+  const { t, tp, day } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
-  const [error, setError] = useState<UiMessage | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ExpenseDto | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<UiMessage | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  async function remove(id: string, description: string) {
-    if (!confirm(t('expenseList.confirmDelete', { description }))) return;
+  async function confirmDelete(expense: ExpenseDto) {
+    setDeleteBusy(true);
     try {
-      await api.deleteExpense(group.code, id);
-      setError(null);
+      await api.deleteExpense(group.code, expense.id);
+      setPendingDelete(null);
       notify('toast.expenseDeleted');
       onChanged();
     } catch (err) {
-      setError({ error: err });
+      setDeleteError({ error: err });
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -43,7 +48,6 @@ export function ExpenseList({
         <h2 className="card__title">{t('expenseList.title')}</h2>
         <span className="text text--muted">{t('expenseList.total', { amount: money(total) })}</span>
       </div>
-      {error && <p className="text text--error">{message(error)}</p>}
       {group.expenses.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
       <ul className="list list--divided">
         {group.expenses.map((e) => {
@@ -90,7 +94,10 @@ export function ExpenseList({
                   {canDelete && !locked && (
                     <button
                       className="button button--icon"
-                      onClick={() => remove(e.id, e.description)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setPendingDelete(e);
+                      }}
                       aria-label={t('expenseList.deleteLabel', { description: e.description })}
                       title={t('expenseList.delete')}
                     >
@@ -113,6 +120,20 @@ export function ExpenseList({
           );
         })}
       </ul>
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t('expenseList.deleteTitle')}
+          detail={[pendingDelete.description, money(pendingDelete.amount), day(pendingDelete.spentOn)].join(
+            t('common.separator'),
+          )}
+          message={t('expenseList.confirmDelete')}
+          confirmLabel={t('expenseList.confirmDeleteButton')}
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </section>
   );
 }
