@@ -163,3 +163,30 @@ From the product owner (human):
     subsection "member_email_invite (built)" as the last subsection of section 6, with the migration, the matching
     query, the GET write exception, the Known limit and the release note; the two policy names are added to the
     section 3 list.
+
+## Merge request
+
+- Branch: `feat/member_email_invite` into `develop`.
+- The merge request is opened on GitLab from this branch; its link is added when it exists.
+- Summary of changes:
+  - `migrations/0009_member_invite_email.sql`: adds `members.invite_email` (`TEXT`, NULL means no invite, no index).
+  - `worker/http.ts`: `optionalEmail` returns null or a trimmed lowercase address and throws `400 INVALID_EMAIL` without
+    the value.
+  - `worker/policy.ts`: `requireCanSetInviteEmail` (owner) and `canAutoLinkInvite` (signed in, no member in the group).
+  - `worker/inviteLink.ts`: `linkInvitedMember`, one guarded `UPDATE ... RETURNING` that picks the oldest match.
+  - `worker/routes/members.ts`: add stores the email only for `claim: false`; patch writes it only when the body carries
+    `inviteEmail`; claim and remove clear it.
+  - `worker/accountLink.ts`: the device-member link clears `invite_email`.
+  - `worker/routes/groups.ts`: `GET /groups/:code` links and calls `recordChange` (`member.link`) only when a link happens.
+  - `worker/groupData.ts`: `MemberDto.invited`, derived, never the email.
+  - UI: optional email in the add form (`member-add`), the badge, and `InviteEmailDialog` (`useDialog`, focus trap,
+    Escape, `data-autofocus`) opened by the owner.
+  - i18n: the `memberInvite` block and `errors.INVALID_EMAIL` in `en.ts` and `vi.ts`.
+  - Tests: `tests/api/member-invite.test.ts` (MEI-1..MEI-12), `tests/unit/ownerTools.test.ts`, `e2e/member-invite.spec.ts`.
+  - Docs: `docs/business-rules.md`, `docs/design.md`.
+- Commands run and results:
+  - `npm run typecheck`: clean.
+  - `npm run lint`: clean.
+  - `npm test`: 36 files, 404 tests passed (MEI-12 migration included).
+  - `npm run test:hooks`: 29 passed.
+  - `npx playwright test --config playwright.local.config.ts` (port 5194): 113 passed, 1 skipped.
