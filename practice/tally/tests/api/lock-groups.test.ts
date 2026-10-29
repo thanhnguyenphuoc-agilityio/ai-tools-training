@@ -3,7 +3,7 @@ import { expiresAt, INACTIVE_MS } from '../../shared/rules';
 import type { ErrorBody } from '../../shared/errors';
 import type { CreateGroupResponse, GroupDto } from '../../shared/types';
 import { purgeInactiveGroups } from '../../worker/cleanup';
-import { Browser, createTestEnv, signIn } from './helpers';
+import { Browser, createTestEnv, interleave, signIn } from './helpers';
 
 describe('lock_groups API', () => {
   let env: Awaited<ReturnType<typeof createTestEnv>>;
@@ -62,9 +62,7 @@ describe('lock_groups API', () => {
     // Set g1 to 30 days old and run purge again with new now
     const now30 = new Date('2026-11-15T12:00:00.000Z');
     const old30d = new Date(now30.getTime() - 30 * 24 * 3600_000).toISOString();
-    await env.env.DB.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?')
-      .bind(old30d, g1.code)
-      .run();
+    await env.env.DB.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(old30d, g1.code).run();
 
     purged = await purgeInactiveGroups(env.env.DB, now30);
     expect(purged).toBe(0);
@@ -154,9 +152,7 @@ describe('lock_groups API', () => {
 
     // Old activity
     const oldTime = '2026-10-01T00:00:00.000Z';
-    await env.env.DB.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?')
-      .bind(oldTime, g.code)
-      .run();
+    await env.env.DB.prepare('UPDATE groups SET last_activity_at = ? WHERE code = ?').bind(oldTime, g.code).run();
 
     // Unlock
     const unlockRes = await owner.call<{ ok: true; changed: boolean }>('DELETE', `/groups/${g.code}/lock`);
@@ -325,6 +321,72 @@ describe('lock_groups API', () => {
     expect(after.json.canLinkAccount).toBe(false);
     expect(after.json.locked).toBe(false);
   }, 30_000);
+
+  // TAL-45 lock_limit_race: another lock commits between the count and the UPDATE.
+  it('LG-13: a lock that loses the race to the 10th kept group gets LOCK_LIMIT_REACHED', async () => {
+    const owner = new Browser(env.env);
+    await signIn(owner, 'race@example.com');
+
+    for (let i = 1; i <= 9; i++) {
+      const kept = await createGroup(owner, `Kept ${i}`);
+      await owner.call('POST', `/groups/${kept.code}/lock`);
+    }
+    const first = await createGroup(owner, 'First');
+    const second = await createGroup(owner, 'Second');
+
+    let other: { status: number; json: { ok: true; changed: boolean } } | undefined;
+    const racing = owner.withEnv({
+      ...owner.env,
+      DB: interleave(env.env.DB, /^UPDATE groups SET locked_at = \?/, async () => {
+        other = await owner.call('POST', `/groups/${first.code}/lock`);
+      }),
+    });
+
+    const res = await racing.call<ErrorBody>('POST', `/groups/${second.code}/lock`);
+    expect(other?.status).toBe(200);
+    expect(other?.json.changed).toBe(true);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('LOCK_LIMIT_REACHED');
+    expect(res.json.params?.max).toBe(10);
+
+    const kept = await env.env.DB.prepare('SELECT COUNT(*) AS total FROM groups WHERE locked_at IS NOT NULL').first<{
+      total: number;
+    }>();
+    expect(kept?.total).toBe(10);
+    const locks = await env.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM audit_log WHERE group_code = ? AND action = 'group.lock'",
+    )
+      .bind(second.code)
+      .first<{ count: number }>();
+    expect(locks?.count).toBe(0);
+  }, 30_000);
+
+  it('LG-14: two simultaneous unlocks write one group.unlock row', async () => {
+    const owner = new Browser(env.env);
+    await signIn(owner, 'race@example.com');
+    const g = await createGroup(owner);
+    await owner.call('POST', `/groups/${g.code}/lock`);
+
+    let other: { status: number; json: { ok: true; changed: boolean } } | undefined;
+    const racing = owner.withEnv({
+      ...owner.env,
+      DB: interleave(env.env.DB, /^UPDATE groups SET locked_at = NULL/, async () => {
+        other = await owner.call('DELETE', `/groups/${g.code}/lock`);
+      }),
+    });
+
+    const res = await racing.call<{ ok: true; changed: boolean }>('DELETE', `/groups/${g.code}/lock`);
+    expect(other?.json.changed).toBe(true);
+    expect(res.status).toBe(200);
+    expect(res.json.changed).toBe(false);
+
+    const unlocks = await env.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM audit_log WHERE group_code = ? AND action = 'group.unlock'",
+    )
+      .bind(g.code)
+      .first<{ count: number }>();
+    expect(unlocks?.count).toBe(1);
+  });
 
   // LG-11: check order: guest signed out and member signed in both get 403 OWNER_ONLY; ACCOUNT_ALREADY_MEMBER
   it('LG-11: non-owner gets 403 OWNER_ONLY; account already a member gets 409 ACCOUNT_ALREADY_MEMBER', async () => {

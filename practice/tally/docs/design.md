@@ -277,12 +277,12 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
   - Require both `isOwner` and `userId` (`requireOwnerAccount(me)` in `policy.ts`), because the limit is counted per person.
   - Check order (round 3, answer 2): `403 OWNER_ONLY` comes first, whether the visitor is signed in or not; then `401 SIGN_IN_REQUIRED` for an owner without an account session.
   - A group with no account yet is linked exactly like "Link to my account": the route calls `linkToAccount` (`worker/accountLink.ts`) before it locks, so the group and the owner member are linked together, all or nothing. Its refusals apply: `403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`. After that `canLinkAccount` is false for the group. Setting `groups.owner_user_id` alone would leave the owner member unlinked and `canLinkAccount` still true.
-  - Count `SELECT COUNT(*) FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL`. When the count is >= `MAX_LOCKED_GROUPS` (10), answers `409 LOCK_LIMIT_REACHED` with params `{ max: 10 }`.
+  - Count `SELECT COUNT(*) FROM groups WHERE owner_user_id = ? AND locked_at IS NOT NULL`. When the count is >= `MAX_LOCKED_GROUPS` (10), answers `409 LOCK_LIMIT_REACHED` with params `{ max: 10 }`. The same count is repeated inside the `UPDATE` (`... AND (SELECT COUNT(*) ...) < 10`), so two simultaneous locks cannot both pass it; when the `UPDATE` changes no row, the route reads the group again and answers `changed: false` if it is already locked, otherwise `LOCK_LIMIT_REACHED`. The unlock `UPDATE` carries `AND locked_at IS NOT NULL`, so two simultaneous unlocks write one `group.unlock` row.
   - Repeat lock or repeat unlock returns `{ ok: true, changed: false }` and writes nothing.
   - Unlocking is a change (`recordChange`), so `last_activity_at` is set to the unlock time and the expiry restarts from the moment of unlocking (unlock + 10 days).
 - **Permissions:** `requireOwnerAccount(me)` in `policy.ts`.
 - **UI:** `<KeepGroup>` component rendered at the end of `OwnerSettings` in `MembersPanel.tsx`. `<GroupExpiry>` renders `t('group.expiry.kept')` without warning colors when locked.
-- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep this group". Known limit: two locks at the same moment can pass `MAX_LOCKED_GROUPS` (no D1 transaction).
+- A lock only exempts the group from deletion; a locked group stays fully editable. The interface calls it "Keep this group".
 - **Tests:** `tests/api/lock-groups.test.ts`, `e2e/lock-groups.spec.ts`.
 
 ### receipt_photos
