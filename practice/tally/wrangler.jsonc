@@ -15,6 +15,14 @@
   "triggers": {
     "crons": ["0 19 * * *"]
   },
+  // Live updates (group_live_updates): one GroupLive Durable Object per group code. The class is exported from
+  // worker/index.ts; the binding name is the Worker env key.
+  "durable_objects": {
+    "bindings": [{ "name": "GROUP_LIVE", "class_name": "GroupLive" }],
+  },
+  // Durable Object migrations, not the D1 migrations_dir. Tag v1 creates the SQLite-backed GroupLive class;
+  // wrangler deploy applies it on a remote deploy.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupLive"] }],
   "d1_databases": [
     {
       "binding": "DB",

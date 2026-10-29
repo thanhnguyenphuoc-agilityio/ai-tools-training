@@ -9,6 +9,8 @@ export interface Env {
   DB: D1Database;
   GOOGLE_CLIENT_ID?: string;
   DEV_LOGIN?: string;
+  /** Live updates (group_live_updates). Optional: without it nothing is signalled and the live endpoint answers 404. */
+  GROUP_LIVE?: DurableObjectNamespace;
 }
 
 export interface UserRow {
@@ -25,7 +27,11 @@ export interface UserRow {
 
 export type AppEnv = {
   Bindings: Env;
-  Variables: { user?: UserRow | null };
+  Variables: {
+    user?: UserRow | null;
+    /** Set by a read that changed the group (the member_email_invite auto-link), so live pages reload. */
+    groupChanged?: boolean;
+  };
 };
 export type Ctx = Context<AppEnv>;
 

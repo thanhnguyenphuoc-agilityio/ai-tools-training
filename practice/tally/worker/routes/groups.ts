@@ -98,6 +98,7 @@ groupRoutes.get('/:code', async (c) => {
     const memberId = account ? await linkInvitedMember(db, group, me, account.email) : null;
     if (memberId) {
       await recordChange(db, group.code, { ...me, memberId }, 'member.link', memberId);
+      c.set('groupChanged', true);
       me.memberId = memberId;
       me.accountMemberId = memberId;
     }

@@ -29,6 +29,7 @@ Browser (React SPA)                      Cloudflare Worker (Hono)               
 |---|---|---|
 | `shared/*.ts` | Pure logic, DTO types, error codes (`errors.ts`), currencies (`currency.ts`) | New rules (calculations, limits) go here, with unit tests |
 | `worker/app.ts` | Middleware and route wiring | Mount the new route file |
+| `worker/liveObject.ts`, `worker/live.ts` | Durable Object `GroupLive` (imported only by `worker/index.ts`) and the live signal helpers | Writes under `/groups/:code` are signalled by the middleware; nothing to add per route |
 | `worker/routes/*.ts` | One file per resource | Add a new file rather than growing an existing one |
 | `worker/auth.ts` | **The only place** that answers "who is calling" | Add identity sources (for example a Google session) |
 | `worker/policy.ts` | **The only place** that answers "may they do this" | Add new permission rules |
@@ -618,6 +619,46 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `user_id`, as claim, link and remove already do.
 - Tests: `tests/api/member-invite.test.ts`, `tests/unit/ownerTools.test.ts`, `e2e/member-invite.spec.ts`.
 
+### group_live_updates (built)
+
+- **Durable Object:** `GroupLive` in `worker/liveObject.ts` extends `DurableObject` (Hibernation API, SQLite-backed).
+  One object per group, named by the group code (`idFromName(code)`). It stores nothing; it keeps the open sockets.
+  `wrangler.jsonc` binds it as `GROUP_LIVE` (`durable_objects`), with a top-level `migrations` entry `v1`
+  (`new_sqlite_classes: ["GroupLive"]`). This is separate from the D1 `migrations_dir`. `worker/index.ts` exports the
+  class; `worker/app.ts` does not import it, because Vitest runs in Node and cannot resolve `cloudflare:workers`.
+- **Endpoint:** `GET /api/groups/:code/live` (`worker/routes/live.ts`). It runs `loadGroup` first (unknown code gives
+  `GROUP_NOT_FOUND`), then forwards an upgrade to the object's `/connect`. Without the upgrade header, or without the
+  binding, it answers `404 NOT_FOUND`. It writes nothing and does not move `last_activity_at`.
+- **Signals:** `worker/live.ts` `signalGroup(env, code)` POSTs `/notify` to the object; the object sends
+  `{"type":"changed"}` to every socket. Failures are logged, never returned. Without the binding nothing happens.
+- **Middleware rule:** one middleware on `/groups/:code/*` in `worker/app.ts`. After the handler it signals when the
+  method is not GET and the response is below 400 with no error, or when the context flag `groupChanged` is set. It
+  runs after the handler, so the D1 write has committed. The route files do not signal themselves. A write that changes
+  nothing (`changed: false`) may still signal; one extra reload is harmless.
+- **Context flag:** `groupChanged` (`AppEnv` variables). `GET /groups/:code` sets it in the member_email_invite
+  auto-link block, because that GET writes. Nothing else sets it.
+- **Account routes:** `PATCH /me` and `DELETE /me` read the affected group codes before the write
+  (`groupCodesForAccount`: groups the account owns, and groups with a member linked to it) and signal them after the
+  write (`afterResponse` + `signalGroups`). The account routes are outside `/groups/:code/*`, so they are handled here.
+- **Optional binding:** `Env.GROUP_LIVE` is optional. Tests and deploys without the object run unchanged.
+- **Client:** `src/liveUpdates.ts`. `LiveConnection` takes the socket constructor, timers, URL and document from the
+  caller, so it is unit-testable in Node. It debounces signals by 250 ms, reconnects with backoff (1 s, doubling, capped
+  at 30 s), calls `onSignal` once after a reconnect that follows a drop, calls it once on `visibilitychange` to visible
+  when no socket exists, and closes on dispose. Only the exact `changed` type counts. `useGroupLive(code, onSignal)`
+  opens it for a group page and closes it on unmount or code change. `GroupPage.tsx` passes a silent `refresh`: a
+  failed refresh keeps the page, and a 404 keeps the not-found handling.
+- **Typed values:** `ExpenseForm` stays keyed by the edited expense id, and the settings form state is initialised
+  once, so a refresh does not overwrite typed text.
+- **Tests:** `tests/api/live.test.ts` (fake `GROUP_LIVE` binding; every write route under `/groups/:code` is listed, and
+  a new route fails the list check until it is added; refused writes, reads, create, account routes, the auto-link GET,
+  missing binding and endpoint answers), `tests/unit/liveUpdates.test.ts` (debounce, backoff, one reload after a drop,
+  one reload on visibility, dispose), `e2e/live-updates.spec.ts` (two contexts; Sam sees Alex's expense without a reload
+  and keeps his typed text; no toast).
+- **Deployment:** a remote deploy needs the Durable Object migration. `npm run deploy` (`wrangler deploy`) applies the
+  `v1` migration from `wrangler.jsonc`. No D1 migration is involved.
+- **Known limit:** a signal is lost if it fails (it is logged) or if the page is disconnected at that moment; the
+  reconnect reload covers the second case.
+
 ## 7. Ticket workflow
 
 1. Branch `feat/<ticket_name>` or `fix/<ticket_name>` from `develop`; move the ticket to `tickets/in-progress/` (see `tickets/README.md`).
@@ -640,3 +681,7 @@ npm run deploy
 ```
 
 The Workers and D1 free tier is sufficient. `DEV_LOGIN` is never set in a deployed environment.
+
+The live updates feature (`group_live_updates`) adds a Durable Object (`GroupLive`) and its `v1` migration in
+`wrangler.jsonc`. `npm run deploy` applies it with the Worker. It needs no separate command, and the D1 migrations are
+unchanged.
