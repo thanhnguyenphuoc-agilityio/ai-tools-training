@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
+import { splitChanged } from '../../shared/expenseEdit';
 import { exactSplitDifference, splitAmount } from '../../shared/money';
-import type { GroupDto, SplitMode } from '../../shared/types';
+import type { ExpenseDto, GroupDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
 import { useGroupMoney } from '../hooks/useGroupMoney';
@@ -8,33 +9,47 @@ import { useI18n } from '../i18n';
 import { useToast } from '../toast';
 import './ExpenseForm.scss';
 
+/**
+ * Adds an expense, or edits `editing` when it is given (edit_expense). GroupPage keys the form by the edited
+ * expense, so the fields start from the stored values each time an edit begins.
+ */
 export function ExpenseForm({
   group,
   onSaved,
   onStale,
+  editing = null,
+  onCancel,
 }: {
   group: GroupDto;
   onSaved: () => void;
   /** Reloads the group when the API says a chosen member is no longer in it (removed on another device). */
   onStale: () => void;
+  editing?: ExpenseDto | null;
+  onCancel?: () => void;
 }) {
   const { t, errorMessage } = useI18n();
-  const { currency, money, parseMoney, parseShareMoney } = useGroupMoney(group);
+  const { currency, money, parseMoney, parseShareMoney, formatAmount } = useGroupMoney(group);
   const notify = useToast();
   // Removed members stay in the history but cannot pay or share new expenses.
   const members = group.members.filter((m) => !m.removed);
-  const [chosenPayerId, setPayerId] = useState(group.me.memberId ?? members[0].id);
+  const [chosenPayerId, setPayerId] = useState(editing?.payerId ?? group.me.memberId ?? members[0].id);
   // A payer removed since the form opened falls back to the user, or to the first current member.
   const fallbackPayerId = members.some((m) => m.id === group.me.memberId) ? group.me.memberId! : members[0].id;
   const payerId = members.some((m) => m.id === chosenPayerId) ? chosenPayerId : fallbackPayerId;
-  const [amountText, setAmountText] = useState('');
-  const [description, setDescription] = useState('');
-  const [spentOn, setSpentOn] = useState(todayLocal);
-  const [mode, setMode] = useState<SplitMode>('equal');
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(members.map((m) => m.id)));
-  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [amountText, setAmountText] = useState(editing ? formatAmount(editing.amount) : '');
+  const [description, setDescription] = useState(editing?.description ?? '');
+  const [spentOn, setSpentOn] = useState(editing?.spentOn ?? todayLocal);
+  const [mode, setMode] = useState<SplitMode>(editing?.splitMode ?? 'equal');
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(editing ? editing.shares.map((s) => s.memberId) : members.map((m) => m.id)),
+  );
+  const [weights, setWeights] = useState<Record<string, string>>(() =>
+    Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, String(s.weight)])),
+  );
   // Exact mode: the text typed per member. An empty field means the member owes nothing.
-  const [shareTexts, setShareTexts] = useState<Record<string, string>>({});
+  const [shareTexts, setShareTexts] = useState<Record<string, string>>(() =>
+    Object.fromEntries((editing?.shares ?? []).map((s) => [s.memberId, formatAmount(s.amount)])),
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -61,8 +76,23 @@ export function ExpenseForm({
     }
     // participantsKey stands in for participants, which is rebuilt every render.
   }, [amount, participantsKey, group.roundTo, payerId]);
+  // An edit that changes nothing the shares depend on keeps the stored shares (edit_expense), so the preview shows
+  // those instead of a recomputation with the group's current rounding that will not be saved.
+  const splitInput = chosen.map((m) => ({
+    memberId: m.id,
+    weight: mode === 'weight' ? Number((weights[m.id] ?? '1').replace(',', '.')) : 1,
+    amount: mode === 'exact' ? (typedShares.get(m.id) ?? 0) : 0,
+  }));
+  const keepsStoredShares =
+    !!editing &&
+    !!amount &&
+    !splitChanged(
+      { amount: editing.amount, payerId: editing.payerId, splitMode: editing.splitMode, shares: editing.shares },
+      { amount, payerId, splitMode: mode, participants: splitInput },
+    );
+  const storedPreview = keepsStoredShares ? new Map(editing.shares.map((s) => [s.memberId, s.amount])) : null;
   // In exact mode the preview shows each typed amount as parsed (no rounding), e.g. what "150k" became.
-  const preview = mode === 'exact' ? typedShares : computed;
+  const preview = storedPreview ?? (mode === 'exact' ? typedShares : computed);
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -84,19 +114,27 @@ export function ExpenseForm({
     setBusy(true);
     setError(null);
     try {
-      await api.addExpense(group.code, {
+      const input = {
         payerId,
         amount,
         description,
         spentOn,
         splitMode: mode,
         participants: mode === 'exact' ? exactParts : participants,
-      });
-      setAmountText('');
-      setDescription('');
-      setShareTexts({});
-      notify('toast.expenseAdded');
-      onSaved();
+      };
+      if (editing) {
+        const { changed } = await api.updateExpense(group.code, editing.id, input);
+        // A save that repeats the stored values is not an edit: say nothing rather than report a change.
+        if (changed) notify('toast.expenseEdited');
+        onSaved();
+      } else {
+        await api.addExpense(group.code, input);
+        setAmountText('');
+        setDescription('');
+        setShareTexts({});
+        notify('toast.expenseAdded');
+        onSaved();
+      }
     } catch (err) {
       setError(errorMessage(err));
       if (err instanceof ApiError && (err.code === 'PAYER_NOT_IN_GROUP' || err.code === 'PARTICIPANT_NOT_IN_GROUP')) {
@@ -127,13 +165,15 @@ export function ExpenseForm({
 
   return (
     <section className="card expense-form">
-      <h2 className="card__title">{t('expenseForm.title')}</h2>
+      <h2 className="card__title">{t(editing ? 'expenseForm.editTitle' : 'expenseForm.title')}</h2>
       <form onSubmit={submit} className="stack">
         <div className="columns">
           <label className="field">
             <span className="field__label">{t('expenseForm.amount')}</span>
             <input
               className="field__control"
+              // The hint below repeats the amount as money, so the name is set here and stays the same in edit mode.
+              aria-label={t('expenseForm.amount')}
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
               placeholder={t('expenseForm.amountPlaceholder')}
@@ -247,9 +287,19 @@ export function ExpenseForm({
         </fieldset>
 
         {error && <p className="text text--error">{error}</p>}
-        <button className="button button--block-mobile" disabled={busy || chosen.length === 0}>
-          {t('expenseForm.submit')}
-        </button>
+        <div className="cluster">
+          <button
+            className={editing ? 'button' : 'button button--block-mobile'}
+            disabled={busy || chosen.length === 0}
+          >
+            {t(editing ? 'expenseForm.editSubmit' : 'expenseForm.submit')}
+          </button>
+          {editing && onCancel && (
+            <button type="button" className="button button--ghost" onClick={onCancel} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

@@ -12,8 +12,8 @@ export function payerName(expense: Pick<ExpenseDto, 'payerId'>, members: MemberD
 }
 
 /**
- * True when a removed member paid the expense or owes a share above zero. The API refuses to delete such an
- * expense (EXPENSE_HAS_REMOVED_MEMBER), so the list does not offer it.
+ * True when a removed member paid the expense or owes a share above zero. The API refuses to edit or delete such an
+ * expense (EXPENSE_HAS_REMOVED_MEMBER), so the list offers neither action.
  */
 export function involvesRemovedMember(
   expense: Pick<ExpenseDto, 'payerId' | 'shares'>,

@@ -61,6 +61,8 @@ export const api = {
 
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),
+  updateExpense: (code: string, id: string, expense: NewExpense) =>
+    call<{ id: string; sharesChanged: boolean; changed: boolean }>('PATCH', `${g(code)}/expenses/${id}`, expense),
 
   recordTransfer: (code: string, toId: string, amount: number) =>
     call<{ id: string }>('POST', `${g(code)}/transfers`, { toId, amount }),

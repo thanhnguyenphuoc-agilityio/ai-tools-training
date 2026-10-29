@@ -114,6 +114,8 @@ export const vi: Messages = {
     invalidShare: 'Phần của {name} không hợp lệ. Để trống hoặc nhập 0 nếu người này không phải trả.',
     exactMismatch: 'Phần của từng người phải cộng lại đúng bằng tổng trước khi lưu.',
     submit: 'Lưu khoản chi',
+    editTitle: 'Sửa khoản chi',
+    editSubmit: 'Lưu thay đổi',
   },
   expenseList: {
     title: 'Các khoản chi',
@@ -127,6 +129,9 @@ export const vi: Messages = {
     deleteLabel: 'Xoá khoản "{description}"',
     confirmDelete: 'Xoá khoản "{description}"?',
     deleteLocked: 'Không xoá được: có thành viên đã bị xoá',
+    edit: 'Sửa',
+    editLabel: 'Sửa khoản "{description}"',
+    edited: 'Đã sửa',
   },
   settle: {
     balancesTitle: 'Số dư',
@@ -218,6 +223,7 @@ export const vi: Messages = {
   toast: {
     ownerTransferred: '{name} hiện là trưởng nhóm.',
     expenseAdded: 'Đã thêm khoản chi.',
+    expenseEdited: 'Đã cập nhật khoản chi.',
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { GroupDto } from '../../shared/types';
+import type { ExpenseDto, GroupDto } from '../../shared/types';
 import { useAccount } from '../account';
 import { api, ApiError } from '../api';
 import { copyText } from '../clipboard';
@@ -49,11 +49,15 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
     () => !!history.state?.created && history.state?.ownerKey == null,
   );
   const { version } = useAccount();
+  // The expense being edited (edit_expense); null while the form adds a new one.
+  const [editing, setEditing] = useState<ExpenseDto | null>(null);
 
   const reload = useCallback(async () => {
     try {
       const g = await api.getGroup(code);
       setGroup(g);
+      // An expense deleted while it was being edited leaves edit mode, so the form cannot save to a missing row.
+      setEditing((current) => (current && g.expenses.some((e) => e.id === current.id) ? current : null));
       setError(null);
       rememberGroup(g.code, g.name);
     } catch (err) {
@@ -195,8 +199,33 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
 
       {tab === 'expenses' && (
         <div className="group-page__panels">
-          {group.me.memberId && <ExpenseForm group={group} onSaved={reload} onStale={reload} />}
-          <ExpenseList group={group} onChanged={reload} />
+          {group.me.memberId && (
+            <ExpenseForm
+              // Keyed by the edited expense, so the fields start from its stored values each time an edit begins.
+              key={editing?.id ?? 'new'}
+              group={group}
+              editing={editing}
+              onCancel={() => setEditing(null)}
+              onSaved={() => {
+                setEditing(null);
+                reload();
+              }}
+              onStale={reload}
+            />
+          )}
+          <ExpenseList
+            group={group}
+            onChanged={reload}
+            onEdit={
+              group.me.memberId
+                ? (expense) => {
+                    setEditing(expense);
+                    // On phones the form sits above the list, so bring it into view.
+                    window.scrollTo(0, 0);
+                  }
+                : undefined
+            }
+          />
         </div>
       )}
       {tab === 'settle' && <SettlePanel group={group} onChanged={reload} />}

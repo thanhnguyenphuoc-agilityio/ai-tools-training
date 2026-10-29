@@ -122,6 +122,8 @@ export const en = {
     invalidShare: 'Invalid share for {name}. Leave it empty or type 0 if they owe nothing.',
     exactMismatch: 'The shares must add up exactly to the total before saving.',
     submit: 'Save expense',
+    editTitle: 'Edit expense',
+    editSubmit: 'Save changes',
   },
   expenseList: {
     title: 'Expenses',
@@ -135,6 +137,9 @@ export const en = {
     deleteLabel: 'Delete "{description}"',
     confirmDelete: 'Delete "{description}"?',
     deleteLocked: 'Kept: involves a removed member',
+    edit: 'Edit',
+    editLabel: 'Edit "{description}"',
+    edited: 'Edited',
   },
   settle: {
     balancesTitle: 'Balances',
@@ -231,6 +236,7 @@ export const en = {
   toast: {
     ownerTransferred: '{name} is now the owner.',
     expenseAdded: 'Expense added.',
+    expenseEdited: 'Expense updated.',
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
