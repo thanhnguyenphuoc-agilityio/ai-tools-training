@@ -14,6 +14,7 @@ const member = (id: string, extra: Partial<MemberDto> = {}): MemberDto => ({
   accountNo: null,
   accountName: null,
   bankSource: null,
+  invited: false,
   ...extra,
 });
 
