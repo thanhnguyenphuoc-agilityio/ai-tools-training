@@ -32,6 +32,8 @@ test('a session that ends after midnight shows +1 day; its cost is shared among 
   await page.getByRole('button', { name: t('common.save') }).click();
 
   const card = page.locator('.sessions-panel__session');
+  // The day is shown in the UI language's date format, never as the stored YYYY-MM-DD.
+  await expect(card).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   await expect(card).toContainText(t('sessions.nextDay'));
   await expect(card).toContainText(t('sessions.duration', { hours: 3, minutes: 30 }));
   await expect(card).toContainText(t('sessions.presentCount', { count: 2 }));

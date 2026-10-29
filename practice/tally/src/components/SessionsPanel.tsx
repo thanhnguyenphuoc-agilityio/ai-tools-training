@@ -26,7 +26,7 @@ export function SessionsPanel({
   onAddCost: (session: SessionDto) => void;
   onEditCost: (expense: ExpenseDto) => void;
 }) {
-  const { t, message } = useI18n();
+  const { t, day: formatDay, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
 
@@ -230,7 +230,7 @@ export function SessionsPanel({
                 <div className="cluster cluster--between sessions-panel__header">
                   <div className="stack stack--tight">
                     <div className="cluster">
-                      <span className="text text--strong">{session.day}</span>
+                      <span className="text text--strong">{formatDay(session.day)}</span>
                       <span className="text">{t('sessions.range', { start: session.startsAt, end: session.endsAt })}</span>
                       {nextDay && <span className="badge">{t('sessions.nextDay')}</span>}
                       <span className="text text--muted text--small">
@@ -352,7 +352,7 @@ function DeleteSessionDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const { t, message } = useI18n();
+  const { t, day, message } = useI18n();
   const panel = useDialog(onCancel, { canClose: !busy });
   const pressedOnBackdrop = useRef(false);
 
@@ -374,7 +374,7 @@ function DeleteSessionDialog({
       <div ref={panel} tabIndex={-1} className="dialog__panel card stack">
         <h2 className="card__title">{t('sessions.deleteTitle')}</h2>
         <p className="text text--muted text--small">
-          {session.day}
+          {day(session.day)}
           {t('common.separator')}
           {t('sessions.range', { start: session.startsAt, end: session.endsAt })}
         </p>
