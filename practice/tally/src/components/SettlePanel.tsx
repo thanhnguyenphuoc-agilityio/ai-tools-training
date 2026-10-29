@@ -14,6 +14,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const { money } = useGroupMoney(group);
   const notify = useToast();
   const [paying, setPaying] = useState<Settlement | null>(null);
+  // show_qr_again: the payer reopens the QR of a transfer they already marked as sent, without recording it again.
+  const [viewing, setViewing] = useState<Settlement | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<UiMessage | null>(null);
   const nameOf = (id: string) => group.members.find((m) => m.id === id)?.name ?? t('common.unknownMember');
@@ -22,6 +24,12 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
   const { balances, activeMembers, plan, removedWithBalance } = settleView(group);
   const pending = group.transfers.filter((t) => t.status === 'sent');
   const confirmed = group.transfers.filter((t) => t.status === 'confirmed');
+
+  // The QR shown again carries the amount that was marked as sent, which is what the bank app should show.
+  const sentAs = (s: Settlement): Settlement => {
+    const tr = pending.find((p) => p.fromId === s.fromId && p.toId === s.toId);
+    return tr ? { ...s, amount: tr.amount } : s;
+  };
 
   async function confirmTransfer(id: string) {
     setConfirmingId(id);
@@ -82,7 +90,16 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
                   </button>
                 )}
                 {action === 'waiting' && (
-                  <span className="text text--muted text--small">{t('settle.waitingFor', { to: nameOf(s.toId) })}</span>
+                  <span className="cluster">
+                    <span className="text text--muted text--small">
+                      {t('settle.waitingFor', { to: nameOf(s.toId) })}
+                    </span>
+                    {s.fromId === group.me.memberId && (
+                      <button className="button button--ghost button--small" onClick={() => setViewing(sentAs(s))}>
+                        {t('settle.showQrAgain')}
+                      </button>
+                    )}
+                  </span>
                 )}
               </li>
             );
@@ -136,6 +153,8 @@ export function SettlePanel({ group, onChanged }: { group: GroupDto; onChanged: 
           </ul>
         </section>
       )}
+
+      {viewing && <QrDialog group={group} settlement={viewing} viewOnly onClose={() => setViewing(null)} />}
 
       {paying && (
         <QrDialog

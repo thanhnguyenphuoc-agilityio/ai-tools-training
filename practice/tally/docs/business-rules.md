@@ -229,6 +229,8 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - While a transfer from a payer to a receiver is `sent`, the same pair cannot record another (409 `TRANSFER_PENDING`),
   and the suggestion shows "waiting for confirmation" instead of Pay or Record payment. A transfer is confirmed once;
   a second confirm answers `ALREADY_CONFIRMED`. Existing duplicate `sent` rows are left as they are.
+- While waiting, the payer can open the payment QR again ("Show QR again", `show_qr_again`) with the amount that
+  was marked as sent. The reopened dialog has no button to record the transfer.
 - A member can record only **their own** transfers. The owner can record transfers on behalf of others: on each
   suggested transfer that is not the owner's own debt, the owner records the payment from the suggestion (`owner_member_tools`).
 

@@ -176,6 +176,7 @@ export const en = {
     removedWithBalance: '{name} was removed with an open balance of {amount}; it is not part of the suggestions.',
     recordFor: 'Record payment',
     recordForLabel: 'Record payment: {from} to {to}',
+    showQrAgain: 'Show QR again',
     waitingFor: 'Waiting for {to} to confirm',
   },
   qr: {

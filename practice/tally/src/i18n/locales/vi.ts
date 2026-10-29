@@ -168,6 +168,7 @@ export const vi: Messages = {
     removedWithBalance: '{name} đã bị xoá khỏi nhóm khi còn số dư {amount}; khoản này không có trong gợi ý.',
     recordFor: 'Ghi nhận chuyển khoản',
     recordForLabel: 'Ghi nhận chuyển khoản: {from} trả {to}',
+    showQrAgain: 'Xem lại mã QR',
     waitingFor: 'Đang chờ {to} xác nhận',
   },
   qr: {
