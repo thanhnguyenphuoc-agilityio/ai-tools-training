@@ -52,7 +52,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
@@ -501,6 +501,38 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `e2e/owner-link-binds-account.spec.ts`. Updated: `tests/api/account.test.ts`, `tests/api/delete-account.test.ts`,
   `tests/api/joined-groups.test.ts`, `tests/api/lock-groups.test.ts` (LG-4, LG-10, LG-12), `tests/unit/groupCsv.test.ts`,
   `e2e/account.spec.ts`.
+
+### transfer_ownership (built)
+
+- **Endpoint:** `POST /api/groups/:code/owner/transfer` with `{ memberId }` (`worker/routes/groups.ts`, after `owner/attach`).
+  Order: `loadGroup`, `requireCanTransferOwnership` (`OWNER_ONLY`), `readJson`, `loadActiveMember` (`404 MEMBER_NOT_FOUND`,
+  `409 MEMBER_REMOVED`), `requireTransferTarget` (`409 OWNER_TRANSFER_SELF`, `409 OWNER_TRANSFER_NOT_LINKED`), then the
+  current owner member lookup.
+- **One `db.batch` of four statements** sharing one hand-over timestamp (`handOverAt`):
+  - (a) `UPDATE groups SET owner_user_id = <receiver account>, owner_key_hash = 'revoked'`, guarded by the previous owner
+    still being the active owner member and the receiver still being an active member linked to that account.
+  - (b) `UPDATE members SET is_owner = CASE WHEN id = receiver THEN 1 ELSE 0 END` for the two ids, guarded by the group
+    now being owned by the receiver with the revoked hash and the previous owner still being the active owner member.
+  - (c) `INSERT INTO audit_log ... 'group.unlock', '{"reason":"owner.transfer"}'` `SELECT ... WHERE locked_at IS NOT NULL`
+    and the same ownership guards, with actor the previous owner member. It runs before (d).
+  - (d) `UPDATE groups SET locked_at = NULL, last_activity_at = handOverAt` with the same guards. A group that is not kept
+    matches nothing in (c) and (d) and keeps `last_activity_at`.
+  - A lost race (the guards match nothing) writes nothing in (b), (c) and (d): no second owner and no `group.unlock` row.
+- **Why not `recordChange()` for the unlock:** `recordChange()` opens its own batch, so its unlock would apply even when the
+  ownership move lost the race. The unlock must share the batch and its guards. `owner.transfer` alone goes through `audit()`,
+  because a hand-over of a group that is not kept is not a change (Answer 3).
+- **Read back:** the receiver's member row. When it is not the owner: `MEMBER_REMOVED`, `OWNER_TRANSFER_NOT_LINKED`, else
+  `403 OWNER_ONLY` (the caller lost ownership in a race).
+- **Success:** `clearOwnerCookie` for the caller, then `audit(db, code, me, 'owner.transfer', receiverMemberId)`. Response `{ ok: true }`.
+  Other devices holding the old owner cookie are cleared on their next request, because `resolveIdentity` ignores a revoked key.
+- **DTO:** `MemberDto.hasAccount` (`worker/groupData.ts` `toMemberDto`) is a boolean only: `user_id !== null` for active
+  members, `false` for removed ones. No account id or email is returned.
+- **Kept groups:** `purgeInactiveGroups` keeps the group after the hand-over, because `last_activity_at` is the hand-over time.
+  The new owner can keep it again through `POST /lock`.
+- **Known limits (deferred):** device tokens of the previous owner member keep member-level access. `delete_account` checks
+  the owned groups and deletes in a separate batch, so a member joining in between can leave a shared group without an owner.
+- **Tests:** `tests/api/transfer-ownership.test.ts` (TO-1 to TO-15, the racing hand-overs through `interleave`, the
+  30 s timeout on the long tests), `tests/unit/ownerTools.test.ts` (`canTransferTo`), `e2e/transfer-ownership.spec.ts`.
 
 ## 7. Ticket workflow
 

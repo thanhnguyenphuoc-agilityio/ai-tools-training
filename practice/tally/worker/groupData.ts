@@ -172,6 +172,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
       accountNo: null,
       accountName: null,
       bankSource: null,
+      hasAccount: false,
     };
   }
 
@@ -203,6 +204,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
     accountNo,
     accountName,
     bankSource,
+    hasAccount: m.user_id !== null,
   };
 };
 

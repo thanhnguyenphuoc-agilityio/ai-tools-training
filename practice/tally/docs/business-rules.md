@@ -21,6 +21,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - After attaching, a revoked recovery link answers `403 OWNER_KEY_REVOKED`. A group owned by another account answers `403 GROUP_OWNED_BY_OTHER_ACCOUNT`.
 - When a group is created while signed in, it belongs to the account from the start: no owner key is issued (`ownerKey` is null), `owner_key_hash` is set to `'revoked'`, and no recovery link is shown. The page shows "Owner access is tied to your account" instead.
 - Owner access of an account-owned group is tied to the account. Migration `0007_owner_key_revoke.sql` revoked the owner key of every group that already had an account owner.
+- **Handing over the group** (`transfer_ownership`):
+  - Only the **owner** can hand the group over, to an active member who is linked to an account (`OWNER_TRANSFER_NOT_LINKED` otherwise; `OWNER_TRANSFER_SELF` for the current owner; `MEMBER_REMOVED` for a removed member).
+  - The new owner does not have to accept. The owner confirms once and the hand-over takes effect at once.
+  - The previous owner stays a member with their expenses and history. Their recovery link is revoked, and owner access on their devices ends (their owner key cookies are cleared on the next request).
+  - A hand-over of a group that is not kept leaves `last_activity_at` unchanged.
 - The owner can rename the group and change the rounding mode.
 - **Currency** is a group setting, independent of the interface language (for example, a trip to Thailand uses THB
   while the interface stays in Vietnamese).
@@ -34,7 +39,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
   - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
   - **Changes that count as activity:** attaching a group to an account (`group.link`, from opening a recovery link while signed in, from the attach after sign-in, or from keeping the group) moves `last_activity_at` like "Link to my account" does.
-  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
+  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), a hand-over of a group that is not kept (`transfer_ownership`, recorded in `audit_log` as `owner.transfer`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
@@ -48,6 +53,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     - A kept group stays fully editable: expenses, transfers, and members can still be added or changed.
     - Everyone who views the group sees "Kept until the owner stops keeping it" instead of the deletion date line, without warning colors. Members and guests see no keep control.
     - Deleting the owner account (`delete_account`) stops keeping: the group is unlocked, audited as `group.unlock` with details `{"reason":"account.delete"}`, and its 10 days restart from the deletion time.
+    - A hand-over (`transfer_ownership`) of a kept group stops keeping it: the group is unlocked, audited as `group.unlock` with details `{"reason":"owner.transfer"}`, and its 10 days restart from the hand-over time. The new owner can keep it again.
 
 ## Members
 
@@ -241,7 +247,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - **Stays:** groups and everything inside them (members, expenses, transfers, bank details entered in a group, audit log). Group data is purged by the inactivity rule or cleared in the group.
   - **Refused while the account owns a group with other members:** deletion answers `409 ACCOUNT_OWNS_SHARED_GROUP` (with `count`) while the account owns any group that has at least one other active (not removed) member. The owner first hands the group over (`transfer_ownership`) or removes those members. Nothing is deleted when refused.
   - **Solo owned groups:** a group where the owner is the only active member does not block the deletion. It is detached (`owner_user_id` set to NULL), its owner key stays revoked, and it has no owner left. It is deleted by the inactivity rule.
-  - **Owned groups:** detached (`owner_user_id` set to NULL). Owner access is tied to the account, so after deletion nobody holds owner access to a detached group.
+  - **Owned groups:** detached (`owner_user_id` set to NULL). Owner access is tied to the account, so after deletion nobody holds owner access to a detached group. A previous owner who handed a group over (`transfer_ownership`) no longer owns it, so that group does not block their deletion.
   - **Kept groups:** stop being kept. Each kept group owned by the account is unlocked (`locked_at` cleared), audited as `group.unlock` (actor `owner`, details `{"reason":"account.delete"}`), and its `last_activity_at` moves to the deletion time (giving 10 full days).
   - **Linked members:** detached (`members.user_id` set to NULL). The member name, expenses, and history stay; devices with a device token keep acting as that member. Members who used the saved bank details no longer show bank details (`bankSource: null`).
   - **Not a group change:** detaching owners and members is not a change and does not move `last_activity_at` on non-kept groups.

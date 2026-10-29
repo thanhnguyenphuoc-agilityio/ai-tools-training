@@ -4,10 +4,12 @@ import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/typ
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n } from '../i18n';
+import { canTransferTo } from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
 import { KeepGroup } from './KeepGroup';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
+import { TransferOwnerDialog } from './TransferOwnerDialog';
 
 export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
   const { t, errorMessage } = useI18n();
@@ -15,6 +17,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
+  const [transferringMember, setTransferringMember] = useState<MemberDto | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
   const active = group.members.filter((m) => !m.removed);
   const removed = group.members.filter((m) => m.removed);
@@ -55,6 +58,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                   <span className="text text--muted text--small">
                     {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
                   </span>
+                  {canTransferTo(group.me, m) && (
+                    <button
+                      className="button button--ghost button--small"
+                      onClick={() => setTransferringMember(m)}
+                      aria-label={t('ownerTransfer.actionLabel', { name: m.name })}
+                    >
+                      {t('ownerTransfer.action')}
+                    </button>
+                  )}
                   {group.me.isOwner && !m.isOwner && (
                     <button
                       className="button button--ghost button--small"
@@ -115,6 +127,18 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
           onClose={() => setRemovingMember(null)}
           onChanged={() => {
             notify('toast.memberRemoved', { name: removingMember.name });
+            onChanged();
+          }}
+        />
+      )}
+
+      {transferringMember && (
+        <TransferOwnerDialog
+          group={group}
+          member={transferringMember}
+          onClose={() => setTransferringMember(null)}
+          onChanged={() => {
+            notify('toast.ownerTransferred', { name: transferringMember.name });
             onChanged();
           }}
         />

@@ -47,6 +47,8 @@ export const api = {
   claimOwner: (code: string, ownerKey: string) =>
     call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/claim`, { ownerKey }),
   attachOwner: (code: string) => call<{ ok: true; attached: boolean }>('POST', `${g(code)}/owner/attach`),
+  transferOwner: (code: string, memberId: string) =>
+    call<{ ok: true }>('POST', `${g(code)}/owner/transfer`, { memberId }),
 
   join: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name, claim: true }),
   addMember: (code: string, name: string) => call<{ id: string }>('POST', `${g(code)}/members`, { name }),

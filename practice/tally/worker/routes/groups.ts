@@ -15,14 +15,25 @@ import {
   sha256Hex,
 } from '../auth';
 import { attachOwnerGroup, tryAttachOwnerGroup } from '../accountLink';
-import { audit, loadGroup, loadLedger, loadMembers, recordChange, toMemberDto } from '../groupData';
+import {
+  audit,
+  loadActiveMember,
+  loadGroup,
+  loadLedger,
+  loadMember,
+  loadMembers,
+  recordChange,
+  toMemberDto,
+} from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
 import {
   canLinkToAccount,
   requireAccount,
+  requireCanTransferOwnership,
   requireGroupNotOwnedByOther,
   requireOwner,
   requireOwnerAccount,
+  requireTransferTarget,
 } from '../policy';
 
 export const groupRoutes = new Hono<AppEnv>();
@@ -195,6 +206,76 @@ groupRoutes.post('/:code/owner/attach', async (c) => {
     await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
   }
   return c.json({ ok: true, attached });
+});
+
+// Hand the group over to another member (transfer_ownership). The receiver must be linked to an account; the
+// previous owner stays a normal member. The recovery link is revoked, so the previous owner loses owner access
+// outside the account. A hand-over does not move last_activity_at, except for a kept group, which stops being kept:
+// its locked_at is cleared, last_activity_at moves to the hand-over time (a fresh 10 days) and group.unlock is written.
+// These statements share the batch with the ownership move, so they apply only when that move wins the race.
+groupRoutes.post('/:code/owner/transfer', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireCanTransferOwnership(me);
+  const body = await readJson(c);
+  const memberId = text(body.memberId, 'memberId', 64);
+
+  const target = await loadActiveMember(c.env.DB, group.code, memberId);
+  requireTransferTarget(target);
+  const currentOwner = await c.env.DB.prepare(
+    'SELECT id FROM members WHERE group_code = ? AND is_owner = 1 AND removed_at IS NULL',
+  )
+    .bind(group.code)
+    .first<{ id: string }>();
+  if (!currentOwner) throw new ApiError(404, 'MEMBER_NOT_FOUND', 'owner member not found');
+
+  // Every statement carries the guards again, so two simultaneous hand-overs cannot both win. The group statement
+  // runs first and the member statement only applies while the previous owner is still the owner member.
+  // The unlock statements share one timestamp and carry the same guards. The audit row runs before the update,
+  // because it selects on locked_at IS NOT NULL.
+  const handOverAt = now();
+  const unlockActor = me.memberId ?? 'owner';
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE groups SET owner_user_id = ?1, owner_key_hash = ?2
+       WHERE code = ?3
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?4 AND group_code = ?3 AND is_owner = 1 AND removed_at IS NULL)
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?5 AND group_code = ?3 AND user_id = ?1 AND removed_at IS NULL)`,
+    ).bind(target.user_id, REVOKED_OWNER_KEY, group.code, currentOwner.id, target.id),
+    c.env.DB.prepare(
+      `UPDATE members SET is_owner = CASE WHEN id = ?1 THEN 1 ELSE 0 END
+       WHERE group_code = ?2 AND id IN (?1, ?3)
+       AND EXISTS (SELECT 1 FROM groups WHERE code = ?2 AND owner_user_id = ?4 AND owner_key_hash = ?5)
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?3 AND group_code = ?2 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(target.id, group.code, currentOwner.id, target.user_id, REVOKED_OWNER_KEY),
+    // A kept group stops being kept: the unlock is recorded, and last_activity_at restarts the 10 days. Applies only
+    // when the ownership move above won (the receiver is now the owner of the group with the revoked key).
+    c.env.DB.prepare(
+      `INSERT INTO audit_log (group_code, actor, action, target, details, at)
+       SELECT code, ?1, 'group.unlock', NULL, '{"reason":"owner.transfer"}', ?2 FROM groups
+       WHERE code = ?3 AND locked_at IS NOT NULL AND owner_user_id = ?4 AND owner_key_hash = ?5
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?6 AND group_code = ?3 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(unlockActor, handOverAt, group.code, target.user_id, REVOKED_OWNER_KEY, target.id),
+    c.env.DB.prepare(
+      `UPDATE groups SET locked_at = NULL, last_activity_at = ?1
+       WHERE code = ?2 AND locked_at IS NOT NULL AND owner_user_id = ?3 AND owner_key_hash = ?4
+       AND EXISTS (SELECT 1 FROM members WHERE id = ?5 AND group_code = ?2 AND is_owner = 1 AND removed_at IS NULL)`,
+    ).bind(handOverAt, group.code, target.user_id, REVOKED_OWNER_KEY, target.id),
+  ]);
+
+  // Read back: when nothing moved, say why.
+  const after = await loadMember(c.env.DB, group.code, target.id);
+  if (after.is_owner !== 1) {
+    if (after.removed_at) throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+    if (after.user_id === null) {
+      throw new ApiError(409, 'OWNER_TRANSFER_NOT_LINKED', 'the member needs an account to receive ownership');
+    }
+    // Another hand-over (or a revoke) won the race, so the caller no longer owns the group.
+    throw new ApiError(403, 'OWNER_ONLY', 'only the group owner can do this');
+  }
+
+  clearOwnerCookie(c, group.code);
+  await audit(c.env.DB, group.code, me, 'owner.transfer', target.id);
+  return c.json({ ok: true });
 });
 
 // Lock a group: exempt it from inactivity deletion.

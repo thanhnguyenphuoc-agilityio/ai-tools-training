@@ -218,6 +218,7 @@ export const en = {
   },
   /** Confirmation messages that disappear by themselves after a save. */
   toast: {
+    ownerTransferred: '{name} is now the owner.',
     expenseAdded: 'Expense added.',
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
@@ -266,6 +267,15 @@ export const en = {
       'Groups you own with other members block deletion: hand them over or remove the other members first. Solo groups stay without an owner and are deleted after 10 days without changes.',
     confirm: 'Delete my account',
     done: 'Your account was deleted.',
+  },
+  ownerTransfer: {
+    action: 'Make owner',
+    actionLabel: 'Make {name} the owner',
+    title: 'Make {name} the owner?',
+    body: 'Owner access moves to {name} at once. The recovery link of this group stops working, and owner access on your devices ends the next time they open the group. You stay in the group as a member, with your expenses and history.',
+    stopsKeeping: 'This group is kept now. After the hand-over it stops being kept and its 10 days start again; the new owner can keep it again.',
+    confirm: 'Make owner',
+    cancel: 'Cancel',
   },
   csvExport: {
     download: 'Download CSV',
@@ -344,6 +354,8 @@ export const en = {
     ACCOUNT_OWNS_SHARED_GROUP:
       'You cannot delete the account while it owns {count} groups with other members. Hand them over or remove the other members first.',
     LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
+    OWNER_TRANSFER_NOT_LINKED: 'This member needs an account before they can become the owner.',
+    OWNER_TRANSFER_SELF: 'This member is already the owner.',
   } satisfies Record<ErrorCode, string>,
 };
 
