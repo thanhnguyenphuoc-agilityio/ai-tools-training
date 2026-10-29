@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { t } from './i18n';
 
-async function devSignIn(page: import('@playwright/test').Page, email: string, name: string) {
+/** A unique synthetic email per call: the dev database persists across tests, and a saved account name is kept. */
+function uniqueEmail(base: string): string {
+  return `${base}.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}@example.com`;
+}
+
+/** Signs in as a development user and returns the name the account shows (the email local part). */
+async function devSignIn(page: import('@playwright/test').Page, email: string): Promise<string> {
+  const name = email.split('@')[0];
   await page.goto('/');
   await page.locator('.account-menu__button').click();
   await page.getByLabel(t('account.devEmail')).fill(email);
@@ -10,6 +17,7 @@ async function devSignIn(page: import('@playwright/test').Page, email: string, n
     .getByRole('button', { name: t('account.devSubmit') })
     .click();
   await expect(page.getByRole('button', { name: t('account.menuLabel', { name }) })).toBeVisible();
+  return name;
 }
 
 async function setAccountName(page: import('@playwright/test').Page, name: string, accountName: string) {
@@ -42,8 +50,8 @@ test.describe('Join as account (join_as_account)', () => {
 
     const contextSam = await browser.newContext();
     const pageSam = await contextSam.newPage();
-    await devSignIn(pageSam, 'sam@example.com', 'sam');
-    await setAccountName(pageSam, 'sam', 'Sam Kim');
+    const samName = await devSignIn(pageSam, uniqueEmail('sam'));
+    await setAccountName(pageSam, samName, 'Sam Kim');
 
     await pageSam.goto(groupUrl);
     const joinInput = pageSam.getByLabel(t('join.yourName'));
@@ -65,8 +73,8 @@ test.describe('Join as account (join_as_account)', () => {
 
     const contextSam = await browser.newContext();
     const pageSam = await contextSam.newPage();
-    await devSignIn(pageSam, 'sam@example.com', 'sam');
-    await setAccountName(pageSam, 'sam', 'Alex');
+    const samName = await devSignIn(pageSam, uniqueEmail('sam'));
+    await setAccountName(pageSam, samName, 'Alex');
 
     await pageSam.goto(groupUrl);
     const joinInput = pageSam.getByLabel(t('join.yourName'));
@@ -85,14 +93,15 @@ test.describe('Join as account (join_as_account)', () => {
 
   test('Escape closes the My name dialog and focus returns to the account menu', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop', 'keyboard check runs on desktop only');
-    await devSignIn(page, 'kim@example.com', 'kim');
-    await page.getByRole('button', { name: t('account.menuLabel', { name: 'kim' }) }).click();
+    const name = await devSignIn(page, uniqueEmail('kim'));
+    const menuBtn = page.getByRole('button', { name: t('account.menuLabel', { name }) });
+    await menuBtn.click();
     await page.getByRole('menuitem', { name: t('account.name') }).click();
 
     const dialog = page.getByRole('dialog', { name: t('accountName.title') });
     await expect(dialog.getByLabel(t('accountName.label'))).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole('button', { name: t('account.menuLabel', { name: 'kim' }) })).toBeFocused();
+    await expect(menuBtn).toBeFocused();
   });
 });
