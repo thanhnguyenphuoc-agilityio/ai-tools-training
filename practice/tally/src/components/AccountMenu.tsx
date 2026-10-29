@@ -172,8 +172,23 @@ export function AccountMenu() {
               </button>
             </div>
           )}
-          {bankDetailsOpen && <SavedBankDialog onClose={() => setBankDetailsOpen(false)} />}
-          {deleteAccountOpen && <DeleteAccountDialog onClose={() => setDeleteAccountOpen(false)} />}
+          {/* The menu item that opened a dialog is gone by then, so focus returns to the menu button instead. */}
+          {bankDetailsOpen && (
+            <SavedBankDialog
+              onClose={() => {
+                setBankDetailsOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
+          {deleteAccountOpen && (
+            <DeleteAccountDialog
+              onClose={() => {
+                setDeleteAccountOpen(false);
+                button.current?.focus();
+              }}
+            />
+          )}
         </>
       ) : (
         <>
