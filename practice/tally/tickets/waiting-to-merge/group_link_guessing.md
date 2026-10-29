@@ -85,3 +85,30 @@ Group links and recovery links cannot be guessed in practice, so no urgent chang
 2. Answer the question in `docs/business-rules.md` and `docs/design.md`. Commit `docs: answer group_link_guessing in business rules and design`.
 3. Add the follow-up `tickets/backlog/rate_limit_guessing.md` (TAL-51). Commit `docs(tickets): add rate_limit_guessing follow-up`.
 4. Run typecheck, lint, test, test:hooks and e2e (port 5191), then move the ticket to `waiting-to-merge/` with a merge request section. Commit `docs(tickets): move group_link_guessing to waiting-to-merge`.
+
+## Merge request
+
+Branch `docs/group_link_guessing` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists.
+
+What changed (docs only, no code):
+
+- `docs/business-rules.md`: "Data and safety" replaces the OPEN QUESTION with the group code (about 59.5 bits) and token
+  (256 bits) entropy figures, the revoked recovery link rule, and the `rate_limit_guessing` follow-up.
+- `docs/design.md`: section 4 notes the group code and token entropy, the identical 404 from `loadGroup`, `randomToken()`
+  and the revoked owner key. No other line changed.
+- `tickets/backlog/rate_limit_guessing.md` (new): follow-up improvement `TAL-51`, throttling of failed group lookups and
+  owner recovery attempts.
+- `tickets/waiting-to-merge/group_link_guessing.md`: analysis, clarifying questions, product owner answers, decision,
+  acceptance criteria, test matrix, plan and this merge request.
+
+Tests: unchanged. No code, schema or test file changed.
+
+Checks run in `practice/tally` on this branch:
+
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `npm test`: 44 files, 515 tests passed.
+- `npm run test:hooks`: passed.
+- `npx playwright test --config playwright.local.config.ts` (port 5191): 142 passed, 2 skipped. The first run failed at
+  web server start with a known flaky "bad port" error and passed on the rerun.
