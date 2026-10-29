@@ -4,11 +4,12 @@ import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/typ
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n, type UiMessage } from '../i18n';
-import { canSetInviteEmail, canTransferTo } from '../ownerTools';
+import { canReleaseMember, canSetInviteEmail, canTransferTo } from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
 import { InviteEmailDialog } from './InviteEmailDialog';
 import { KeepGroup } from './KeepGroup';
+import { ReleaseMemberDialog } from './ReleaseMemberDialog';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
 import { TransferOwnerDialog } from './TransferOwnerDialog';
 import './MembersPanel.scss';
@@ -20,6 +21,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   const [newEmail, setNewEmail] = useState('');
   const [error, setError] = useState<UiMessage | null>(null);
   const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
+  const [releasingMember, setReleasingMember] = useState<MemberDto | null>(null);
   const [transferringMember, setTransferringMember] = useState<MemberDto | null>(null);
   const [invitingMember, setInvitingMember] = useState<MemberDto | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
@@ -79,6 +81,15 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
                       aria-label={t('memberInvite.set')}
                     >
                       {t('memberInvite.set')}
+                    </button>
+                  )}
+                  {canReleaseMember(group.me, m) && (
+                    <button
+                      className="button button--ghost button--small"
+                      onClick={() => setReleasingMember(m)}
+                      aria-label={t('members.releaseLabel', { name: m.name })}
+                    >
+                      {t('members.release')}
                     </button>
                   )}
                   {group.me.isOwner && !m.isOwner && (
@@ -144,6 +155,18 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
       </section>
 
       {group.me.isOwner && <OwnerSettings group={group} onSaved={onChanged} />}
+
+      {releasingMember && (
+        <ReleaseMemberDialog
+          group={group}
+          member={releasingMember}
+          onClose={() => setReleasingMember(null)}
+          onChanged={() => {
+            notify('toast.memberReleased', { name: releasingMember.name });
+            onChanged();
+          }}
+        />
+      )}
 
       {removingMember && (
         <RemoveMemberDialog

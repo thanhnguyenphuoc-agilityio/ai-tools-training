@@ -52,7 +52,7 @@ There are three identity sources, all resolved in `resolveIdentity()`:
 | Google session | cookie `tally_session` (path `/api`) | `sessions.token_hash` -> `users` | `userId`, from which `memberId`/`isOwner` are derived |
 
 Routes never compare ids directly. All rules live in `policy.ts`: `requireMember`, `requireOwner`,
-`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`.
+`requireOwnerAccount`, `requireCanEditMember`, `requireCanDeleteExpense`, `requireCanRecordTransfer`, `requireCanConfirmTransfer`, `canLinkToAccount`, `requireNoSharedOwnedGroups`, `requireCanTransferOwnership`, `requireTransferTarget`, `requireCanSetInviteEmail`, `canAutoLinkInvite`, `requireCanReleaseMember`.
 A future rule such as "a closed group is read-only" (not planned; `lock_groups` only stops deletion) only needs
 `requireWritable(group)`, called from the write routes.
 
@@ -550,6 +550,27 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 - **No group change:** the name write touches no group, member, `audit_log` row or `last_activity_at`.
 - **Tests:** `tests/api/account-name.test.ts` (AN-1 to AN-6, migration default on a pre-existing row).
 
+### wrong_name_claim (built)
+
+- No migration. A released member has `token_hash`, `user_id` and `invite_email` set to NULL, the same state as a member
+  added by name.
+- Route: `POST /groups/:code/members/:id/release` in `worker/routes/members.ts`, after remove. Order: `loadGroup`,
+  `requireCanReleaseMember` (owner, `OWNER_ONLY`), `loadActiveMember` (`MEMBER_NOT_FOUND`, `MEMBER_REMOVED`), then
+  `CANNOT_RELEASE_OWNER` for the owner member.
+- Guarded `UPDATE members SET token_hash = NULL, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL
+  AND (token_hash IS NOT NULL OR user_id IS NOT NULL)`. When no row changes, the member is read again: removed gives
+  `MEMBER_REMOVED`, otherwise `MEMBER_NOT_CLAIMED`. Two simultaneous releases cannot both win.
+- Audit: `recordChange` with `member.release` and the released member as target, the owner member as actor. It moves
+  `last_activity_at`. No change to `worker/auth.ts`: a cleared token or `user_id` resolves to no member.
+- Claim audit: `member.claim` records `{ ...me, memberId }`, so the claimed member is the actor.
+- Policy: `requireCanReleaseMember(me)` in `worker/policy.ts`; the interface mirror is `canReleaseMember` in
+  `src/ownerTools.ts` (owner, not removed, not the owner member, claimed).
+- Dialogs (`useDialog`): `ClaimMemberDialog` opens from "I am <name>" in `JoinPanel` and sends the claim only on
+  confirm; `ReleaseMemberDialog` opens from the owner's "Release" button in `MembersPanel` and calls `api.releaseMember`.
+  After a release the toast `toast.memberReleased` shows.
+- Tests: `tests/api/claim-member.test.ts`, `tests/unit/ownerTools.test.ts` (`canReleaseMember`), and
+  `e2e/claim-member.spec.ts` (confirm, cancel, release through the dialog, claim again).
+
 ### member_email_invite (built)
 
 - Migration `0009_member_invite_email.sql`: `ALTER TABLE members ADD COLUMN invite_email TEXT`. Nullable, no index,
@@ -570,8 +591,8 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `me.memberId`.
 - Exposure: `MemberDto.invited` is derived in `toMemberDto`, which never spreads the row. No DTO or error param holds the
   email.
-- **Release note (future):** the release route (`wrong_name_claim`, not built) must clear `invite_email` when it
-  releases a member, as claim, link and remove already do.
+- **Release (done, `wrong_name_claim`):** the release route clears `invite_email` together with `token_hash` and
+  `user_id`, as claim, link and remove already do.
 - Tests: `tests/api/member-invite.test.ts`, `tests/unit/ownerTools.test.ts`, `e2e/member-invite.spec.ts`.
 
 ## 7. Ticket workflow

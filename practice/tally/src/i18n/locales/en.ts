@@ -95,6 +95,8 @@ export const en = {
     iAm: 'I am {name}',
     yourName: 'Your name',
     submit: 'Join',
+    confirmClaim: 'You are about to join as {name}. Only continue if this is you.',
+    confirmClaimSubmit: 'Yes, I am {name}',
   },
   expenseForm: {
     title: 'Add an expense',
@@ -196,6 +198,9 @@ export const en = {
     removeHint: 'Their expenses stay in the history.',
     removeReason: 'Reason (optional)',
     removed: 'removed',
+    release: 'Release',
+    releaseLabel: 'Release the name {name}',
+    releaseConfirm: 'Release {name}? The device that uses this name becomes a guest, and the name can be claimed again.',
   },
   memberInvite: {
     emailLabel: 'Email (optional)',
@@ -234,6 +239,7 @@ export const en = {
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
+    memberReleased: '{name} can be claimed again.',
     ownerAttached: 'Group attached to your account.',
     bankSaved: 'Your bank details were saved.',
     settingsSaved: 'Group settings were saved.',
@@ -377,6 +383,8 @@ export const en = {
     LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
     OWNER_TRANSFER_NOT_LINKED: 'This member needs an account before they can become the owner.',
     OWNER_TRANSFER_SELF: 'This member is already the owner.',
+    MEMBER_NOT_CLAIMED: 'This name has not been claimed yet.',
+    CANNOT_RELEASE_OWNER: 'The group owner cannot be released.',
   } satisfies Record<ErrorCode, string>,
 };
 

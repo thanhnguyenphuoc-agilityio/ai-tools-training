@@ -58,6 +58,7 @@ export const api = {
     call('PATCH', `${g(code)}/members/${id}`, patch),
   removeMember: (code: string, id: string, reason: string) =>
     call('POST', `${g(code)}/members/${id}/remove`, { reason }),
+  releaseMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/release`),
 
   addExpense: (code: string, expense: NewExpense) => call<{ id: string }>('POST', `${g(code)}/expenses`, expense),
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),

@@ -108,6 +108,14 @@ export function requireCanRemoveMember(me: Identity): void {
   requireOwner(me);
 }
 
+/**
+ * Releasing a wrongly claimed name (wrong_name_claim): the owner only. The route checks the target (owner member,
+ * removed, not claimed) itself, because those refusals need the member row.
+ */
+export function requireCanReleaseMember(me: Identity): void {
+  requireOwner(me);
+}
+
 /** Expenses: the author or the owner. A guest (no member identity) is never the author. */
 export function requireCanDeleteExpense(me: Identity, expense: { created_by: string | null }): void {
   if (me.isOwner) return;
