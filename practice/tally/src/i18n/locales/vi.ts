@@ -207,6 +207,7 @@ export const vi: Messages = {
     },
   },
   toast: {
+    ownerTransferred: '{name} hiện là trưởng nhóm.',
     expenseAdded: 'Đã thêm khoản chi.',
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
@@ -255,6 +256,15 @@ export const vi: Messages = {
       'Nhóm bạn sở hữu có thành viên khác sẽ chặn việc xoá: hãy chuyển quyền hoặc xoá các thành viên khác trước. Nhóm chỉ có mình bạn sẽ không còn trưởng nhóm và bị xoá sau 10 ngày không có thay đổi.',
     confirm: 'Xoá tài khoản của tôi',
     done: 'Tài khoản của bạn đã được xoá.',
+  },
+  ownerTransfer: {
+    action: 'Chuyển quyền trưởng nhóm',
+    actionLabel: 'Chuyển quyền trưởng nhóm cho {name}',
+    title: 'Chuyển quyền trưởng nhóm cho {name}?',
+    body: 'Quyền trưởng nhóm chuyển cho {name} ngay. Link khôi phục của nhóm này sẽ không dùng được nữa, và quyền trưởng nhóm trên các thiết bị của bạn sẽ mất khi lần mở nhóm tiếp theo. Bạn vẫn là thành viên của nhóm, cùng với các khoản chi và lịch sử.',
+    stopsKeeping: 'Nhóm đang được giữ. Sau khi chuyển quyền, nhóm ngừng được giữ và 10 ngày được tính lại; trưởng nhóm mới có thể giữ lại nhóm.',
+    confirm: 'Chuyển quyền',
+    cancel: 'Huỷ',
   },
   csvExport: {
     download: 'Tải file CSV',
@@ -329,6 +339,8 @@ export const vi: Messages = {
     ACCOUNT_OWNS_SHARED_GROUP:
       'Không thể xoá tài khoản khi đang sở hữu {count} nhóm có thành viên khác. Hãy chuyển quyền hoặc xoá các thành viên khác trước.',
     LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
+    OWNER_TRANSFER_NOT_LINKED: 'Thành viên này cần có tài khoản trước khi trở thành trưởng nhóm.',
+    OWNER_TRANSFER_SELF: 'Thành viên này đã là trưởng nhóm.',
   },
 };
 
