@@ -187,6 +187,10 @@ export const vi: Messages = {
     removeHint: 'Các khoản chi của họ vẫn được giữ trong lịch sử.',
     removeReason: 'Lý do (không bắt buộc)',
     removed: 'đã bị xoá khỏi nhóm',
+    editAccount: 'Sửa tài khoản',
+    editAccountLabel: 'Sửa tài khoản nhận tiền của {name}',
+    bankTitleFor: 'Tài khoản nhận tiền của {name}',
+    bankHintFor: 'Dùng để tạo mã VietQR khi người khác trả tiền cho thành viên này. Ai có link nhóm đều xem được.',
   },
   memberInvite: {
     emailLabel: 'Email (không bắt buộc)',
@@ -232,6 +236,7 @@ export const vi: Messages = {
     signedIn: 'Đã đăng nhập.',
     signedOut: 'Đã đăng xuất.',
     accountLinked: 'Đã liên kết với tài khoản của bạn.',
+    bankSavedFor: 'Đã lưu tài khoản nhận tiền của {name}.',
   },
   account: {
     signIn: 'Đăng nhập',
@@ -280,7 +285,8 @@ export const vi: Messages = {
     actionLabel: 'Chuyển quyền trưởng nhóm cho {name}',
     title: 'Chuyển quyền trưởng nhóm cho {name}?',
     body: 'Quyền trưởng nhóm chuyển cho {name} ngay. Link khôi phục của nhóm này sẽ không dùng được nữa, và quyền trưởng nhóm trên các thiết bị của bạn sẽ mất khi lần mở nhóm tiếp theo. Bạn vẫn là thành viên của nhóm, cùng với các khoản chi và lịch sử.',
-    stopsKeeping: 'Nhóm đang được giữ. Sau khi chuyển quyền, nhóm ngừng được giữ và 10 ngày được tính lại; trưởng nhóm mới có thể giữ lại nhóm.',
+    stopsKeeping:
+      'Nhóm đang được giữ. Sau khi chuyển quyền, nhóm ngừng được giữ và 10 ngày được tính lại; trưởng nhóm mới có thể giữ lại nhóm.',
     confirm: 'Chuyển quyền',
     cancel: 'Huỷ',
   },

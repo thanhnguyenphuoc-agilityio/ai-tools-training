@@ -4,7 +4,7 @@ import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/typ
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n } from '../i18n';
-import { canSetInviteEmail, canTransferTo } from '../ownerTools';
+import { canEditAccount, canSetInviteEmail, canTransferTo } from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
 import { InviteEmailDialog } from './InviteEmailDialog';
@@ -22,6 +22,7 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   const [removingMember, setRemovingMember] = useState<MemberDto | null>(null);
   const [transferringMember, setTransferringMember] = useState<MemberDto | null>(null);
   const [invitingMember, setInvitingMember] = useState<MemberDto | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const me = group.members.find((m) => m.id === group.me.memberId);
   const active = group.members.filter((m) => !m.removed);
   const removed = group.members.filter((m) => m.removed);
@@ -52,45 +53,69 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
           {active.map((m) => {
             const bank = findBank(m.bankBin);
             return (
-              <li key={m.id} className="list__item cluster cluster--between">
-                <span className="cluster">
-                  <span className="text text--strong">{m.name}</span>
-                  {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
-                  {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
-                  {m.invited && <span className="badge">{t('memberInvite.badge')}</span>}
-                </span>
-                <span className="cluster">
-                  <span className="text text--muted text--small">
-                    {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+              <li key={m.id} className="list__item stack">
+                <div className="cluster cluster--between">
+                  <span className="cluster">
+                    <span className="text text--strong">{m.name}</span>
+                    {m.isOwner && <span className="badge">{t('common.ownerBadge')}</span>}
+                    {!m.claimed && <span className="text text--muted text--small">{t('members.unclaimed')}</span>}
+                    {m.invited && <span className="badge">{t('memberInvite.badge')}</span>}
                   </span>
-                  {canTransferTo(group.me, m) && (
-                    <button
-                      className="button button--ghost button--small"
-                      onClick={() => setTransferringMember(m)}
-                      aria-label={t('ownerTransfer.actionLabel', { name: m.name })}
-                    >
-                      {t('ownerTransfer.action')}
-                    </button>
-                  )}
-                  {canSetInviteEmail(group.me, m) && (
-                    <button
-                      className="button button--ghost button--small"
-                      onClick={() => setInvitingMember(m)}
-                      aria-label={t('memberInvite.set')}
-                    >
-                      {t('memberInvite.set')}
-                    </button>
-                  )}
-                  {group.me.isOwner && !m.isOwner && (
-                    <button
-                      className="button button--ghost button--small"
-                      onClick={() => setRemovingMember(m)}
-                      aria-label={t('members.removeLabel', { name: m.name })}
-                    >
-                      {t('members.remove')}
-                    </button>
-                  )}
-                </span>
+                  <span className="cluster">
+                    <span className="text text--muted text--small">
+                      {bank && m.accountNo ? `${bank.shortName} ${m.accountNo}` : t('members.noAccount')}
+                    </span>
+                    {canEditAccount(group.me, m) && (
+                      <button
+                        className="button button--ghost button--small"
+                        onClick={() => setEditingId(m.id)}
+                        aria-label={t('members.editAccountLabel', { name: m.name })}
+                      >
+                        {t('members.editAccount')}
+                      </button>
+                    )}
+                    {canTransferTo(group.me, m) && (
+                      <button
+                        className="button button--ghost button--small"
+                        onClick={() => setTransferringMember(m)}
+                        aria-label={t('ownerTransfer.actionLabel', { name: m.name })}
+                      >
+                        {t('ownerTransfer.action')}
+                      </button>
+                    )}
+                    {canSetInviteEmail(group.me, m) && (
+                      <button
+                        className="button button--ghost button--small"
+                        onClick={() => setInvitingMember(m)}
+                        aria-label={t('memberInvite.set')}
+                      >
+                        {t('memberInvite.set')}
+                      </button>
+                    )}
+                    {group.me.isOwner && !m.isOwner && (
+                      <button
+                        className="button button--ghost button--small"
+                        onClick={() => setRemovingMember(m)}
+                        aria-label={t('members.removeLabel', { name: m.name })}
+                      >
+                        {t('members.remove')}
+                      </button>
+                    )}
+                  </span>
+                </div>
+                {editingId === m.id && (
+                  <BankForm
+                    key={m.id}
+                    code={group.code}
+                    member={m}
+                    forOther
+                    onSaved={() => {
+                      setEditingId(null);
+                      onChanged();
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                )}
               </li>
             );
           })}
@@ -189,11 +214,15 @@ function BankForm({
   member,
   accountLinked,
   onSaved,
+  forOther,
+  onCancel,
 }: {
   code: string;
   member: MemberDto;
   accountLinked?: boolean;
   onSaved: () => void;
+  forOther?: boolean;
+  onCancel?: () => void;
 }) {
   const { t, errorMessage } = useI18n();
   const { user } = useAccount();
@@ -210,7 +239,8 @@ function BankForm({
     try {
       await api.updateMember(code, member.id, { bankBin, accountNo, accountName });
       setError(null);
-      notify('toast.bankSaved');
+      if (forOther) notify('toast.bankSavedFor', { name: member.name });
+      else notify('toast.bankSaved');
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -229,7 +259,7 @@ function BankForm({
     }
   }
 
-  if (member.bankSource === 'account' && !useDifferent) {
+  if (!forOther && member.bankSource === 'account' && !useDifferent) {
     return (
       <section className="card stack">
         <h2 className="card__title">{t('members.bankTitle')}</h2>
@@ -246,9 +276,11 @@ function BankForm({
 
   return (
     <section className="card">
-      <h2 className="card__title">{t('members.bankTitle')}</h2>
+      <h2 className="card__title">
+        {forOther ? t('members.bankTitleFor', { name: member.name }) : t('members.bankTitle')}
+      </h2>
       <form onSubmit={save} className="stack">
-        <p className="text text--muted text--small">{t('members.bankHint')}</p>
+        <p className="text text--muted text--small">{forOther ? t('members.bankHintFor') : t('members.bankHint')}</p>
         <label className="field">
           <span className="field__label">{t('members.bank')}</span>
           <select className="field__control" value={bankBin} onChange={(e) => setBankBin(e.target.value)}>
@@ -285,7 +317,12 @@ function BankForm({
         {error && <p className="text text--error">{error}</p>}
         <div className="cluster">
           <button className="button button--block-mobile">{t('common.save')}</button>
-          {member.bankSource === 'group' && accountLinked && !!user?.accountNo && (
+          {forOther && onCancel && (
+            <button type="button" className="button button--ghost" onClick={onCancel}>
+              {t('common.cancel')}
+            </button>
+          )}
+          {!forOther && member.bankSource === 'group' && accountLinked && !!user?.accountNo && (
             <button type="button" className="button button--ghost" onClick={handleUseSaved}>
               {t('savedBank.useSaved')}
             </button>

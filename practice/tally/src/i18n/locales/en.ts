@@ -196,6 +196,10 @@ export const en = {
     removeHint: 'Their expenses stay in the history.',
     removeReason: 'Reason (optional)',
     removed: 'removed',
+    editAccount: 'Edit account',
+    editAccountLabel: 'Edit the receiving account of {name}',
+    bankTitleFor: 'Receiving account of {name}',
+    bankHintFor: 'Used to build the VietQR code when others pay this member. Anyone with the group link can see it.',
   },
   memberInvite: {
     emailLabel: 'Email (optional)',
@@ -245,6 +249,7 @@ export const en = {
     signedIn: 'Signed in.',
     signedOut: 'Signed out.',
     accountLinked: 'Linked to your account.',
+    bankSavedFor: 'Saved the receiving account of {name}.',
   },
   account: {
     signIn: 'Sign in',
@@ -293,7 +298,8 @@ export const en = {
     actionLabel: 'Make {name} the owner',
     title: 'Make {name} the owner?',
     body: 'Owner access moves to {name} at once. The recovery link of this group stops working, and owner access on your devices ends the next time they open the group. You stay in the group as a member, with your expenses and history.',
-    stopsKeeping: 'This group is kept now. After the hand-over it stops being kept and its 10 days start again; the new owner can keep it again.',
+    stopsKeeping:
+      'This group is kept now. After the hand-over it stops being kept and its 10 days start again; the new owner can keep it again.',
     confirm: 'Make owner',
     cancel: 'Cancel',
   },

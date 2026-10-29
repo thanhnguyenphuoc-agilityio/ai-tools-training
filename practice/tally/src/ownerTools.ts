@@ -10,3 +10,8 @@ export function canTransferTo(me: Me, member: MemberDto): boolean {
 export function canSetInviteEmail(me: Me, member: MemberDto): boolean {
   return me.isOwner && !member.removed && !member.claimed && !member.isOwner;
 }
+
+/** The owner may edit the receiving account of any active member other than their own member (owner_member_tools). */
+export function canEditAccount(me: Me, member: MemberDto): boolean {
+  return me.isOwner && !member.removed && member.id !== me.memberId;
+}
