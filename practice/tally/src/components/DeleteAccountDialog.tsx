@@ -50,7 +50,7 @@ export function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
         <div className="cluster">
           <button
             type="button"
-            className="button delete-account__danger-button"
+            className="button button--danger"
             onClick={handleDelete}
             disabled={deleting}
           >
