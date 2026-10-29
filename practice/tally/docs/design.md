@@ -452,6 +452,9 @@ Built. Project conventions are checked automatically by `npm run lint`:
 - UI: `MembersPanel` shows an "Edit account" action per active member for the owner (not the owner's own member), opening
   `BankForm` under that row with `forOther`; `SettlePanel` shows "Record payment" on every suggested transfer the owner is
   not the payer of, opening `QrDialog` for the payer; `api.recordTransfer` gains an optional `fromId`.
+- A second `sent` transfer for the same payer and receiver is refused inside the `INSERT ... SELECT` (`NOT EXISTS` a
+  `sent` row for the pair), with one follow-up read to choose `TRANSFER_PENDING` or `PARTICIPANT_NOT_IN_GROUP`. Confirm
+  is a conditional `UPDATE` on `status = 'sent'`; zero changes answers `ALREADY_CONFIRMED` (`duplicate_sent_transfers`).
 
 ### edit_expense (built)
 

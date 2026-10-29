@@ -223,6 +223,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
+- While a transfer from a payer to a receiver is `sent`, the same pair cannot record another (409 `TRANSFER_PENDING`),
+  and the suggestion shows "waiting for confirmation" instead of Pay or Record payment. A transfer is confirmed once;
+  a second confirm answers `ALREADY_CONFIRMED`. Existing duplicate `sent` rows are left as they are.
 - A member can record only **their own** transfers. The owner can record transfers on behalf of others: on each
   suggested transfer that is not the owner's own debt, the owner records the payment from the suggestion (`owner_member_tools`).
 
