@@ -1,0 +1,19 @@
+@use '../styles/abstracts' as *;
+
+// The add-person form: name, optional email and the add button. Stacked on phones so the email input stays usable;
+// one row from sm up.
+.member-add {
+  @include up(sm) {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  &__input {
+    min-width: 0;
+
+    @include up(sm) {
+      flex: 1 1 0;
+      width: auto;
+    }
+  }
+}

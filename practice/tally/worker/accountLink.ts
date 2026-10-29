@@ -130,7 +130,9 @@ export async function linkToAccount(
 
     try {
       const res = await db
-        .prepare('UPDATE members SET user_id = ? WHERE id = ? AND (user_id IS NULL OR user_id = ?)')
+        .prepare(
+          'UPDATE members SET user_id = ?, invite_email = NULL WHERE id = ? AND (user_id IS NULL OR user_id = ?)',
+        )
         .bind(me.userId, deviceMember.id, me.userId)
         .run();
 

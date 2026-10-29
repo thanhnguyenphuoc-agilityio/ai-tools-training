@@ -14,6 +14,7 @@ const member = (id: string, name: string): MemberDto => ({
   removedReason: null,
   bankSource: null,
   hasAccount: false,
+  invited: false,
 });
 const members = [member('alex', 'Alex'), member('jamie', 'Jamie')];
 

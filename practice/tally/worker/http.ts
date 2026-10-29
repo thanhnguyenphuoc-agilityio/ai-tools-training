@@ -62,6 +62,25 @@ export function optionalText(value: unknown, field: string, max: number): string
   return text(value, field, max);
 }
 
+/**
+ * An invite email: null for no email (undefined, null, '' or spaces only), else the trimmed lowercase address.
+ * Only the shape is checked (one `@`, text on both sides, no spaces, at most 254 characters). The value is never put
+ * into the error.
+ */
+export function optionalEmail(value: unknown, field: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') {
+    throw new ApiError(400, 'INVALID_EMAIL', `${field} must be an email address`, { field });
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const parts = trimmed.split('@');
+  const valid =
+    trimmed.length <= 254 && !/\s/.test(trimmed) && parts.length === 2 && parts[0] !== '' && parts[1] !== '';
+  if (!valid) throw new ApiError(400, 'INVALID_EMAIL', `${field} must be an email address`, { field });
+  return trimmed.toLowerCase();
+}
+
 export function amount(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0 || value > MAX_AMOUNT) {
     throw new ApiError(400, 'INVALID_AMOUNT', 'amount must be a positive integer in minor units', { max: MAX_AMOUNT });

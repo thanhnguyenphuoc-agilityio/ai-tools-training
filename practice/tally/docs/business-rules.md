@@ -37,7 +37,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     because they stay in the history with their amounts in the original currency.
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
-  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
+  - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, the automatic link of an invited member (`member_email_invite`), keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
   - **Changes that count as activity:** attaching a group to an account (`group.link`, from opening a recovery link while signed in, from the attach after sign-in, or from keeping the group) moves `last_activity_at` like "Link to my account" does.
   - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), a hand-over of a group that is not kept (`transfer_ownership`, recorded in `audit_log` as `owner.transfer`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
@@ -64,6 +64,22 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - A device acts as at most one member per group: a device that has already joined gets `ALREADY_MEMBER` when claiming
   or joining again. The rule extends to accounts: one account is at most one member per group; if the account already has
   a member in the group, `ACCOUNT_ALREADY_MEMBER` is returned before `ALREADY_MEMBER`.
+- **Invite by email** (`member_email_invite`):
+  - A member who adds a person by name (`claim: false`) may give that person an email (`inviteEmail`, optional, at most
+    254 characters). Empty means none; anything that is not a single `name@domain`-shaped address gives `400 INVALID_EMAIL`.
+    The email is stored trimmed and lowercased.
+  - Afterwards only the owner can set or clear it (`PATCH`, `OWNER_ONLY` for others), and only while the member is not
+    claimed (`MEMBER_ALREADY_CLAIMED`) and not removed (`MEMBER_REMOVED`). Each change is recorded as `member.update`.
+  - The API never returns the email: `MemberDto` carries only `invited` (true for an active, unclaimed member with an
+    email). The members list shows an "Invited by email" badge.
+  - When a signed-in person opens the group link (`GET /groups/:code`) and their account email equals the invite email
+    (ignoring case), has no member in the group and the device is not acting as a member, the oldest matching active,
+    unclaimed member is linked to the account and its invite email is cleared. This is recorded as `member.link` and
+    moves `last_activity_at`. If nothing matches, or the account already has a member, nothing is written and no error
+    is shown. A second GET writes nothing.
+  - The invite email is also cleared when the member is claimed, linked through the device account link, or removed.
+    **Known limit:** no release route exists yet (`wrong_name_claim` is in the backlog). When it lands, releasing a
+    member must clear `invite_email` as well.
 - Names are unique within a group (case-insensitive).
 - Each member enters their own **receiving account**: bank (from the VietQR-supported list), account number
   (4-19 letters or digits) and account holder name. Receiving account precedence: group account, else saved account
@@ -224,7 +240,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   linked to another account. Both the group and the owner member are updated, or neither is.
   - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
 - Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
-  is **never returned in group data** or shown to other members.
+  for email invites (`member_email_invite`), and is **never returned in group data** or shown to other members.
 - **Saved bank details (`saved_bank_details`):**
   - A signed-in person can save one set of bank details in their account (`PATCH /api/me`, returning 401
     `SIGN_IN_REQUIRED` without a session).

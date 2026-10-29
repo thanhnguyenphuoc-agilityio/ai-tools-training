@@ -27,6 +27,7 @@ const member = (id: string, name: string): MemberDto => ({
   accountName: null,
   bankSource: null,
   hasAccount: false,
+  invited: false,
 });
 
 const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'amount' | 'shares'>): ExpenseDto => ({

@@ -31,6 +31,8 @@ export interface MemberDto extends BankDetails {
   bankSource: 'group' | 'account' | null;
   /** Linked to a signed-in account (boolean only; the account itself is never returned). */
   hasAccount: boolean;
+  /** Active unclaimed member who has an invite email set. The email itself is never returned. */
+  invited: boolean;
 }
 
 /** equal: same share for everyone; weight: by weight; exact: each participant's amount is typed. */

@@ -107,8 +107,11 @@ test.describe('lock_groups (LG-6, LG-7)', () => {
 
         // AccountMenu dev form opens
         await expect(page.getByText(t('account.devTitle'))).toBeVisible();
-        await page.getByLabel(t('account.devEmail')).fill(email);
-        await page.locator('.account-menu__form').getByRole('button', { name: t('account.devSubmit') }).click();
+        await page.locator('.account-menu__form').getByLabel(t('account.devEmail')).fill(email);
+        await page
+          .locator('.account-menu__form')
+          .getByRole('button', { name: t('account.devSubmit') })
+          .click();
 
         // Now signed in: control becomes enabled
         await expect(checkbox).toBeEnabled();

@@ -15,6 +15,7 @@ import {
   sha256Hex,
 } from '../auth';
 import { attachOwnerGroup, tryAttachOwnerGroup } from '../accountLink';
+import { linkInvitedMember } from '../inviteLink';
 import {
   audit,
   loadActiveMember,
@@ -27,6 +28,7 @@ import {
 } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
 import {
+  canAutoLinkInvite,
   canLinkToAccount,
   requireAccount,
   requireCanTransferOwnership,
@@ -88,6 +90,18 @@ groupRoutes.post('/', async (c) => {
 groupRoutes.get('/:code', async (c) => {
   const { group, me } = await loadGroup(c);
   const db = c.env.DB;
+
+  // member_email_invite: a signed-in account with no member here is linked to the invited member that has its email.
+  // This is the only GET that writes, and only when a link happens (recorded as a change, like a claim).
+  if (canAutoLinkInvite(me)) {
+    const account = await resolveAccount(c);
+    const memberId = account ? await linkInvitedMember(db, group, me, account.email) : null;
+    if (memberId) {
+      await recordChange(db, group.code, { ...me, memberId }, 'member.link', memberId);
+      me.memberId = memberId;
+      me.accountMemberId = memberId;
+    }
+  }
 
   const [members, { expenses, transfers }] = await Promise.all([
     loadMembers(db, group.code),

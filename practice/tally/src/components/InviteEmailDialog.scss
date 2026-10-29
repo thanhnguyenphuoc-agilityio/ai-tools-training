@@ -1,0 +1,9 @@
+@use '../styles/abstracts' as *;
+
+.invite-email-dialog {
+  max-width: 32rem;
+
+  .text--muted {
+    margin: 0;
+  }
+}
