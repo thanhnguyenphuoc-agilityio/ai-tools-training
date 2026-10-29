@@ -175,3 +175,25 @@ waiting-to-merge with a merge request section.
 
 Deployment note: before a remote deploy, run `npx wrangler r2 bucket create tally-receipts` and
 `npx wrangler d1 migrations apply DB --remote`.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- [major] `src/components/ExpenseForm.tsx`: the file input had `capture="environment"`. On a phone this opens the
+  camera only, so a receipt saved from a chat history (the case in the ticket description) could not be picked.
+  Fixed: the attribute is removed; `accept="image/*"` still offers the camera next to the gallery. `e2e/receipts.spec.ts`
+  now checks the attribute is absent; it failed on desktop and mobile before the fix.
+- Checked against the Answers: one photo per expense with replace and old object deletion; add, replace and remove
+  through `requireCanEditExpense` and `EXPENSE_HAS_REMOVED_MEMBER`; view for anyone with the link; GET writes
+  nothing; magic bytes checked against the header; 1 MB own limit while JSON routes keep 16 KB; expense delete and
+  group purge remove the R2 objects; account deletion keeps them. Migration `0011_attachments.sql` is new.
+- [nit] `deleteExpenseReceipt` runs after the soft delete as a separate statement; a failure only leaves an orphan
+  row of a deleted expense, which the ledger and GET already hide and the purge removes. Accepted.
+
+Verdict: approve after the fix. Commit authors and dates checked.
+
+Checks: `npm run typecheck` and `npm run lint` passed, `npm test` 46 files / 536 passed, `e2e/receipts.spec.ts`
+(port 5193) 4 passed. Typecheck and `npm test` rerun on `develop` after the merge.
