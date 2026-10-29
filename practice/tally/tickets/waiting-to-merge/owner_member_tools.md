@@ -58,7 +58,7 @@ On `develop`:
 1. Alex creates a group and adds Sam by name.
 2. Alex adds a 90k expense shared by Alex and Sam.
 
-Expected from the code paths above, and observed on the Members tab and the Settle tab:
+Expected from the code paths above (not run in the app):
 
 - The Members tab shows one bank form, Alex's own.
 - Sam's row offers no account action for Alex.
@@ -165,10 +165,36 @@ Branch `feat/owner_member_tools` from `develop` (4c72495). The ticket moves to `
 10. Tests:
     - `tests/unit/ownerTools.test.ts` (appended): the `canEditAccount` and `payAction` cases from the test matrix.
     - `tests/api/groups.test.ts`: the five API cases from the test matrix, each in its own `it()` block, to stay within
-      the test timeout (the same split as commit 07f2009).
+      the test timeout.
     - `e2e/owner-member-tools.spec.ts` (new): the e2e cases from the test matrix, in the Vietnamese locale used by the
       other e2e specs, with text read through `t()`.
 11. Docs: `docs/business-rules.md` (the receiving-account bullet and the balances section), `README.md` (the Owner
     concept row and "Not in the MVP"), and `docs/design.md` (`owner_member_tools` marked built, and one line in
     section 3 about `src/ownerTools.ts`).
 12. Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:hooks` and the e2e run on port 5194.
+
+## Merge request
+
+The merge request is opened on GitLab from this branch; its link is added when it exists.
+
+- Source branch: `feat/owner_member_tools`. Target branch: `develop`.
+- Changes:
+  - the owner sees "Edit account" on each active member row except their own; it opens the bank form under that row
+    (`MembersPanel`, `BankForm` with `forOther`);
+  - the owner sees "Record payment" on each suggested transfer whose payer is not the owner; it opens the transfer
+    dialog for the payer (`SettlePanel`, `QrDialog`) and records a `sent` transfer from that payer;
+  - `api.recordTransfer` takes an optional `fromId`; display helpers `canEditAccount` and `payAction` in
+    `src/ownerTools.ts`.
+- No API route change, no `policy.ts` change, no migration.
+- The API cases in `tests/api/groups.test.ts` document existing behaviour and pass before and after the change.
+- Commands and results (worktree `practice/tally`):
+  - `npm run typecheck`: pass.
+  - `npm run lint`: pass.
+  - `npm test`: 40 files, 458 tests pass on the last run. Earlier runs showed Miniflare timeouts and `fetch failed`
+    in unrelated API files; each failing file passes when rerun alone (71 of 71 in the four files that failed).
+  - `npm run test:hooks`: 29 pass, 0 fail.
+  - `npx playwright test --config playwright.local.config.ts` (port 5194): 129 passed, 1 failed, 2 skipped. The
+    failure was `transfer-ownership.spec.ts` on desktop at `browserContext.close` (target closed during teardown);
+    the spec passes on rerun (4 of 4). The new spec `e2e/owner-member-tools.spec.ts` passes on desktop and mobile.
+- Docs updated: `docs/business-rules.md`, `docs/design.md` (`owner_member_tools (built)` and section 3) and
+  `README.md` (Owner concept row and "Not in the MVP").
