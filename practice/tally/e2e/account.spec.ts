@@ -117,10 +117,9 @@ test.describe('Account and Dev sign-in (GS-11, GS-15, GS-2)', () => {
       .getByRole('button', { name: t('account.devSubmit') })
       .click();
 
-    // Signing in reloads the group; the owner key on this device can now be attached to the account
-    await expect(link).toBeVisible();
-    await link.click();
-    await expect(page.locator('.toasts')).toContainText(t('toast.accountLinked'));
+    // Signing in attaches the owner group right away (owner_link_binds_account): no button, owner tools shown
+    await page.getByRole('tab', { name: t('group.tabs.members') }).click();
+    await expect(page.getByText(t('ownerAccess.tied'))).toBeVisible();
     await expect(link).toBeHidden();
 
     // A second device that signs in with the same account is the owner without the recovery link

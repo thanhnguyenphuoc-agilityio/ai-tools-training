@@ -56,7 +56,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
         roundTo: roundCoarse ? coarseUnit : currency.roundOptions[0],
       });
       // The owner key is shown once on the group page, then only the user has it.
-      navigate(`/g/${code}`, { ownerKey });
+      navigate(`/g/${code}`, { ownerKey, created: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

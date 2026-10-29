@@ -11,11 +11,16 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   not guessable and not sequential.
 - Anyone with the link `/g/<code>` can **view** the whole group: members, expenses, balances and receiving accounts.
 - The creator of a group is its **owner** and also its first member.
-- The owner receives a secret **owner key**:
+- When a group is created without signing in, the owner receives a secret **owner key**:
   - The server stores only its SHA-256 hash, never the key.
   - The key is shown **once**, as a recovery link `.../g/<code>#owner=<key>`.
   - The key is after `#`, so browsers do not send it to the server and it does not appear in logs.
-  - Opening the recovery link on another device restores owner access.
+  - Opening the recovery link on another device restores owner access, until the group is tied to an account.
+  - Opening the recovery link while signed in attaches the group and the owner member to that account, without a confirmation step, and shows a toast. The owner key is then revoked (`owner_key_hash = 'revoked'`) and the owner cookie on every device stops granting owner access; each device clears it on its next request to the group.
+  - An owner who created a group without an account and signs in later on the same device is attached automatically: after sign-in, the interface asks the server to attach each group of the device history that the device holds an owner key for.
+  - After attaching, a revoked recovery link answers `403 OWNER_KEY_REVOKED`. A group owned by another account answers `403 GROUP_OWNED_BY_OTHER_ACCOUNT`.
+- When a group is created while signed in, it belongs to the account from the start: no owner key is issued (`ownerKey` is null), `owner_key_hash` is set to `'revoked'`, and no recovery link is shown. The page shows "Owner access is tied to your account" instead.
+- Owner access of an account-owned group is tied to the account. Migration `0007_owner_key_revoke.sql` revoked the owner key of every group that already had an account owner.
 - The owner can rename the group and change the rounding mode.
 - **Currency** is a group setting, independent of the interface language (for example, a trip to Thailand uses THB
   while the interface stays in Vietnamese).
@@ -28,14 +33,15 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - **Automatic deletion (`purge_inactive_groups`):**
   - An inactive group is deleted automatically after **10 days** without changes. A daily cleanup job runs at 02:00 Vietnam time (19:00 UTC) and deletes groups whose `last_activity_at` is strictly older than 10 days before the run time. Exactly 10 days is kept.
   - **Changes that count as activity:** adding, editing or deleting an expense, recording or confirming a transfer, adding a member (joining or by name), claiming a name, editing member details, releasing a member, removing a member, linking the group or a member to an account, keeping a group or stopping keeping it (`lock_groups`), and saving group settings that differ from the current values.
-  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link, saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Opening an owner recovery link is still recorded in `audit_log` (`owner.claim`); viewing, saving identical settings, signing in and saving account bank details write nothing.
+  - **Changes that count as activity:** attaching a group to an account (`group.link`, from opening a recovery link while signed in, from the attach after sign-in, or from keeping the group) moves `last_activity_at` like "Link to my account" does.
+  - **Not changes:** viewing the group (by anyone, members and guests alike), opening an owner recovery link without an account (still recorded in `audit_log` as `owner.claim`), saving group settings identical to the current ones, signing in, and saving or clearing bank details in the account (`saved_bank_details`). None of them moves `last_activity_at`. Viewing, saving identical settings, signing in and saving account bank details write nothing. A revoked owner cookie that the server clears on the next request writes nothing either.
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
   - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
   - **Kept groups (`lock_groups`):**
     - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
-    - If the group does not belong to an account yet, keeping it links the group and the owner member to the owner's account with the same checks and refusals as "Link to my account" (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
+    - If the group does not belong to an account yet, keeping it attaches the group and the owner member to the owner's account and revokes the owner key, with the same refusals as attaching an owner (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`, `409 ACCOUNT_ALREADY_MEMBER`, `409 MEMBER_LINKED_ELSEWHERE`).
     - Kept groups are exempt from the daily purge (`locked_at IS NULL`).
     - Unlocking restarts the 10 days: `last_activity_at` is set to the unlock time, so the expiry is 10 days after the unlock.
     - Keeping and unlocking are changes audited in `audit_log` as `group.lock` and `group.unlock`.
@@ -197,15 +203,18 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
 - Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
   claiming a name while signed in links that member to the account (`members.user_id`).
 - **Link to my account:**
-  - The button is shown only when there is something to link: the signed-in person holds the owner key and the group
-    or the owner member is not linked to the account yet, or holds a device token of a member who is not linked to
-    any account. It is not shown when the group or the member belongs to another account, or when the account is
-    already another member of the group.
-  - An owner with access from a recovery link on this device can attach the group and the owner member to their account.
-    Both rows are updated or nothing changes.
+  - The button is shown only when a member device token is held, the member is not linked to any account, and the
+    account is not already another member of the group. It is never shown to an owner: owners attach their group
+    automatically (see the owner key bullets above).
   - A member with access from a device token on this device can attach that member to their account.
-  - If the group belongs to another account, linking is refused (`403 GROUP_OWNED_BY_OTHER_ACCOUNT`).
   - If the member is linked to another account, linking is refused (`409 MEMBER_LINKED_ELSEWHERE`).
+  - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
+  - An owner member's device token cannot be linked this way (`403 OWNER_ONLY`): the owner attaches through the owner key.
+  - Linking a member is a change of the group (`member.link`); it moves `last_activity_at`.
+- **Owner attach:** a signed-in person whose device holds the owner key of a group can attach the group and the owner
+  member to the account. The attach answers `attached: false` and writes nothing when the device holds no live key,
+  the group belongs to another account, the account already has another member in the group, or the owner member is
+  linked to another account. Both the group and the owner member are updated, or neither is.
   - If the account already has another member in the group, linking is refused (`409 ACCOUNT_ALREADY_MEMBER`).
 - Stored data: Google account id (`google_sub`), email and display name. The email is stored for identification and
   is **never returned in group data** or shown to other members.
@@ -230,11 +239,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Deletion confirms through a dialog explaining what is deleted and what stays, with no typed confirmation.
   - **Deleted:** the `users` row (Google account id, email, display name, saved bank details) and all sessions across every device. The session cookie is cleared and the interface signs out.
   - **Stays:** groups and everything inside them (members, expenses, transfers, bank details entered in a group, audit log). Group data is purged by the inactivity rule or cleared in the group.
-  - **Owned groups:** detached (`owner_user_id` set to NULL) and keep working. Owner access remains on devices holding the owner key or through the recovery link.
+  - **Refused while the account owns a group with other members:** deletion answers `409 ACCOUNT_OWNS_SHARED_GROUP` (with `count`) while the account owns any group that has at least one other active (not removed) member. The owner first hands the group over (`transfer_ownership`) or removes those members. Nothing is deleted when refused.
+  - **Solo owned groups:** a group where the owner is the only active member does not block the deletion. It is detached (`owner_user_id` set to NULL), its owner key stays revoked, and it has no owner left. It is deleted by the inactivity rule.
+  - **Owned groups:** detached (`owner_user_id` set to NULL). Owner access is tied to the account, so after deletion nobody holds owner access to a detached group.
   - **Kept groups:** stop being kept. Each kept group owned by the account is unlocked (`locked_at` cleared), audited as `group.unlock` (actor `owner`, details `{"reason":"account.delete"}`), and its `last_activity_at` moves to the deletion time (giving 10 full days).
   - **Linked members:** detached (`members.user_id` set to NULL). The member name, expenses, and history stay; devices with a device token keep acting as that member. Members who used the saved bank details no longer show bank details (`bankSource: null`).
   - **Not a group change:** detaching owners and members is not a change and does not move `last_activity_at` on non-kept groups.
-  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding the owner key or a device token).
+  - **Signing in again:** creates a fresh, empty account with a new id; previous groups are not reattached automatically ("Link to my account" works on devices holding a member device token; an owner's group is not reattached, since its key is revoked).
 - **Member removal:**
   - When the owner removes a member, `user_id` is cleared; the account no longer resolves to it and may join the group
     again as a new member.

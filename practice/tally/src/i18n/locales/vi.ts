@@ -79,6 +79,10 @@ export const vi: Messages = {
     linkLabel: 'Link khôi phục',
     done: 'Tôi đã lưu',
   },
+  ownerAccess: {
+    title: 'Quyền trưởng nhóm',
+    tied: 'Quyền trưởng nhóm gắn với tài khoản của bạn.',
+  },
   join: {
     title: 'Bạn là ai trong nhóm?',
     iAm: 'Tôi là {name}',
@@ -206,6 +210,7 @@ export const vi: Messages = {
     expenseDeleted: 'Đã xoá khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
+    ownerAttached: 'Đã gắn nhóm vào tài khoản của bạn.',
     bankSaved: 'Đã lưu tài khoản nhận tiền.',
     settingsSaved: 'Đã lưu cài đặt nhóm.',
     transferRecorded: 'Đã ghi nhận chuyển khoản. Số dư cập nhật khi {name} xác nhận.',
@@ -245,7 +250,8 @@ export const vi: Messages = {
     title: 'Xoá tài khoản',
     deleted: 'Thông tin đăng nhập, thông tin ngân hàng đã lưu và phiên đăng nhập trên mọi thiết bị sẽ bị xoá.',
     kept: 'Các nhóm và dữ liệu nhóm vẫn giữ nguyên. Các nhóm bạn giữ không bị xoá sẽ bị xoá sau 10 ngày không có thay đổi.',
-    ownerWarning: 'Bạn chỉ giữ quyền trưởng nhóm trên các thiết bị còn lưu khóa trưởng nhóm hoặc qua liên kết khôi phục.',
+    ownerWarning:
+      'Nhóm bạn sở hữu có thành viên khác sẽ chặn việc xoá: hãy chuyển quyền hoặc xoá các thành viên khác trước. Nhóm chỉ có mình bạn sẽ không còn trưởng nhóm và bị xoá sau 10 ngày không có thay đổi.',
     confirm: 'Xoá tài khoản của tôi',
     done: 'Tài khoản của bạn đã được xoá.',
   },
@@ -318,6 +324,9 @@ export const vi: Messages = {
     GROUP_OWNED_BY_OTHER_ACCOUNT: 'Nhóm này đã thuộc về một tài khoản khác.',
     ACCOUNT_ALREADY_MEMBER: 'Tài khoản của bạn đã là thành viên trong nhóm này.',
     MEMBER_LINKED_ELSEWHERE: 'Thành viên này đã được liên kết với một tài khoản khác.',
+    OWNER_KEY_REVOKED: 'Link khôi phục này đã bị thu hồi vì nhóm đã được gắn vào một tài khoản.',
+    ACCOUNT_OWNS_SHARED_GROUP:
+      'Không thể xoá tài khoản khi đang sở hữu {count} nhóm có thành viên khác. Hãy chuyển quyền hoặc xoá các thành viên khác trước.',
     LOCK_LIMIT_REACHED: 'Bạn đã giữ tối đa {max} nhóm. Hãy dừng giữ một nhóm trước.',
   },
 };

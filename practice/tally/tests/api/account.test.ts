@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ErrorBody } from '../../shared/errors';
-import type { GroupDto, MeResponse } from '../../shared/types';
+import type { CreateGroupResponse, GroupDto, MeResponse } from '../../shared/types';
 import { runDailyJobs } from '../../worker/cleanup';
 import { resetGoogleKeyCache } from '../../worker/google';
 import { Browser, GOOGLE_CLIENT_ID, createGoogleKey, createTestEnv, signIn } from './helpers';
@@ -73,42 +73,37 @@ describe('account and Google sign-in API', () => {
     expect(b4Group.json.me.memberId).toBe(charlieMemberId);
   });
 
-  it('GS-4: link with owner key sets owner_user_id; linking group owned by another account returns 403', async () => {
+  it('GS-4: attach of an anonymous group sets owner_user_id; a group owned by another account is refused on claim', async () => {
     // Created as guest (not signed in)
     const guest = new Browser(env.env);
-    const code = (await guest.call('POST', '/groups', { name: 'Party', ownerName: 'Alice' })).json.code;
+    const created = (await guest.call<CreateGroupResponse>('POST', '/groups', { name: 'Party', ownerName: 'Alice' }))
+      .json;
+    const code = created.code;
 
-    // Guest signs in as Alice
+    // Guest signs in as Alice and attaches the group from the owner cookie of this device
     await signIn(guest, 'alice@example.com');
-
-    // Link to account
-    const linkRes = await guest.call<{ ok: boolean; changed: boolean }>('POST', `/groups/${code}/link`);
-    expect(linkRes.status).toBe(200);
-    expect(linkRes.json.changed).toBe(true);
+    const attachRes = await guest.call<{ ok: true; attached: boolean }>('POST', `/groups/${code}/owner/attach`);
+    expect(attachRes.status).toBe(200);
+    expect(attachRes.json.attached).toBe(true);
 
     const groupRow = await env.env.DB.prepare('SELECT owner_user_id FROM groups WHERE code = ?')
       .bind(code)
       .first<{ owner_user_id: string }>();
     expect(groupRow?.owner_user_id).toBeTruthy();
 
-    // Linking again returns changed: false
-    const relinkRes = await guest.call<{ ok: boolean; changed: boolean }>('POST', `/groups/${code}/link`);
-    expect(relinkRes.status).toBe(200);
-    expect(relinkRes.json.changed).toBe(false);
+    // Attaching again changes nothing
+    const reattachRes = await guest.call<{ ok: true; attached: boolean }>('POST', `/groups/${code}/owner/attach`);
+    expect(reattachRes.status).toBe(200);
+    expect(reattachRes.json.attached).toBe(false);
 
-    // Another account with owner key (e.g. copied recovery key) tries to link: 403
+    // Another account with the old recovery key (e.g. copied recovery link) is refused
     const intruder = new Browser(env.env);
     await signIn(intruder, 'intruder@example.com');
-    const ownerCookie = guest.getCookie(`tally_owner_${code}`);
-    // Intruder has owner cookie
-    const intruderLink = await intruder.call<ErrorBody>(
-      'POST',
-      `/groups/${code}/link`,
-      {},
-      { cookie: `tally_owner_${code}=${ownerCookie}` },
-    );
-    expect(intruderLink.status).toBe(403);
-    expect(intruderLink.json.code).toBe('GROUP_OWNED_BY_OTHER_ACCOUNT');
+    const intruderClaim = await intruder.call<ErrorBody>('POST', `/groups/${code}/owner/claim`, {
+      ownerKey: created.ownerKey,
+    });
+    expect(intruderClaim.status).toBe(403);
+    expect(intruderClaim.json.code).toBe('GROUP_OWNED_BY_OTHER_ACCOUNT');
   });
 
   it('GS-5: account already a member cannot join, claim, or link another member (409 ACCOUNT_ALREADY_MEMBER)', async () => {
@@ -155,10 +150,11 @@ describe('account and Google sign-in API', () => {
     expect(linkElse.json.code).toBe('MEMBER_LINKED_ELSEWHERE');
   });
 
-  it('GS-6: sign out, then GET /me returns null and owner key still gives isOwner', async () => {
+  it('GS-6: sign out, then GET /me returns null and an unattached owner key still gives isOwner', async () => {
+    // Anonymous group: the owner key is still live, so the device keeps owner access after sign-out
     const b = new Browser(env.env);
-    await signIn(b, 'user@example.com');
     const code = (await b.call('POST', '/groups', { name: 'Party', ownerName: 'Alice' })).json.code;
+    await signIn(b, 'user@example.com');
 
     const logoutRes = await b.call('POST', '/auth/logout');
     expect(logoutRes.status).toBe(200);
@@ -331,15 +327,16 @@ describe('account and Google sign-in API', () => {
       .first<{ last_activity_at: string }>();
     expect(rowAfterSignIn?.last_activity_at).toBe(past);
 
-    // Link moves activity and writes group.link audit
+    // Attaching the owner moves activity and writes group.link audit
     const ownerCookie = owner.getCookie(`tally_owner_${code}`);
-    const linkRes = await guest.call(
+    const linkRes = await guest.call<{ ok: true; attached: boolean }>(
       'POST',
-      `/groups/${code}/link`,
+      `/groups/${code}/owner/attach`,
       {},
       { cookie: `tally_owner_${code}=${ownerCookie}` },
     );
     expect(linkRes.status).toBe(200);
+    expect(linkRes.json.attached).toBe(true);
 
     const rowAfterLink = await env.env.DB.prepare('SELECT last_activity_at FROM groups WHERE code = ?')
       .bind(code)
@@ -450,38 +447,42 @@ describe('account and Google sign-in API', () => {
       await signIn(sam, 'sam@example.com');
       await sam.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
 
-      // The same account, on the owner's device, tries to link the owner key
+      // The same account, on the owner's device, attaches the owner group: refused, nothing changes
       await signIn(guest, 'sam@example.com');
-      const res = await guest.call<ErrorBody>('POST', `/groups/${code}/link`);
-      expect(res.status).toBe(409);
-      expect(res.json.code).toBe('ACCOUNT_ALREADY_MEMBER');
+      const res = await guest.call<ErrorBody>('POST', `/groups/${code}/owner/attach`);
+      expect(res.status).toBe(200);
+      expect(res.json).toEqual({ ok: true, attached: false });
       expect(await linkRows(code)).toEqual({ owner: null, member: null });
     });
 
-    it('GS-4: a refused link changes neither groups.owner_user_id nor members.user_id', async () => {
+    it('GS-4: a refused owner attach changes neither groups.owner_user_id nor members.user_id', async () => {
       const guest = new Browser(env.env);
       const code = (await guest.call('POST', '/groups', { name: 'Party', ownerName: 'Alice' })).json.code;
       await signIn(guest, 'alice@example.com');
-      await guest.call('POST', `/groups/${code}/link`);
+      await guest.call('POST', `/groups/${code}/owner/attach`);
       const before = await linkRows(code);
       expect(before?.owner).toBeTruthy();
       expect(before?.member).toBe(before?.owner);
 
+      // The old owner cookie is now used by another account: attach is skipped, nothing is written
       const intruder = new Browser(env.env);
       await signIn(intruder, 'intruder@example.com');
-      const res = await intruder.call<ErrorBody>(
+      const res = await intruder.call<{ ok: true; attached: boolean }>(
         'POST',
-        `/groups/${code}/link`,
+        `/groups/${code}/owner/attach`,
         {},
         { cookie: `tally_owner_${code}=${guest.getCookie(`tally_owner_${code}`)}` },
       );
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      expect(res.json.attached).toBe(false);
       expect(await linkRows(code)).toEqual(before);
     });
 
     it('a half-linked group (member linked to another account) is refused whole, leaving the group unlinked', async () => {
       const guest = new Browser(env.env);
-      const code = (await guest.call('POST', '/groups', { name: 'Party', ownerName: 'Alice' })).json.code;
+      const created = (await guest.call<CreateGroupResponse>('POST', '/groups', { name: 'Party', ownerName: 'Alice' }))
+        .json;
+      const code = created.code;
       await signIn(guest, 'alice@example.com');
       // Another account holds the owner member but the group itself is unlinked
       await env.env.DB.prepare(
@@ -491,17 +492,17 @@ describe('account and Google sign-in API', () => {
         .bind('u-other', code)
         .run();
 
-      const res = await guest.call<ErrorBody>('POST', `/groups/${code}/link`);
+      const res = await guest.call<ErrorBody>('POST', `/groups/${code}/owner/claim`, { ownerKey: created.ownerKey });
       expect(res.status).toBe(409);
       expect(res.json.code).toBe('MEMBER_LINKED_ELSEWHERE');
       expect(await linkRows(code)).toEqual({ owner: null, member: 'u-other' });
     });
 
-    it('linking an owner sets both the group and the owner member, and audits group.link with the owner member', async () => {
+    it('attaching an owner sets both the group and the owner member, and audits group.link with the owner member', async () => {
       const guest = new Browser(env.env);
       const code = (await guest.call('POST', '/groups', { name: 'Party', ownerName: 'Alice' })).json.code;
       await signIn(guest, 'alice@example.com');
-      await guest.call('POST', `/groups/${code}/link`);
+      await guest.call('POST', `/groups/${code}/owner/attach`);
 
       const owner = await env.env.DB.prepare('SELECT id FROM members WHERE group_code = ? AND is_owner = 1')
         .bind(code)
@@ -546,15 +547,15 @@ describe('account and Google sign-in API', () => {
       // Not signed in: nothing to link with
       expect(await can(guest)).toBe(false);
 
-      // Signed in with the owner key, group not linked yet
+      // Signed in with the owner key: the owner attaches automatically, so the button is never offered to an owner
       await signIn(guest, 'alice@example.com');
-      expect(await can(guest)).toBe(true);
-
-      // After linking there is nothing left
-      await guest.call('POST', `/groups/${code}/link`);
       expect(await can(guest)).toBe(false);
 
-      // Another account holding a copy of the owner key: the group is taken, the button is not offered
+      // After attaching there is nothing left
+      await guest.call('POST', `/groups/${code}/owner/attach`);
+      expect(await can(guest)).toBe(false);
+
+      // Another account holding a copy of the old owner key: the group is taken, the button is not offered
       const intruder = new Browser(env.env);
       await signIn(intruder, 'intruder@example.com');
       expect(await can(intruder, `tally_owner_${code}=${guest.getCookie(`tally_owner_${code}`)}`)).toBe(false);

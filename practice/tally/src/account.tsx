@@ -2,12 +2,15 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
 import type { ConfigResponse, UserDto } from '../shared/types';
+import { readHistory } from './history';
+import { attachDeviceGroups } from './ownerAttach';
 import { useToast } from './toast';
 
 interface AccountContextValue {
   config: ConfigResponse | null;
   user: UserDto | null;
   refresh: () => Promise<void>;
+  afterSignIn: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   version: number;
@@ -47,6 +50,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
+  // After sign-in, groups created or opened on this device before signing in are attached to the account.
+  const afterSignIn = async () => {
+    const entries = readHistory();
+    if (entries.length > 0) await attachDeviceGroups(api, entries);
+    await refresh();
+  };
+
   const signOut = async () => {
     await api.signOut();
     setUser(null);
@@ -62,7 +72,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   return (
     <AccountContext.Provider
-      value={{ config, user, refresh, signOut, deleteAccount, version, requestSignIn, signInRequest }}
+      value={{ config, user, refresh, afterSignIn, signOut, deleteAccount, version, requestSignIn, signInRequest }}
     >
       {children}
     </AccountContext.Provider>

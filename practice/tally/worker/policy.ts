@@ -15,6 +15,15 @@ export function requireSignedIn(account: { id: string } | null): string {
   return account.id;
 }
 
+/** Deleting the account is refused while it owns a group that still has other active members. */
+export function requireNoSharedOwnedGroups(count: number): void {
+  if (count > 0) {
+    throw new ApiError(409, 'ACCOUNT_OWNS_SHARED_GROUP', 'cannot delete account while owning groups with other members', {
+      count,
+    });
+  }
+}
+
 export function requireMember(me: Identity): string {
   if (!me.memberId) throw new ApiError(401, 'JOIN_FIRST', 'join the group first');
   return me.memberId;
@@ -60,24 +69,20 @@ export function requireMemberLinkable(me: Identity, member: { id: string; user_i
 /**
  * Whether "Link to my account" has something to link: a signed-in person whose access on this device is not linked
  * yet. It mirrors the checks of `linkToAccount` (`worker/accountLink.ts`) without throwing, so the button is shown
- * only when the request can succeed. The owner key is tried first, as in `linkToAccount`.
+ * only when the request can succeed. Owners never use it: they attach automatically (`attachOwnerGroup`).
  */
 export function canLinkToAccount(
   me: Identity,
-  group: { owner_user_id: string | null },
-  ownerMember: { id: string; user_id: string | null } | null,
-  deviceMember: { id: string; user_id: string | null } | null,
+  deviceMember: { id: string; user_id: string | null; is_owner: number } | null,
 ): boolean {
   if (!me.userId) return false;
-  if (me.hasOwnerKey) {
-    if (!ownerMember) return false;
-    if (group.owner_user_id !== null && group.owner_user_id !== me.userId) return false;
-    if (ownerMember.user_id !== null && ownerMember.user_id !== me.userId) return false;
-    if (me.accountMemberId !== null && me.accountMemberId !== ownerMember.id) return false;
-    return group.owner_user_id === null || ownerMember.user_id === null;
-  }
   // A member linked to any account is not linkable. An account that already has another member in the group is refused.
-  return deviceMember !== null && deviceMember.user_id === null && me.accountMemberId === null;
+  return (
+    deviceMember !== null &&
+    deviceMember.is_owner === 0 &&
+    deviceMember.user_id === null &&
+    me.accountMemberId === null
+  );
 }
 
 /** Name and bank details: the member themself or the owner. */

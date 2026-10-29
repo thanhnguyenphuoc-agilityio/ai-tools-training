@@ -86,6 +86,10 @@ export const en = {
     linkLabel: 'Recovery link',
     done: 'I saved it',
   },
+  ownerAccess: {
+    title: 'Owner access',
+    tied: 'Owner access is tied to your account.',
+  },
   join: {
     title: 'Who are you in this group?',
     iAm: 'I am {name}',
@@ -218,6 +222,7 @@ export const en = {
     expenseDeleted: 'Expense deleted.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
+    ownerAttached: 'Group attached to your account.',
     bankSaved: 'Your bank details were saved.',
     settingsSaved: 'Group settings were saved.',
     transferRecorded: 'Transfer recorded. It counts once {name} confirms it.',
@@ -257,7 +262,8 @@ export const en = {
     title: 'Delete account',
     deleted: 'Your sign-in details, saved bank details and sessions on every device are deleted.',
     kept: 'Groups and their data stay. Groups you keep from deletion are deleted after 10 days without changes.',
-    ownerWarning: 'You keep owner access only on devices that hold the owner key or through the recovery link.',
+    ownerWarning:
+      'Groups you own with other members block deletion: hand them over or remove the other members first. Solo groups stay without an owner and are deleted after 10 days without changes.',
     confirm: 'Delete my account',
     done: 'Your account was deleted.',
   },
@@ -334,6 +340,9 @@ export const en = {
     GROUP_OWNED_BY_OTHER_ACCOUNT: 'This group already belongs to another account.',
     ACCOUNT_ALREADY_MEMBER: 'Your account is already a member of this group.',
     MEMBER_LINKED_ELSEWHERE: 'This member is already linked to another account.',
+    OWNER_KEY_REVOKED: 'This recovery link was revoked because the group is now linked to an account.',
+    ACCOUNT_OWNS_SHARED_GROUP:
+      'You cannot delete the account while it owns {count} groups with other members. Hand them over or remove the other members first.',
     LOCK_LIMIT_REACHED: 'You already keep {max} groups. Stop keeping one first.',
   } satisfies Record<ErrorCode, string>,
 };
