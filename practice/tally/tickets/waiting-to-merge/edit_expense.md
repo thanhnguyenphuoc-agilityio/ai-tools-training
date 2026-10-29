@@ -174,3 +174,35 @@ From the product owner (human), follow-up after review:
     removed-member bullet says "deleted or edited"); `docs/design.md` (`### edit_expense` section marked Built, and
     the section 3 list); `README.md` (editing removed from "Not in the MVP", and the sentence about the rules in the
     ticket is dropped).
+
+## Merge request
+
+Branch `feat/edit_expense` into `develop`. The merge request is opened on GitLab from this branch; its link is added
+when it exists.
+
+What changed:
+
+- `PATCH /groups/:code/expenses/:id` takes the same body as `POST`. The author or the owner may edit; an expense
+  without a recorded author can be edited only by the owner. A guest gets `JOIN_FIRST`, another member
+  `EDIT_NOT_ALLOWED`, an unknown or deleted expense `EXPENSE_NOT_FOUND`, and an expense a removed member paid or owes
+  a share of `EXPENSE_HAS_REMOVED_MEMBER`.
+- Shares are recomputed with the group's current rounding only when the amount, payer, split, participants, weights
+  (compared in hundredths) or typed exact amounts change. A date or description edit keeps the stored shares. Exact
+  mode stores the typed amounts with no rounding. A request that repeats the stored values answers `changed: false`
+  and writes nothing.
+- A real edit sets `expenses.edited_at` (migration `0010_expense_edits.sql`) and records `expense.edit` with the
+  previous values in the audit details. That moves `last_activity_at`. It works the same in a kept group. The UPDATE
+  repeats the removed-member check, and the share rewrite is gated on the new `edited_at`, so a removal that commits
+  in between changes nothing.
+- The list shows an edit action to the author and the owner (hidden when a removed member is involved) and an
+  "edited" badge. The form opens in edit mode with a Cancel action; the toast appears only when the save changed
+  something. Deleting the expense being edited returns the form to adding.
+
+Commands and results, run in `practice/tally`:
+
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm test`: 478 tests, 476 passed on the first run. Two tests in other files (`TO-1`, `GS-3`) timed out once with a
+  poisoned Miniflare stub; both passed on the rerun.
+- `npm run test:hooks`: 29 passed.
+- `npx playwright test --config playwright.local.config.ts`: 132 passed, 2 skipped.
