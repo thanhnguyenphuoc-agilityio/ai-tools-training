@@ -2,7 +2,7 @@
 import type { Context } from 'hono';
 import type { ErrorCode, ErrorParams } from '../shared/errors';
 import { getCurrency, type CurrencyInfo } from '../shared/currency';
-import { MAX_AMOUNT, MAX_WEIGHT, isValidWeight } from '../shared/money';
+import { MAX_AMOUNT, MAX_WEIGHT, isValidWeight, roundWeight } from '../shared/money';
 import { findBank, type BankDetails } from '../shared/types';
 
 export interface Env {
@@ -105,7 +105,7 @@ export function weight(value: unknown): number {
       max: MAX_WEIGHT,
     });
   }
-  return n;
+  return roundWeight(n);
 }
 
 export function currency(value: unknown): CurrencyInfo {

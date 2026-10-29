@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react';
 import type { GroupDto, MemberDto } from '../../shared/types';
 import { useAccount } from '../account';
 import { api } from '../api';
-import { useI18n } from '../i18n';
+import { useI18n, type UiMessage } from '../i18n';
 import { useToast } from '../toast';
 import { ClaimMemberDialog } from './ClaimMemberDialog';
 
 /** For visitors who are not a member on this device yet. */
 export function JoinPanel({ group, onDone }: { group: GroupDto; onDone: () => void }) {
   const { user } = useAccount();
-  const { t, errorMessage } = useI18n();
+  const { t, message } = useI18n();
   const notify = useToast();
   const [name, setName] = useState(user?.name.slice(0, 40) ?? '');
   const [touched, setTouched] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiMessage | null>(null);
   const [claiming, setClaiming] = useState<MemberDto | null>(null);
   const unclaimed = group.members.filter((m) => !m.claimed && !m.removed);
 
@@ -28,7 +28,7 @@ export function JoinPanel({ group, onDone }: { group: GroupDto; onDone: () => vo
         notify('toast.joined');
         onDone();
       })
-      .catch((err) => setError(errorMessage(err)));
+      .catch((err) => setError({ error: err }));
 
   return (
     <section className="card stack">
@@ -63,7 +63,7 @@ export function JoinPanel({ group, onDone }: { group: GroupDto; onDone: () => vo
         />
         <button className="button">{t('join.submit')}</button>
       </form>
-      {error && <p className="text text--error">{error}</p>}
+      {error && <p className="text text--error">{message(error)}</p>}
       {claiming && (
         <ClaimMemberDialog
           code={group.code}
