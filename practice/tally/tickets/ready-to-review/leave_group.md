@@ -123,3 +123,35 @@ Verification, run in the worktree on 2026-10-30:
   TO-1) with a Miniflare `ECONNRESET`; a rerun of those files plus `leave-group.test.ts` passed (59 tests).
 - `npm run test:hooks`: 29 tests, 0 failed.
 - `e2e/leave-group.spec.ts` is new and is left for the batch e2e run.
+
+## Review
+
+Reviewed by Sonnet (QA tester). The QA pass reported one major finding and one nit, did not finish its regression
+proof, and committed no change. The Opus review below supersedes it.
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- [rejected] QA major on the `DELETE /groups/:code` retry: each run of the guarded statement evaluates `NOT EXISTS`
+  atomically on the current state, so a member who joins before the second run blocks it, and a join after it finds no
+  group. The retry cannot delete a group that gained a member; it only lets an alone owner through when a removal commits
+  between the refused statement and the count. The code and `docs/design.md` stay as built.
+- [nit] Commits `af2959a` and `589dda1` share the author date 2026-10-30 11:10:44 +0700. Dates stay non-decreasing and
+  within working hours; pushed history is not re-dated, and these commits are not rewritten.
+- Policy only in `worker/policy.ts`; identity unchanged in `worker/auth.ts`; migration `0014_member_left.sql` is new;
+  `softRemove` keeps the remove race handling in one place; both error codes are translated in both locales; the live
+  middleware covers `DELETE /groups/:code` (the live test lists both routes).
+
+Fixes:
+
+- `tests/api/leave-group.test.ts`: two tests pin the retry. A removal between the refused statement and the count lets the
+  owner delete; a join right before the second statement answers `GROUP_HAS_MEMBERS` and keeps the group and all four
+  members. The QA probe left uncommitted in `worker/routes/groups.ts` and the test file was discarded.
+
+Checks (feature worktree):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 54 files, 688 tests passed.
+- `e2e/leave-group.spec.ts`: run with the batch e2e on `develop`.
