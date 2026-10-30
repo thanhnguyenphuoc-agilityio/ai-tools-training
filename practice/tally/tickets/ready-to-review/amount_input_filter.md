@@ -121,3 +121,14 @@ Fixes: none needed.
 
 Checks (feature worktree): `npm run typecheck` clean, `npm run lint` clean, `npm test` 55 files, 711 tests passed. The
 full e2e suite runs on `develop` after the batch merge.
+
+## Feedback
+
+From the product owner (human), 2026-10-30: the shorthand letter K, M or B is accepted only once and only at the end of
+the amount.
+
+- Fix: `filterAmountInput` keeps at most one shorthand letter, and only after a digit. The first K, M or B ends the
+  value, and a letter with no digit before it is dropped. "1K5" becomes "1K", "150KM" becomes "150K", "1.2m3" becomes
+  "1.2M", and "k150" becomes "150". This replaces the acceptance criterion that "1K5" stays "1K5".
+- Unit cases for the rule are in `tests/unit/money.test.ts`. `e2e/amount-input-filter.spec.ts` now expects `1,2B` for
+  the fill `1,2tr abc 150k`.

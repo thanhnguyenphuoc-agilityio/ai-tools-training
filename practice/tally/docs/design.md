@@ -404,8 +404,11 @@ Built. Rules in `docs/business-rules.md` (Expenses, the amount field bullets).
 
 - **Helper (`shared/money.ts`):** `filterAmountInput(input)` keeps only `0`-`9`, `.`, `,` and the letters k, m, b in
   either case, and returns the letters in upper case (`"150k"` becomes `"150K"`). Every other character is dropped:
-  spaces, other letters, currency signs and the minus sign. It does no other validation: `"1K5"` stays `"1K5"` and
-  `parseAmount` rejects it. Both separators are kept in every locale, since `parseAmount` decides their meaning.
+  spaces, other letters, currency signs and the minus sign. At most one letter is kept, and only after a digit: the
+  first letter ends the value, so `"1K5"` becomes `"1K"`, `"150KM"` becomes `"150K"` and `"1.2m3"` becomes `"1.2M"`.
+  A letter with no digit before it is dropped: `"k150"` becomes `"150"` and `"B"` becomes `""`. There is no other
+  validation: `"1.5"` stays `"1.5"` and `parseAmount` decides what is valid. Both separators are kept in every locale,
+  since `parseAmount` decides their meaning.
 - **Use (`src/components/ExpenseForm.tsx`):** the `onChange` of the amount input and of each exact-share input wraps
   its value in `filterAmountInput`. Pasted text takes the same path. The weight inputs are not filtered. Edit mode
   needs no change, because `formatAmountInput` already produces digits and the locale decimal separator only.
@@ -418,9 +421,10 @@ Built. Rules in `docs/business-rules.md` (Expenses, the amount field bullets).
   (100,000,000,000 cents) returns null.
 - **Examples:** `expenseForm.amountPlaceholder`, `amountExamples` and `amountExamplesDecimal` use upper-case
   shorthand and drop `tr`. No new keys and no new error codes.
-- **Tests:** unit tests in `tests/unit/money.test.ts` (`filterAmountInput`, the B suffix, upper-case K and M, and
-  the USD limit). E2e in `e2e/amount-input-filter.spec.ts` (per-keystroke `pressSequentially`, `fill`, the hint, and
-  an exact share with a dong sign). `e2e/language-picker.spec.ts` now fills `1.5` instead of `abc`.
+- **Tests:** unit tests in `tests/unit/money.test.ts` (`filterAmountInput` with the one-letter-at-the-end rule, the B
+  suffix, upper-case K and M, and the USD limit). E2e in `e2e/amount-input-filter.spec.ts` (per-keystroke
+  `pressSequentially`, `fill`, the hint, and an exact share with a dong sign). `e2e/language-picker.spec.ts` now fills
+  `1.5` instead of `abc`.
 
 ### csv_export
 
