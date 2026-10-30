@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { t, vnd } from './i18n';
 
-// The amount and exact-share fields keep only digits, "." and ",", and the shorthand letters K, M and B
-// (shown in upper case) while typing and pasting. Fake data only.
+// The amount and exact-share fields keep only digits, "." and ",", and at most one shorthand letter (K, M or B),
+// shown in upper case and kept only at the end, while typing and pasting. Fake data only.
 test('filter amount input while typing and filling', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel(t('home.create.groupName')).fill('Lunch club');
@@ -25,9 +25,10 @@ test('filter amount input while typing and filling', async ({ page }) => {
   await expect(amount).toHaveValue('150K');
   await expect(amountHint).toHaveText(vnd(150_000));
 
-  // Filled as a whole: "t", "r", "a" and "c" are dropped, "b" is kept as the billion shorthand.
+  // Filled as a whole: "t", "r", "a" and "c" are dropped, "b" is kept as the billion shorthand. It ends the value, so
+  // the "150k" after it is dropped too.
   await amount.fill('1,2tr abc 150k');
-  await expect(amount).toHaveValue('1,2B150K');
+  await expect(amount).toHaveValue('1,2B');
 
   await amount.fill('200k');
   await expect(amount).toHaveValue('200K');

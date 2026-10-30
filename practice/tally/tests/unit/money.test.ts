@@ -31,7 +31,7 @@ describe('filterAmountInput', () => {
     ['1.2m', '1.2M'],
     ['2b', '2B'],
     ['1,2tr', '1,2'],
-    ['abc', 'B'],
+    ['abc', ''],
     [' 30 000 ', '30000'],
     ['-5000', '5000'],
     ['150.000 VND', '150.000'],
@@ -39,7 +39,13 @@ describe('filterAmountInput', () => {
     [`150.000${DONG_SIGN}`, '150.000'],
     ['', ''],
     ['1.250,50', '1.250,50'],
-    ['1K5', '1K5'],
+    ['1K5', '1K'],
+    ['150KM', '150K'],
+    ['1.2m3', '1.2M'],
+    ['k150', '150'],
+    ['B', ''],
+    ['2KB', '2K'],
+    ['k1k5', '1K'],
   ])('filters %j to %j', (input, expected) => {
     expect(filterAmountInput(input)).toBe(expected);
   });
@@ -312,22 +318,54 @@ describe('splitExact', () => {
   });
 
   it.each([
-    ['less than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 599 }]],
-    ['more than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 601 }]],
+    [
+      'less than the amount',
+      [
+        { memberId: 'a', amount: 400 },
+        { memberId: 'b', amount: 599 },
+      ],
+    ],
+    [
+      'more than the amount',
+      [
+        { memberId: 'a', amount: 400 },
+        { memberId: 'b', amount: 601 },
+      ],
+    ],
     ['all zero', [{ memberId: 'a', amount: 0 }]],
   ])('rejects parts that add up to %s', (_, parts) => {
     expect(() => splitExact(1000, parts)).toThrow('add up');
   });
 
   it('rejects negative, fractional and too large parts', () => {
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 1100 }, { memberId: 'b', amount: -100 }])).toThrow();
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 999.5 }, { memberId: 'b', amount: 0.5 }])).toThrow();
-    expect(() => splitExact(MAX_AMOUNT, [{ memberId: 'a', amount: MAX_AMOUNT + 1 }, { memberId: 'b', amount: -1 }])).toThrow();
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 1100 },
+        { memberId: 'b', amount: -100 },
+      ]),
+    ).toThrow();
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 999.5 },
+        { memberId: 'b', amount: 0.5 },
+      ]),
+    ).toThrow();
+    expect(() =>
+      splitExact(MAX_AMOUNT, [
+        { memberId: 'a', amount: MAX_AMOUNT + 1 },
+        { memberId: 'b', amount: -1 },
+      ]),
+    ).toThrow();
     expect(() => splitExact(1000, [{ memberId: 'a', amount: Number.NaN }])).toThrow();
   });
 
   it('rejects duplicate members, empty parts and a bad amount', () => {
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 500 }, { memberId: 'a', amount: 500 }])).toThrow('duplicate');
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 500 },
+        { memberId: 'a', amount: 500 },
+      ]),
+    ).toThrow('duplicate');
     expect(() => splitExact(1000, [])).toThrow();
     expect(() => splitExact(0, [{ memberId: 'a', amount: 0 }])).toThrow();
     expect(() => splitExact(10.5, [{ memberId: 'a', amount: 10.5 }])).toThrow();

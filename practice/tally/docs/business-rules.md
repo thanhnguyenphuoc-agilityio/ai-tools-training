@@ -140,11 +140,12 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     currencies with decimals (USD): `12,50`, `1.250,50`.
   - English: `150000`, `150,000`, `150K`, `1.2M`, `1B`. For USD: `12.50`, `1,250.50`.
   - For VND, ambiguous values such as `1.5` (without a suffix) are rejected.
-- The amount field and the exact-share fields keep only digits, "." and ",", and the shorthand letters K, M and B,
-  while typing or pasting. The letters are shown in upper case. K, M and B mean thousand, million and billion in
-  every locale. The maximum is unchanged, so `1B` is the largest B value accepted for VND, and `1B` is rejected for
-  USD. The older Vietnamese `tr` suffix and the currency marks are still parsed but cannot be typed
-  (`amount_input_filter`).
+- The amount field and the exact-share fields keep only digits, "." and ",", and at most one shorthand letter, K, M
+  or B, while typing or pasting. The letter is shown in upper case and must come after a digit and at the end: the
+  first letter ends the value and everything after it is dropped (`1K5` becomes `1K`), and a letter with no digit
+  before it is dropped (`k150` becomes `150`). K, M and B mean thousand, million and billion in every locale. The
+  maximum is unchanged, so `1B` is the largest B value accepted for VND, and `1B` is rejected for USD. The older
+  Vietnamese `tr` suffix and the currency marks are still parsed but cannot be typed (`amount_input_filter`).
 - The date is a calendar date chosen by the user (`YYYY-MM-DD`), without a time zone. It defaults to **today in the
   time zone of the device entering the expense**.
 - Split modes:
