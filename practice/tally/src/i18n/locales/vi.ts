@@ -30,6 +30,8 @@ export const vi: Messages = {
       groupNamePlaceholder: 'Đi chơi cuối tuần',
       yourName: 'Tên của bạn',
       yourNamePlaceholder: 'Minh',
+      useDifferentName: 'Dùng tên khác',
+      accountNameHint: 'Lấy từ tài khoản của bạn. Tên này chỉ dùng trong nhóm này.',
       currency: 'Tiền tệ',
       roundCoarse: 'Làm tròn phần chia đến {unit}',
       submit: 'Tạo nhóm',

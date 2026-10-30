@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CURRENCIES } from '../../shared/currency';
 import { normalizeGroupCode } from '../../shared/groupCode';
 import type { MyGroupDto } from '../../shared/types';
@@ -7,6 +7,7 @@ import { api } from '../api';
 import type { Navigate } from '../App';
 import { useI18n, type UiMessage } from '../i18n';
 import { forgetGroup, readHistory } from '../history';
+import { createOwnerName } from '../ownerName';
 import './HomePage.scss';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
@@ -15,6 +16,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   const [accountGroups, setAccountGroups] = useState<MyGroupDto[] | null>(null);
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [useDifferentName, setUseDifferentName] = useState(false);
+  const ownerNameRef = useRef<HTMLInputElement>(null);
   const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
   const [roundCoarse, setRoundCoarse] = useState(true);
   const [joinInput, setJoinInput] = useState('');
@@ -43,6 +46,15 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
 
   const currency = CURRENCIES[currencyCode];
   const coarseUnit = currency.roundOptions[currency.roundOptions.length - 1];
+  const accountName = user?.name ?? '';
+  const owner = createOwnerName(accountName, useDifferentName, ownerName);
+  // Trimmed: a blank account name shows no checkbox, matching the helper's lock rule.
+  const hasAccountName = accountName.trim() !== '';
+
+  // Focus the name field once the person ticks "Use a different name".
+  useEffect(() => {
+    if (useDifferentName) ownerNameRef.current?.focus();
+  }, [useDifferentName]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +63,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
     try {
       const { code, ownerKey } = await api.createGroup({
         name,
-        ownerName,
+        ownerName: owner.value,
         currency: currency.code,
         roundTo: roundCoarse ? coarseUnit : currency.roundOptions[0],
       });
@@ -89,17 +101,42 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
             />
           </label>
           <div className="columns">
-            <label className="field">
-              <span className="field__label">{t('home.create.yourName')}</span>
-              <input
-                className="field__control"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                placeholder={t('home.create.yourNamePlaceholder')}
-                required
-                maxLength={40}
-              />
-            </label>
+            <div className="stack">
+              <label className="field">
+                <span className="field__label">{t('home.create.yourName')}</span>
+                <input
+                  ref={ownerNameRef}
+                  className={`field__control${owner.locked ? ' field__control--readonly' : ''}`}
+                  value={owner.value}
+                  onChange={(e) => {
+                    if (!owner.locked) setOwnerName(e.target.value);
+                  }}
+                  readOnly={owner.locked}
+                  aria-describedby={owner.locked ? 'owner-name-hint' : undefined}
+                  placeholder={t('home.create.yourNamePlaceholder')}
+                  required
+                  maxLength={40}
+                />
+              </label>
+              {owner.locked && (
+                <p id="owner-name-hint" className="field__hint">
+                  {t('home.create.accountNameHint')}
+                </p>
+              )}
+              {hasAccountName && (
+                <label className="field field--inline">
+                  <input
+                    type="checkbox"
+                    checked={useDifferentName}
+                    onChange={(e) => {
+                      setUseDifferentName(e.target.checked);
+                      if (e.target.checked) setOwnerName(owner.value);
+                    }}
+                  />
+                  {t('home.create.useDifferentName')}
+                </label>
+              )}
+            </div>
             <label className="field">
               <span className="field__label">{t('home.create.currency')}</span>
               <select className="field__control" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>

@@ -325,6 +325,10 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     - On the home page, groups in the account list are omitted from the device history list.
 - Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
   claiming a name while signed in links that member to the account (`members.user_id`).
+- Signed in, the create form shows the account name in the name field, read-only, with an unchecked "Use a different name"
+  checkbox. Checking it makes the field editable and moves focus to it; unchecking restores the account name. Signed out,
+  the form is unchanged (an empty, editable field and no checkbox). The limits are the same (1 to 40 characters, the
+  account name cut to 40). The chosen name never changes the account name (`create_group_account_name`).
 - **Link to my account:**
   - The button is shown only when a member device token is held, the member is not linked to any account, and the
     account is not already another member of the group. It is never shown to an owner: owners attach their group

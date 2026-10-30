@@ -650,6 +650,14 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 - **No group change:** the name write touches no group, member, `audit_log` row or `last_activity_at`.
 - **Tests:** `tests/api/account-name.test.ts` (AN-1 to AN-6, migration default on a pre-existing row).
 
+### create_group_account_name (built)
+
+- Client only. No API, migration or `worker/` change: `POST /groups` already takes `ownerName` (1 to 40 characters) and never writes `users.name`.
+- `createOwnerName(accountName, useDifferent, typed)` in `src/ownerName.ts` (pure, no React import) returns `{ value, locked }`. A non-empty trimmed account name with the box unchecked gives the account name cut to 40, locked; otherwise the typed value, unlocked.
+- `src/pages/HomePage.tsx`: the name field takes its value and `readOnly` from the helper; `onChange` ignores input while locked. The "Use a different name" checkbox (`label.field.field--inline`) appears only when the account name is non-empty. Checking it focuses the field after the state update (effect with a ref) and seeds it with the account name cut to 40; unchecking restores the account name through the helper. Submit sends `owner.value`.
+- Styles: modifier `field__control--readonly` in `src/styles/blocks/_field.scss` (muted text, dashed border; theme custom properties only). A hint (`home.create.accountNameHint`) is shown under the locked field.
+- Tests: `tests/unit/ownerName.test.ts`; `e2e/create-group-account-name.spec.ts` (cases a to d); the specs that fill `home.create.yourName` on a signed-in page (`account.spec.ts`, `joined-groups.spec.ts`, `owner-link-binds-account.spec.ts`, `saved-bank.spec.ts`, `transfer-ownership.spec.ts`) tick the checkbox first.
+
 ### wrong_name_claim (built)
 
 - No migration. A released member has `token_hash`, `user_id` and `invite_email` set to NULL, the same state as a member

@@ -25,6 +25,12 @@
     &--mono {
       font-family: $font-family-mono;
     }
+
+    // Filled from the account and not editable until "Use a different name" is ticked.
+    &--readonly {
+      color: var(--color-muted);
+      border-style: dashed;
+    }
   }
 
   &__hint {

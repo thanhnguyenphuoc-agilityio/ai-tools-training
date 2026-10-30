@@ -18,6 +18,7 @@ test.describe('Joined groups list (JG-7, JG-8)', () => {
     await expect(page1.getByRole('button', { name: t('account.menuLabel', { name: email.split('@')[0] }) })).toBeVisible();
 
     await page1.getByLabel(t('home.create.groupName')).fill(groupName);
+    await page1.getByLabel(t('home.create.useDifferentName')).check();
     await page1.getByLabel(t('home.create.yourName')).fill('Alex');
     await page1.getByRole('button', { name: t('home.create.submit') }).click();
 
@@ -85,6 +86,7 @@ test.describe('Joined groups list (JG-7, JG-8)', () => {
 
         // Create a group
         await page.getByLabel(t('home.create.groupName')).fill(groupName);
+        await page.getByLabel(t('home.create.useDifferentName')).check();
         await page.getByLabel(t('home.create.yourName')).fill('Owner');
         await page.getByRole('button', { name: t('home.create.submit') }).click();
 
