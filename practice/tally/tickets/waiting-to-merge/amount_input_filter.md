@@ -28,8 +28,6 @@ From the product owner (human), given with the request:
    the field cannot type it; the parser may keep accepting it.
 5. Parsing rules (`parseAmount`) otherwise stay the same; add unit tests for the filter and for the B suffix, and
    update the amount examples in every locale.
-</content>
-</invoke>
 
 ## Acceptance criteria
 
@@ -99,7 +97,7 @@ How it was tested:
 - `npm run test:hooks`: 32 pass, 0 fail.
 - `npm test`: run three times. Runs 1 and 2 each had one or two Miniflare API tests time out at 5000 ms
   (`saved-bank` SB-4 and `transfer-ownership` TO-1, with a "poisoned stub" error). Both files passed alone
-  (26/26). Run 3 passed: 55 files, 711 tests.
-- Unit tests for `money.test.ts` ran alone before the commit: 109 pass.
-- Not run here: `npx playwright test` (e2e). The batch runs it for `exact-split`, `language-picker`, `edit-expense`
-  and `amount-input-filter`.
+  (26/26). Run 3 passed: 55 files, 711 tests. A later run passed again: 55 files, 711 tests.
+- Unit tests for `money.test.ts` ran alone before the commit: 109 pass. A later run passed again: 109 tests.
+- `npx playwright test` for `exact-split`, `language-picker`, `edit-expense` and `amount-input-filter`: 28 passed
+  (desktop and mobile). The invalid-amount case in `language-picker` fills `1.5`.
