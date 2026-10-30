@@ -135,3 +135,24 @@ Checks after the fixes (run in the feature worktree):
 - `npm run lint`: clean.
 - `npm test`: 54 files, 662 tests passed (the trim case added one).
 - `npm run e2e`: still not run here. The batch runs the new spec and the five adapted specs.
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- No blocking finding. The change is client only, as planned: `POST /groups` already trims `ownerName`, limits it to 40
+  characters and never writes `users.name`. The helper `createOwnerName` is pure and trims before the lock check, so the
+  value sent always passes the server rule. Submit sends the helper value, not the raw state.
+- No permission, identity or migration change. Both locales carry `useDifferentName` and `accountNameHint`; the
+  `field__control--readonly` modifier uses only `--color-muted`. Docs match the code; the next free ID is `TAL-64`.
+- Cross-ticket: `e2e/leave-group.spec.ts` (TAL-63) creates its groups signed out, so the read-only field does not affect
+  it.
+
+Fixes: none.
+
+Checks (feature worktree, after the QA fix):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 54 files, 662 tests passed.
+- `e2e/create-group-account-name.spec.ts` and the five adapted specs: run with the batch e2e on `develop`.
