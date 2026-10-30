@@ -132,3 +132,4 @@ there. Fixed on `fix/batch-review-2026-10-30` with `test.info().project.name`, a
 e2e suite then passed: 173 passed, 5 skipped.
 
 Confirmed by the human on `develop`. Moved to done on 2026-10-30.
+Released in release/2026-10-30.

@@ -134,3 +134,4 @@ the amount.
   the fill `1,2tr abc 150k`.
 
 Confirmed by the human on `develop`, including the one-letter fix from pull request #62. Moved to done on 2026-10-30.
+Released in release/2026-10-30.

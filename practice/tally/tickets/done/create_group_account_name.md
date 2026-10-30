@@ -158,3 +158,4 @@ Checks (feature worktree, after the QA fix):
 - `e2e/create-group-account-name.spec.ts` and the five adapted specs: run with the batch e2e on `develop`.
 
 Confirmed by the human on `develop`. Moved to done on 2026-10-30.
+Released in release/2026-10-30.
