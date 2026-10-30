@@ -83,7 +83,7 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
 - Plurals use `tp('expenseList.people', n)` with `Intl.PluralRules`. Vietnamese needs only the `other` form.
 - Each locale also declares:
   - `intl`: the tag passed to `Intl`.
-  - `amountInput`: how users type amounts (decimal separator, `k`/`tr`/`m` suffixes, currency marks).
+  - `amountInput`: how users type amounts (decimal separator, `k`/`m`/`b` suffixes (vi also keeps `tr`), currency marks).
   - `defaultCurrency`: the suggested currency for new groups.
 - Locale detection order: the stored choice (`localStorage` `tally.locale`), then `navigator.languages`, then `vi`.
 - Language picker (`language_picker`, restyled in `header_controls_icons`): `src/components/LanguagePicker.tsx`
@@ -397,6 +397,30 @@ Built. Rules in `docs/business-rules.md` (Expenses, split modes).
   and a live status line: the amount left to assign, the excess, an invalid share, or that the shares match.
   Saving is blocked until they match. `ExpenseList` labels exact expenses. Settle-up needs no change, since balances come from the stored shares.
   E2e test in `e2e/exact-split.spec.ts`.
+
+### amount_input_filter (built)
+
+Built. Rules in `docs/business-rules.md` (Expenses, the amount field bullets).
+
+- **Helper (`shared/money.ts`):** `filterAmountInput(input)` keeps only `0`-`9`, `.`, `,` and the letters k, m, b in
+  either case, and returns the letters in upper case (`"150k"` becomes `"150K"`). Every other character is dropped:
+  spaces, other letters, currency signs and the minus sign. It does no other validation: `"1K5"` stays `"1K5"` and
+  `parseAmount` rejects it. Both separators are kept in every locale, since `parseAmount` decides their meaning.
+- **Use (`src/components/ExpenseForm.tsx`):** the `onChange` of the amount input and of each exact-share input wraps
+  its value in `filterAmountInput`. Pasted text takes the same path. The weight inputs are not filtered. Edit mode
+  needs no change, because `formatAmountInput` already produces digits and the locale decimal separator only.
+- **Controlled input:** the field is controlled (`value={amountText}`), so when a character is dropped, React resets
+  the value and the caret moves to the end. This is accepted: a typed letter that is dropped does not keep the caret
+  in place.
+- **B suffix (`src/i18n/locales/en.ts`, `vi.ts`):** `amountInput.suffixes` gains `b: 1_000_000_000`. `vi.ts` keeps
+  `tr` for parsing, but the field cannot type it. The `MAX_AMOUNT` check in `parseMinorUnits` is unchanged:
+  VND `1B` (1,000,000,000) is accepted, `1,5B` and `2B` in vi are above the limit and return null, and `1B` for USD
+  (100,000,000,000 cents) returns null.
+- **Examples:** `expenseForm.amountPlaceholder`, `amountExamples` and `amountExamplesDecimal` use upper-case
+  shorthand and drop `tr`. No new keys and no new error codes.
+- **Tests:** unit tests in `tests/unit/money.test.ts` (`filterAmountInput`, the B suffix, upper-case K and M, and
+  the USD limit). E2e in `e2e/amount-input-filter.spec.ts` (per-keystroke `pressSequentially`, `fill`, the hint, and
+  an exact share with a dong sign). `e2e/language-picker.spec.ts` now fills `1.5` instead of `abc`.
 
 ### csv_export
 
