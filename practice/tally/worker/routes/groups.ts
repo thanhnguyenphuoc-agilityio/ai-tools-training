@@ -196,12 +196,14 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
   if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
 
   if (me.userId) {
-    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
-    clearOwnerCookie(c, group.code);
-    if (changed) {
+    const { attached, memberId } = await tryAttachOwnerGroup(c.env.DB, group, me);
+    if (attached) {
+      clearOwnerCookie(c, group.code);
       await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+      return c.json({ ok: true, attached: true });
     }
-    return c.json({ ok: true, attached: true });
+    // The account is already another member of the group, so it is not attached. The owner key still
+    // restores owner access on this device through the owner cookie, as it does without an account.
   }
 
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
