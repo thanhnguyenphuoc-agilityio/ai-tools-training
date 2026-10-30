@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { splitChanged } from '../../shared/expenseEdit';
-import { exactSplitDifference, splitAmount } from '../../shared/money';
+import { exactSplitDifference, filterAmountInput, splitAmount } from '../../shared/money';
 import type { ExpenseDto, GroupDto, SessionDto, SplitMode } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { todayLocal } from '../dates';
@@ -232,7 +232,7 @@ export function ExpenseForm({
               // The hint below repeats the amount as money, so the name is set here and stays the same in edit mode.
               aria-label={t('expenseForm.amount')}
               value={amountText}
-              onChange={(e) => setAmountText(e.target.value)}
+              onChange={(e) => setAmountText(filterAmountInput(e.target.value))}
               placeholder={t('expenseForm.amountPlaceholder')}
               inputMode="decimal"
               required
@@ -334,7 +334,7 @@ export function ExpenseForm({
                     aria-label={t('expenseForm.shareOf', { name: m.name })}
                     aria-invalid={typedShares.get(m.id) === null}
                     value={shareTexts[m.id] ?? ''}
-                    onChange={(e) => setShareTexts({ ...shareTexts, [m.id]: e.target.value })}
+                    onChange={(e) => setShareTexts({ ...shareTexts, [m.id]: filterAmountInput(e.target.value) })}
                     placeholder={t('expenseForm.sharePlaceholder')}
                     inputMode="decimal"
                   />

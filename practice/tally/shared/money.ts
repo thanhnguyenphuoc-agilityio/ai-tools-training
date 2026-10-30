@@ -243,3 +243,13 @@ export function parseShareAmount(input: string, rules: AmountInputRules, currenc
   if (input.trim() === '') return 0;
   return parseMinorUnits(input, rules, currency);
 }
+
+/**
+ * Keeps only what an amount box accepts while typing or pasting: digits, "." and ",", and the shorthand letters
+ * k, m and b, which are returned in upper case ("150k" -> "150K"). Every other character is dropped, including
+ * spaces, other letters, currency signs and the minus sign. No other validation: "1K5" stays "1K5" and
+ * parseAmount rejects it. Both separators are kept in every locale, because parseAmount decides their meaning.
+ */
+export function filterAmountInput(input: string): string {
+  return input.replace(/[^0-9.,kmb]/gi, '').toUpperCase();
+}

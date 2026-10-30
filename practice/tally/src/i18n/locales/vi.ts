@@ -96,10 +96,10 @@ export const vi: Messages = {
   expenseForm: {
     title: 'Thêm khoản chi',
     amount: 'Số tiền',
-    amountPlaceholder: '150k',
+    amountPlaceholder: '150K',
     invalidAmount: 'Số tiền không hợp lệ. Ví dụ: {examples}.',
-    amountExamples: '150000, 150.000, 150k, 1,2tr',
-    amountExamplesDecimal: '12, 12,50, 1.250,50, 1,5k',
+    amountExamples: '150000, 150.000, 150K, 1,2M',
+    amountExamplesDecimal: '12, 12,50, 1.250,50, 1,5K',
     paidBy: 'Ai trả',
     description: 'Nội dung',
     descriptionPlaceholder: 'Ăn tối hôm đầu',
@@ -482,7 +482,7 @@ export const viLocale: LocaleBundle = {
   defaultCurrency: 'VND',
   amountInput: {
     decimalSeparator: ',',
-    suffixes: { k: 1_000, tr: 1_000_000, m: 1_000_000 },
+    suffixes: { k: 1_000, tr: 1_000_000, m: 1_000_000, b: 1_000_000_000 },
     currencyMarks: { VND: ['đ', '₫', 'vnd', 'vnđ'] },
   },
 };
