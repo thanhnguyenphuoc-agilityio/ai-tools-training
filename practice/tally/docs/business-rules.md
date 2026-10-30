@@ -45,6 +45,10 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
+  - **Deleting a group** (`leave_group`): the owner can delete the group from the members tab, after a confirmation, while no other active member exists. An unclaimed member added by name counts as a member, so the owner removes or waits for them first. Kept groups can be deleted too.
+    - Deletion is complete, as in automatic deletion: members, bank details, expenses, shares, transfers, sessions, photos and the `audit_log`. A deleted group leaves no audit row, because only leaving is recorded.
+    - Refusals: `403 OWNER_ONLY` for a member or a guest; `409 GROUP_HAS_MEMBERS` while another active member exists (the delete action is then not shown); `404 GROUP_NOT_FOUND` for an unknown code.
+    - Afterwards the device forgets the group (recent groups and the joined groups list), and its links answer "group not found".
   - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
   - **Kept groups (`lock_groups`):**
     - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
@@ -112,6 +116,17 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted or edited
     (`EXPENSE_HAS_REMOVED_MEMBER`): deleting or editing it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
+- **Leaving a group** (`leave_group`):
+  - A member other than the owner can leave on their own from the members tab, after a confirmation. The owner
+    cannot leave (`409 CANNOT_LEAVE_OWNER`); the owner hands the group over first (`transfer_ownership`).
+  - The rules are those of removal: the balance must be zero and no transfer may wait for confirmation
+    (`409 MEMBER_HAS_BALANCE`, with the balance). A guest gets `401 JOIN_FIRST`; leaving twice gets `JOIN_FIRST`
+    too, because the device no longer resolves.
+  - A leave is a soft removal marked as left: the member stays in past expenses and transfers with their name, the
+    removed list shows "left the group" with no reason, and the device and the account become guests. The account
+    leaves the joined groups list and can join again as a new member.
+  - The leave is recorded in `audit_log` as `member.leave`, with the leaver as actor, and moves `last_activity_at`.
+  - A removal by the owner is never shown as left.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
 ## Expenses
