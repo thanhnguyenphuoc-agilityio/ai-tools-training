@@ -69,3 +69,37 @@ From the product owner (human), given with the request:
 8. Tests: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:hooks`. E2e is run by the batch.
 9. Commits: `feat:` (money, locales, form), `test:` (unit and e2e), `docs:` (business rules and design), then the move
    to `waiting-to-merge/` as `docs(tickets)`.
+
+## Merge request
+
+Branch `feat/amount_input_filter` into `develop`. The merge request is opened on GitLab from this branch; its link is
+added when it exists. Merge after `create_form_layout` (TAL-64), which edits the same files in other sections.
+
+What changed:
+
+- `shared/money.ts`: `filterAmountInput(input)` (new export). Keeps `0`-`9`, `.`, `,` and k, m, b in either case,
+  returns the letters in upper case, and drops every other character. No other validation.
+- `src/components/ExpenseForm.tsx`: the amount input and each exact-share input wrap their `onChange` value in
+  `filterAmountInput`. The weight inputs are not changed.
+- `src/i18n/locales/en.ts`, `vi.ts`: `amountInput.suffixes` gains `b: 1_000_000_000`; `vi.ts` keeps `tr`. The
+  placeholder and the two example strings use upper-case shorthand and drop `tr` in vi. No new keys or error codes.
+- `tests/unit/money.test.ts`: `filterAmountInput` cases from the ticket, the B suffix for VND in both locales,
+  the VND limit for `2B` and `1,5B` in vi, `1B` for USD, and upper-case K and M parsing.
+- `e2e/amount-input-filter.spec.ts` (new): per-keystroke `pressSequentially` of `x150k `, `fill` of `1,2tr abc 150k`
+  (`1,2B150K`) and `200k` with the hint, and an exact share filled with `50k` plus the dong sign (`50K`).
+- `e2e/language-picker.spec.ts`: the invalid input changes from `abc` to `1.5` (`abc` would now become `B`).
+- `docs/business-rules.md`: the amount bullets use upper-case examples and a new filter bullet.
+- `docs/design.md`: the `amountInput` line, and the new `### amount_input_filter (built)` section after
+  `exact_amount_split`. It records the caret behaviour of the controlled input.
+
+How it was tested:
+
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (oxlint and stylelint).
+- `npm run test:hooks`: 32 pass, 0 fail.
+- `npm test`: run three times. Runs 1 and 2 each had one or two Miniflare API tests time out at 5000 ms
+  (`saved-bank` SB-4 and `transfer-ownership` TO-1, with a "poisoned stub" error). Both files passed alone
+  (26/26). Run 3 passed: 55 files, 711 tests.
+- Unit tests for `money.test.ts` ran alone before the commit: 109 pass.
+- Not run here: `npx playwright test` (e2e). The batch runs it for `exact-split`, `language-picker`, `edit-expense`
+  and `amount-input-filter`.
