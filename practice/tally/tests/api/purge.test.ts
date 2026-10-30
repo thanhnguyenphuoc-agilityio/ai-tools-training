@@ -285,6 +285,11 @@ describe('purge_inactive_groups API', () => {
       return res;
     });
 
+    // 5b. Expense delete, before any transfer (TAL-61: a transfer after the expense locks it)
+    await expectActivityMoved(async () => {
+      return await owner.call('DELETE', `/groups/${code}/expenses/${expId}`);
+    });
+
     // 6. Transfer add
     let transferId = '';
     await expectActivityMoved(async () => {
@@ -299,11 +304,6 @@ describe('purge_inactive_groups API', () => {
     // 7. Transfer confirm
     await expectActivityMoved(async () => {
       return await owner.call('POST', `/groups/${code}/transfers/${transferId}/confirm`);
-    });
-
-    // 8. Expense delete
-    await expectActivityMoved(async () => {
-      return await owner.call('DELETE', `/groups/${code}/expenses/${expId}`);
     });
 
     // Refund Sam so balance is 0 before removal

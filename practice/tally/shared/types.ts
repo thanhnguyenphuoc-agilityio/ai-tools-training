@@ -62,6 +62,10 @@ export interface ExpenseDto {
   receipt: ReceiptDto | null;
   /** The session the cost belongs to (attendance_split); null when it has none. */
   sessionId: string | null;
+  /** Time the expense was hidden from the list (delete_settled_expense); null when visible. Balances still count it. */
+  hiddenAt: string | null;
+  /** True once a transfer involving its payer or a sharing member was recorded after it (shared/expenseLock.ts). */
+  paidToward: boolean;
 }
 
 /** A recurring session with the members present (attendance_split). Times are HH:mm in group-local time. */

@@ -282,7 +282,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`). When the account is already another member of the group, the attach is refused and the claim falls back to the owner cookie with `owner.claim` (`recovery_link_signed_in_member`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0012_sessions.sql` (`attendance_split`) is the newest migration, after `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0013_expense_hidden.sql` (`delete_settled_expense`) is the newest migration, after `0012_sessions.sql` (`attendance_split`), `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -734,6 +734,43 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `v1` migration from `wrangler.jsonc`. No D1 migration is involved.
 - **Known limit:** a signal is lost if it fails (it is logged) or if the page is disconnected at that moment; the
   reconnect reload covers the second case.
+
+### delete_settled_expense (built)
+
+- **Migration `0013_expense_hidden.sql`:** `expenses.hidden_at TEXT` and `expenses.hidden_by TEXT`. NULL means visible.
+  The file is applied by `tests/api/helpers.ts`, which reads the whole `migrations/` directory in order.
+- **Rule (`shared/expenseLock.ts`):** `isPaidToward(expense, transfers)` is pure. An expense is paid toward when a
+  transfer has `createdAt >= expense.createdAt` and its `fromId` or `toId` is the payer or a member with a share above
+  zero. Equal timestamps count. The function is the reference; `paidTowardSql` must match it.
+- **SQL (`worker/groupData.ts`):** `paidTowardSql(expenseParam, groupParam)` returns an `EXISTS` fragment with the same
+  rule, used inside the UPDATEs so a transfer committed in between is seen. `isExpensePaidToward(db, code, id)` runs it
+  as a SELECT for the early checks. `noneRemovedSql` and `involvesRemovedMember` are unchanged.
+- **DTO:** `ExpenseDto` gains `hiddenAt: string | null` (from `hidden_at`) and `paidToward: boolean`. `loadLedger`
+  sets `paidToward` after the transfers are built, with `isPaidToward`. Balances, `groupSummary`, the settle view and
+  `groupCsv` read the full `expenses` list, so hidden rows count there with no change.
+- **Error order (`worker/routes/expenses.ts`):**
+  - `DELETE /groups/:code/expenses/:id`: the UPDATE carries `AND NOT ${paidTowardSql(1, 2)}`. When it changes nothing:
+    404 if the expense is gone, then 409 `EXPENSE_HAS_REMOVED_MEMBER`, else 409 `EXPENSE_PAID_TOWARD`.
+  - `PATCH /groups/:code/expenses/:id`: after the removed-member check, `isExpensePaidToward` gives 409
+    `EXPENSE_PAID_TOWARD`. The UPDATE carries `AND NOT ${paidTowardSql(7, 8)}` as the race guard. In the changes-0 branch
+    the order is 404, removed member, paid toward, then the payer and participant checks. A repeat of the stored values
+    still answers 200 `changed: false` before any UPDATE.
+  - The removed-member check comes first, so the existing removed-member tests keep their code.
+- **Hide route:** `POST /groups/:code/expenses/:id/hide` with `{ hidden: boolean }`; any other body answers 400
+  `FIELD_REQUIRED` through `readJson`. It loads the expense (`deleted_at IS NULL`, else 404), then
+  `requireCanHideExpense(me, expense)` in `worker/policy.ts`: the owner, or the member who created the expense; a
+  guest gets `JOIN_FIRST`, another member `HIDE_NOT_ALLOWED`. The UPDATE sets or clears `hidden_at` and `hidden_by`
+  (`me.memberId ?? 'owner'`). Hiding also requires `paidTowardSql`. When nothing changed the row is read again: gone
+  gives 404, the requested state already in place gives `{ ok: true, changed: false }` with nothing recorded, and any
+  other case gives 409 `EXPENSE_NOT_PAID_TOWARD`. A change calls `recordChange` with `expense.hide` or
+  `expense.unhide`, which audits and moves `last_activity_at`. The live signal comes from the middleware.
+- **Receipts:** the receipt photo routes are unchanged. A photo changes no money, so it is not blocked by the lock.
+- **Client:** `api.hideExpense(code, id, hidden)` in `src/api.ts`. `ExpenseList` keeps `showAll` in component state
+  (per viewer, not sent); when no expense is hidden any more the toggle disappears and `showAll` resets, so the
+  next hide starts from the visible list. Its rows are `showAll ? expenses : expenses without hiddenAt`, and the header total sums
+  those rows. A paid-toward row shows `expenseList.paidTowardLocked` and, for a viewer who may delete, a Hide or Unhide
+  icon button (`eyeOff`, `eye` in `Icon.tsx`). Hiding needs no dialog; an error is shown next to the list.
+- **Purge:** hidden expenses are removed with the group, as every other expense row is.
 
 ## 7. Ticket workflow
 

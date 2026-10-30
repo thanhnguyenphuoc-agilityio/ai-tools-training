@@ -19,14 +19,22 @@ export function ExpenseList({
   /** Opens the expense in the form for editing (edit_expense). Omitted: no edit action. */
   onEdit?: (expense: ExpenseDto) => void;
 }) {
-  const { t, tp, day } = useI18n();
+  const { t, tp, day, message } = useI18n();
   const { money } = useGroupMoney(group);
   const notify = useToast();
   const [pendingDelete, setPendingDelete] = useState<ExpenseDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<UiMessage | null>(null);
+  // Per viewer and never sent to the server (delete_settled_expense): hidden expenses are left out until this is on.
+  const [showAll, setShowAll] = useState(false);
+  const [hideBusy, setHideBusy] = useState<string | null>(null);
+  const [hideError, setHideError] = useState<UiMessage | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
-  const total = group.expenses.reduce((sum, e) => sum + e.amount, 0);
+  const anyHidden = group.expenses.some((e) => e.hiddenAt);
+  // With nothing hidden the toggle is gone, so a stale "All expenses" choice must not carry over to the next hide.
+  if (showAll && !anyHidden) setShowAll(false);
+  const rows = showAll && anyHidden ? group.expenses : group.expenses.filter((e) => !e.hiddenAt);
+  const total = rows.reduce((sum, e) => sum + e.amount, 0);
 
   async function confirmDelete(expense: ExpenseDto) {
     setDeleteBusy(true);
@@ -42,15 +50,52 @@ export function ExpenseList({
     }
   }
 
+  // Hiding is reversible, so it needs no dialog; an error stays next to the list.
+  async function toggleHidden(expense: ExpenseDto) {
+    const hidden = !expense.hiddenAt;
+    setHideBusy(expense.id);
+    setHideError(null);
+    try {
+      await api.hideExpense(group.code, expense.id, hidden);
+      notify(hidden ? 'toast.expenseHidden' : 'toast.expenseUnhidden');
+      onChanged();
+    } catch (err) {
+      setHideError({ error: err });
+    } finally {
+      setHideBusy(null);
+    }
+  }
+
   return (
     <section className="card expense-list">
-      <div className="cluster cluster--between">
+      <div className="cluster cluster--between expense-list__header">
         <h2 className="card__title">{t('expenseList.title')}</h2>
         <span className="text text--muted">{t('expenseList.total', { amount: money(total) })}</span>
       </div>
-      {group.expenses.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
+      {anyHidden && (
+        <div className="expense-list__filter" role="group" aria-label={t('expenseList.filterLabel')}>
+          <button
+            type="button"
+            className={showAll ? 'button button--small button--ghost' : 'button button--small'}
+            aria-pressed={!showAll}
+            onClick={() => setShowAll(false)}
+          >
+            {t('expenseList.showVisible')}
+          </button>
+          <button
+            type="button"
+            className={showAll ? 'button button--small' : 'button button--small button--ghost'}
+            aria-pressed={showAll}
+            onClick={() => setShowAll(true)}
+          >
+            {t('expenseList.showAll')}
+          </button>
+        </div>
+      )}
+      {hideError && <p className="text text--error">{message(hideError)}</p>}
+      {rows.length === 0 && <p className="text text--muted">{t('expenseList.empty')}</p>}
       <ul className="list list--divided">
-        {group.expenses.map((e) => {
+        {rows.map((e) => {
           const isAuthor = !!group.me.memberId && e.createdBy === group.me.memberId;
           const canDelete = group.me.isOwner || isAuthor;
           const locked = involvesRemovedMember(e, group.members);
@@ -82,7 +127,7 @@ export function ExpenseList({
                       <Icon name="receipt" />
                     </a>
                   )}
-                  {canDelete && !locked && onEdit && (
+                  {canDelete && !locked && !e.paidToward && onEdit && (
                     <button
                       className="button button--icon"
                       onClick={() => onEdit(e)}
@@ -92,7 +137,7 @@ export function ExpenseList({
                       <Icon name="pencil" />
                     </button>
                   )}
-                  {canDelete && !locked && (
+                  {canDelete && !locked && !e.paidToward && (
                     <button
                       className="button button--icon"
                       onClick={() => {
@@ -108,6 +153,24 @@ export function ExpenseList({
                   {canDelete && locked && (
                     <span className="text text--muted text--small">{t('expenseList.deleteLocked')}</span>
                   )}
+                  {!locked && e.paidToward && (
+                    <span className="text text--muted text--small">{t('expenseList.paidTowardLocked')}</span>
+                  )}
+                  {canDelete && !locked && e.paidToward && (
+                    <button
+                      className="button button--icon"
+                      onClick={() => toggleHidden(e)}
+                      disabled={hideBusy === e.id}
+                      aria-label={
+                        e.hiddenAt
+                          ? t('expenseList.unhideLabel', { description: e.description })
+                          : t('expenseList.hideLabel', { description: e.description })
+                      }
+                      title={e.hiddenAt ? t('expenseList.unhide') : t('expenseList.hide')}
+                    >
+                      <Icon name={e.hiddenAt ? 'eye' : 'eyeOff'} />
+                    </button>
+                  )}
                 </span>
               </div>
               <div className="text text--muted text--small">{meta}</div>
@@ -116,6 +179,11 @@ export function ExpenseList({
                   <span className="badge expense-list__session">
                     {t('expenseList.sessionBadge', { label: sessionLabel(session, t, day) })}
                   </span>
+                </div>
+              )}
+              {showAll && e.hiddenAt && (
+                <div>
+                  <span className="badge expense-list__hidden">{t('expenseList.hiddenBadge')}</span>
                 </div>
               )}
               {e.editedAt && (

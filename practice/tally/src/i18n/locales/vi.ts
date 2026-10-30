@@ -139,6 +139,15 @@ export const vi: Messages = {
     editLabel: 'Sửa khoản "{description}"',
     edited: 'Đã sửa',
     sessionBadge: 'Buổi {label}',
+    paidTowardLocked: 'Đã giữ lại: đã có người thanh toán',
+    hide: 'Ẩn',
+    hideLabel: 'Ẩn "{description}"',
+    unhide: 'Hiện lại',
+    unhideLabel: 'Hiện lại "{description}"',
+    hiddenBadge: 'Đã ẩn',
+    filterLabel: 'Hiển thị',
+    showVisible: 'Khoản chi đang hiện',
+    showAll: 'Tất cả khoản chi',
   },
   expenses: {
     receipt: {
@@ -257,6 +266,8 @@ export const vi: Messages = {
     sessionSaved: 'Đã lưu buổi sinh hoạt.',
     sessionDeleted: 'Đã xoá buổi sinh hoạt.',
     expenseDeleted: 'Đã xoá khoản chi.',
+    expenseHidden: 'Đã ẩn khoản chi.',
+    expenseUnhidden: 'Đã hiện lại khoản chi.',
     memberAdded: 'Đã thêm {name} vào nhóm.',
     memberRemoved: 'Đã xoá {name} khỏi nhóm.',
     memberReleased: '{name} có thể được nhận lại.',
@@ -435,6 +446,10 @@ export const vi: Messages = {
     INVALID_SESSION_TIME: 'Giờ buổi sinh hoạt phải theo định dạng HH:mm (00:00-23:59) và giờ bắt đầu không được trùng giờ kết thúc.',
     SESSION_NOT_FOUND: 'Không tìm thấy buổi sinh hoạt.',
     SESSION_HAS_EXPENSES: 'Không thể xoá buổi sinh hoạt đã có chi phí.',
+    EXPENSE_PAID_TOWARD:
+      'Đã có người thanh toán cho khoản chi này nên không thể sửa hoặc xoá được nữa. Bạn có thể ẩn nó.',
+    EXPENSE_NOT_PAID_TOWARD: 'Chỉ có thể ẩn khoản chi đã có người thanh toán.',
+    HIDE_NOT_ALLOWED: 'Chỉ người thêm khoản này hoặc trưởng nhóm mới ẩn được.',
   },
 };
 

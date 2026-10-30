@@ -39,6 +39,8 @@ const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'a
   editedAt: null,
   receipt: null,
   sessionId: null,
+  hiddenAt: null,
+  paidToward: false,
   ...e,
 });
 

@@ -65,6 +65,9 @@ export const ERROR_CODES = [
   'INVALID_SESSION_TIME',
   'SESSION_NOT_FOUND',
   'SESSION_HAS_EXPENSES',
+  'EXPENSE_PAID_TOWARD',
+  'EXPENSE_NOT_PAID_TOWARD',
+  'HIDE_NOT_ALLOWED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

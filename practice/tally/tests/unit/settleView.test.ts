@@ -29,6 +29,8 @@ const expense = (payerId: string, shares: Record<string, number>): ExpenseDto =>
   editedAt: null,
   receipt: null,
   sessionId: null,
+  hiddenAt: null,
+  paidToward: false,
 });
 
 describe('settle view', () => {

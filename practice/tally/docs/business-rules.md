@@ -177,6 +177,26 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - A real edit is activity: it moves `last_activity_at`. It works the same in a kept group, because a lock only stops
     deletion.
 
+### Paid-toward expenses
+
+- An expense is **paid toward** once the group has a transfer (`sent` or `confirmed`) recorded at or after the
+  expense's creation whose sender or receiver is the expense's payer or a member with a share above zero. Transfers
+  are never deleted, so the state is permanent. Both times are compared as ISO timestamps. Shares of zero do not count.
+- A transfer covers only the expenses that existed when it was recorded. An expense added later can still be edited
+  or deleted; if it is correct, the payer settles the new difference with a new transfer.
+- A paid-toward expense cannot be edited or deleted. The API answers 409 `EXPENSE_PAID_TOWARD` (both for the PATCH and
+  the DELETE). The expense list shows "Kept: already paid toward" in place of Edit and Delete. A removed member on the
+  expense still gives `EXPENSE_HAS_REMOVED_MEMBER`, which is checked first.
+- **Hide and Unhide**: the author or the owner may hide or unhide a paid-toward expense (`requireCanHideExpense` in
+  `worker/policy.ts`). Another member gets 403 `HIDE_NOT_ALLOWED`; a guest gets `JOIN_FIRST`. Hiding an expense that
+  is not paid toward answers 409 `EXPENSE_NOT_PAID_TOWARD`. Hiding or unhiding is recorded in the audit log
+  (`expense.hide`, `expense.unhide`) and moves `last_activity_at`. Repeating the stored state answers
+  `changed: false` and records nothing.
+- Hidden is group-wide and stored on the expense. It affects only the expense list (see the toggle below).
+- **Toggle**: the expense list offers "Visible expenses" (default) and "All expenses". In "All expenses", hidden rows
+  are marked "Hidden". The choice is per viewer and is not stored on the server.
+- A receipt photo changes no money, so attaching or removing one is not affected by the lock.
+
 ### Receipt photo
 
 - An expense has at most one optional receipt photo (`receipt_photos`). Uploading again replaces the old photo, and the
@@ -227,6 +247,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
+- Hidden expenses (see "Paid-toward expenses") still count in balances, settle-up suggestions, the summary bar above
+  the tabs (its total spent) and the spreadsheet export. Hiding leaves them out only of the expense list and the total
+  shown in the list header.
 - While a transfer from a payer to a receiver is `sent`, the same pair cannot record another (409 `TRANSFER_PENDING`),
   and the suggestion shows "waiting for confirmation" instead of Pay or Record payment. A transfer is confirmed once;
   a second confirm answers `ALREADY_CONFIRMED`. Existing duplicate `sent` rows are left as they are.
