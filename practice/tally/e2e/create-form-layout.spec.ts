@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { t } from './i18n';
 
+// Viewport-specific. The mobile project (Pixel 7, 412px) is below md, so the side-by-side assertion would fail there.
+// The desktop project keeps the configured browser and setViewportSize overrides it.
 test.describe('Create form layout (create_form_layout)', () => {
+  test.beforeEach((_fixtures, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'layout checks run in the desktop project');
+  });
+
   test('(a) desktop: the two groups sit side by side with equal tops; the currency group holds the select and the rounding checkbox', async ({
     page,
   }) => {
