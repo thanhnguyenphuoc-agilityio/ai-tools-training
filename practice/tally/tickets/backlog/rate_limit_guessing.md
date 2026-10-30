@@ -4,7 +4,7 @@
 |---|---|
 | ID | `TAL-51` |
 | Labels | `type::improvement`, `priority::low`, `area::security` |
-| Reporter | Product owner (human) |
+| Reporter | Opus (AI team lead) |
 | Assignee | - |
 | Depends on | - |
 | Related | `group_link_guessing` |
