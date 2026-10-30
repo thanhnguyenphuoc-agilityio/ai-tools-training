@@ -84,8 +84,10 @@ test('leaving with a balance shows the settle-up message', async ({ browser, pag
   await sam.getByRole('button', { name: t('join.submit') }).click();
   await expect(sam.getByRole('tab', { name: t('group.tabs.members') })).toBeVisible();
 
-  // Alex paid for both, so Sam owes money.
+  // Alex paid for both, so Sam owes money. The reload makes the form list Sam as a participant.
+  await page.reload();
   await page.getByRole('tab', { name: t('group.tabs.expenses') }).click();
+  await expect(page.getByRole('checkbox', { name: 'Sam' })).toBeChecked();
   await page.getByLabel(t('expenseForm.amount'), { exact: true }).fill('90k');
   await page.getByLabel(t('expenseForm.description')).fill('Utilities');
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();

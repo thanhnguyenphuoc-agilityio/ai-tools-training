@@ -46,8 +46,8 @@ test.describe('Create group with the account name (create_group_account_name)', 
 
     await page.getByLabel(t('home.create.groupName')).fill('Weekend Trip');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
+    // Signed in, owner access is tied to the account, so no owner key dialog is shown.
     await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-    await page.getByRole('button', { name: t('ownerKey.done') }).click();
 
     await page.getByRole('tab', { name: t('group.tabs.members') }).click();
     await expect(page.getByText('Sam Kim', { exact: true }).first()).toBeVisible();
@@ -69,7 +69,6 @@ test.describe('Create group with the account name (create_group_account_name)', 
     await page.getByLabel(t('home.create.groupName')).fill('Weekend Trip');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
-    await page.getByRole('button', { name: t('ownerKey.done') }).click();
 
     await page.getByRole('tab', { name: t('group.tabs.members') }).click();
     await expect(page.getByText('Sam', { exact: true }).first()).toBeVisible();
