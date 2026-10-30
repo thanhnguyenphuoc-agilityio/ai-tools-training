@@ -102,3 +102,42 @@ From the product owner (human):
 7. Docs: `docs/business-rules.md` ("Expenses" and a note under "Balances and settling up") and `docs/design.md`
    (`### delete_settled_expense (built)` after `group_live_updates`). The TAL-60 parts are not touched.
 8. Verify: typecheck, lint, `npm test`, `npm run test:hooks`. Then the ticket moves to `waiting-to-merge/`.
+
+## Merge request
+
+Branch `fix/delete_settled_expense` into `develop`. The merge request link is added when it exists. Merge order in
+the batch: `fix/recovery_link_signed_in_member` (TAL-60) first, then this branch.
+
+What changed:
+
+- `shared/expenseLock.ts`: `isPaidToward`, the pure rule. Equal timestamps count, zero shares do not.
+- `migrations/0013_expense_hidden.sql`: `hidden_at` and `hidden_by`, NULL means visible.
+- `worker/groupData.ts`: `paidTowardSql` (the EXISTS fragment used in the UPDATEs), `isExpensePaidToward`,
+  `loadLedger` maps `hiddenAt` and sets `paidToward`.
+- `worker/routes/expenses.ts`: DELETE and PATCH refuse a paid-toward expense with `EXPENSE_PAID_TOWARD`, checked in
+  the UPDATE SQL and before the payer and participant checks. The removed-member check stays first. New
+  `POST /:code/expenses/:id/hide` with `{ hidden }`, 404, 403, 409 `EXPENSE_NOT_PAID_TOWARD`, audited as
+  `expense.hide` or `expense.unhide`, counts as activity.
+- `worker/policy.ts`: `requireCanHideExpense`, the owner or the author, `HIDE_NOT_ALLOWED` otherwise.
+- `shared/errors.ts`, `src/i18n/locales/en.ts` and `vi.ts`: `EXPENSE_PAID_TOWARD`, `EXPENSE_NOT_PAID_TOWARD`,
+  `HIDE_NOT_ALLOWED`, and the list and toast texts.
+- `shared/types.ts`: `ExpenseDto.hiddenAt` and `paidToward`. Unit fixtures updated.
+- `src/api.ts`: `hideExpense`.
+- `src/components/ExpenseList.tsx`, `ExpenseList.scss`, `Icon.tsx`: the Visible / All toggle (per viewer), the
+  paid-toward row state with a Hide or Unhide button, the hidden badge. Errors show next to the list.
+- Existing suites adjusted to the rule: `tests/api/edit-expense.test.ts` (the edit targets an expense added after the
+  transfer), `tests/api/purge.test.ts` (the delete moves before the transfer), `tests/api/live.test.ts` (new
+  `POST /groups/:code/expenses/:id/hide` case).
+- `tests/api/paid-toward.test.ts`, `tests/unit/expenseLock.test.ts` and `e2e/hide-expense.spec.ts`: the matrix in the
+  acceptance criteria.
+- `docs/business-rules.md` ("Paid-toward expenses", and a note under "Balances and settling up") and
+  `docs/design.md` (`### delete_settled_expense (built)`).
+
+Commands and results (run in the feature worktree):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 52 files, 647 tests passed.
+- `npm run test:hooks`: 29 passed, 0 failed.
+- `npm run e2e`: not run in this branch. The batch runs it, including `e2e/hide-expense.spec.ts` and the regression
+  specs (edit-expense, receipts, attendance, csv-export).
