@@ -19,6 +19,7 @@ test.describe('owner_link_binds_account (OL-7, OL-8, OL-9)', () => {
     await signIn(page, `owner-${Date.now()}@example.com`);
 
     await page.getByLabel(t('home.create.groupName')).fill('Account Trip');
+    await page.getByLabel(t('home.create.useDifferentName')).check();
     await page.getByLabel(t('home.create.yourName')).fill('Alex');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
 
