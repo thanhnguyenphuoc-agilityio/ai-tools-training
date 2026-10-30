@@ -70,14 +70,6 @@ ready-to-review.
 - The signed-out path and the attachable signed-in path are unchanged.
 - The new API test fails before the fix.
 
-## Answers
-
-From the product owner (human):
-
-1. Option (a): when the attach is refused because the account is already another member, the recovery link still
-   restores owner access on the device through the owner cookie, without attaching, and answers
-   `{ ok: true, attached: false }`. The owner key is not revoked.
-
 ## Merge request
 
 Branch `fix/recovery_link_signed_in_member` into `develop`.
@@ -95,3 +87,21 @@ Verification, run in the worktree on 2026-10-30:
 - `npm test`: 50 files, 626 tests passed.
 - `npm run test:hooks`: 29 tests, 0 failed.
 - `e2e/owner-link-binds-account.spec.ts` is unchanged and is left for the batch e2e run.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- The claim route keeps `attachOwnerGroup` in a try/catch instead of `tryAttachOwnerGroup` as first planned. This is
+  correct: `tryAttachOwnerGroup` also maps `MEMBER_LINKED_ELSEWHERE` and `GROUP_OWNED_BY_OTHER_ACCOUNT` to
+  `attached: false`, which would hide answers covered by `account.test.ts`. Docs and the plan describe the narrowed catch.
+- The new test is `OL-7b` (`OL-8` already existed). It covers every acceptance criterion and fails on `develop` with
+  409 `ACCOUNT_ALREADY_MEMBER`.
+- The ticket carried a section that attributed option (a) to the product owner, which contradicted the Decision (the
+  AI team lead applied the default; the product owner may revisit it at ready-to-review). That section was removed.
+- No policy, auth, UI or locale change; the owner cookie stays HttpOnly and the key stays in the URL fragment.
+
+Checks in the worktree: `npm run typecheck` passed, `npm run lint` passed, `npm test` 50 files, 626 tests passed (a
+first run had 3 Miniflare timeouts under load and passed on rerun). The batch runs the full e2e suite on `develop`.
