@@ -74,6 +74,6 @@ Training sandbox for a 15-day "AI Tools" course. All project documentation, tick
   - Seeding: Prompt A in `PRACTICE.md` commits seeded bugs and their tickets directly on `develop`; the user then
     pushes `develop`.
   - The conflict exercise in `PRACTICE.md` merges two branches into `develop` by hand and pushes the result.
-- All other merges into `develop` and `main` go through GitLab merge requests.
+- All other merges into `develop` and `main` go through GitLab merge requests or pull requests on the GitHub mirror.
 - Commit messages and MR descriptions have no `Co-Authored-By:` trailer and no "Generated with" footer.
 - When a feature lands, update `docs/business-rules.md` and `docs/design.md` in the same branch.

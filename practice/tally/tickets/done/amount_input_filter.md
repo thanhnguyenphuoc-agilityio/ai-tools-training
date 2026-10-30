@@ -132,3 +132,5 @@ the amount.
   "1.2M", and "k150" becomes "150". This replaces the acceptance criterion that "1K5" stays "1K5".
 - Unit cases for the rule are in `tests/unit/money.test.ts`. `e2e/amount-input-filter.spec.ts` now expects `1,2B` for
   the fill `1,2tr abc 150k`.
+
+Confirmed by the human on `develop`, including the one-letter fix from pull request #62. Moved to done on 2026-10-30.

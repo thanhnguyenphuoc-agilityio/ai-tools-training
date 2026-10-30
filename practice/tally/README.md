@@ -60,8 +60,9 @@ to failed or misdirected transfers. Tally keeps one shared record per event and 
 
 ### Not in the MVP
 
-Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): currency conversion.
-`docs/design.md` holds a design for it.
+Each of these is a ticket in [`tickets/`](tickets/) (`backlog/`, or `todo/` once clarified): paying back a
+non-VND group in VND at an agreed rate (`vnd_settle_rate`). `docs/design.md` holds a design for it
+(`currency_conversion`).
 
 ### Who reports tickets
 
@@ -136,7 +137,7 @@ behaviour they check.
 | `scripts/seed-demo.mjs` | Creates a demo group through the API |
 | `docs/business-rules.md` | Required behaviour, as stated by the customer |
 | `docs/design.md` | Architecture, extension points and up-front designs per ticket |
-| `tickets/` | Backlog. Some tickets are intentionally vague |
+| `tickets/` | Ticket board, one folder per status. Some tickets are intentionally vague until clarified |
 | `PRACTICE.md` | Practice method: bug seeding, personas, ticket map, 15-day schedule |
 
 ## Practice rules

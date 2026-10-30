@@ -38,11 +38,15 @@ final human check: every feature is tested by hand on `develop` before it reache
 | [`CLAUDE.md`](CLAUDE.md) | Instructions for Claude Code in this repository |
 | `.claude/skills/review-checklist/` | Review skill based on the Day 3 checklist |
 | `.claude/skills/release-checklist/` | Release skill: `develop` to `main` after the human confirms the tested tickets |
+| `.claude/skills/ticket-batch/` | Batch skill: runs several approved tickets through a saved workflow (plan, build, review, merge into `develop`, e2e) |
+| `.claude/workflows/`, `.claude/workflow-src/` | The `ticket-batch-thorough` and `ticket-batch-fast` workflows, generated from `workflow-src/` by `node .claude/workflow-src/build.mjs` |
 | `.claude/commands/start-ticket.md` | `/start-ticket <ticket_name>`: branch, ticket to `in-progress/`, plan before code |
+| `.claude/commands/sync-board.md` | `/sync-board <project url>`: mirrors the ticket board onto a GitHub Projects board (`tickets/README.md`) |
 | `.claude/loop.md` | Default prompt for a bare `/loop`: a report-only pass that tests one ticket waiting to merge |
 | `.claude/hooks/`, `.claude/settings.json` | Claude Code hooks: `guard-answer-keys` (`PreToolUse`) blocks common ways to read the exercise answer keys (`tally-*-answers.md`), the CLAUDE.md rule still applies; `format-on-edit` (`PostToolUse`) formats an edited app file with Prettier; `notify-on-finish` (`Stop`) shows a desktop notification when a reply ends (`CLAUDE_NOTIFY=off` turns it off). Tests: `npm run test:hooks` inside `practice/tally` (or `node --test .claude/hooks/*.test.mjs`) |
 | `.mcp.json` | Playwright MCP server for driving the running app from a Claude Code session (notes below) |
 | `.github/workflows/ci.yml` | GitHub Actions: typecheck, unit/API tests and e2e on pull requests and on `develop`/`main` |
+| `.github/workflows/claude.yml`, `claude-mention.yml` | GitHub Actions with Claude Code: a review comment on each new pull request, and a reply when a collaborator writes `@claude` (notes below) |
 
 The Playwright MCP server in `.mcp.json` is a project-scope entry named `playwright`. Claude Code asks for approval
 when it first loads a project MCP server, at the start of a session, and a local-scope entry with the same name
@@ -71,6 +75,13 @@ claude mcp add --transport http github https://api.githubcopilot.com/mcp/ -s loc
 The token stays in the local Claude Code configuration and is never committed. `/mcp` shows whether the server is
 connected.
 
+The two Claude workflows use `anthropics/claude-code-action@v1` with a Claude subscription token stored as the
+repository secret `CLAUDE_CODE_OAUTH_TOKEN` (created with `claude setup-token`), and they need the Claude GitHub app
+installed on the repository. GitHub runs comment-triggered workflows from the default branch, and the action refuses
+a workflow file that differs from the default branch copy. Both workflows therefore act only once they are on the
+GitHub default branch. The review prompt uses the `review-checklist` skill; neither workflow approves, merges or
+pushes to `develop` or `main`.
+
 ## Language
 
 The repository is written in English: code, tests, documentation, tickets and the training log. The only
@@ -81,7 +92,7 @@ for each supported language.
 
 Start with the **Business overview** in [`practice/tally/README.md`](practice/tally/README.md#business-overview):
 what the app does, its concepts, the main flow and its constraints. Then clone the integration branch and run it
-(`develop` is the default branch on GitLab once Day 0 is pushed):
+(`develop` is the default branch on GitLab):
 
 ```bash
 git clone -b develop git@gitlab.asoft-python.com:thanh.nguyenphuoc/ai-tools-training.git
@@ -104,5 +115,6 @@ before Day 2.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`).
 - A merge request is self-contained: what changed, why, how it was tested, screenshots for UI changes and a
   ticket link. Typecheck, unit/API tests and e2e must pass locally and in the GitHub Actions run.
-- The repository is mirrored to GitHub (`git@github.com:thanhnguyenphuoc-agilityio/ai-tools-training.git`) for CI;
-  GitLab stays the primary remote for merge requests.
+- The repository is mirrored to GitHub (`git@github.com:thanhnguyenphuoc-agilityio/ai-tools-training.git`) for CI,
+  the Claude workflows and the project board. Changes reach `develop` through a GitLab merge request or a GitHub pull
+  request, never by a direct push.
