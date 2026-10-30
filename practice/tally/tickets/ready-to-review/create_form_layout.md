@@ -106,3 +106,22 @@ Commands and results (feature worktree):
 - `npm run test:hooks`: 32 pass, 0 fail.
 - `npm run e2e`: not run in the worktree, as planned. The batch runs `e2e/create-form-layout.spec.ts` and
   `e2e/create-group-account-name.spec.ts`, plus the existing create-form specs that must pass unchanged.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- No blocker or major finding. The markup matches the plan: two `div.fieldset.stack.stack--tight.home-page__group`
+  boxes inside `div.home-page__groups`, the labels still wrap their inputs, and the rounding checkbox keeps its
+  `coarseUnit > 1` condition inside the "Currency" group. No state, handler, id or i18n key changed.
+- [nit] `src/pages/HomePage.tsx`: Prettier reflowed one unrelated line (the recent-groups `<span>` pair). No behaviour
+  change; accepted because the line already failed Prettier on `develop`.
+- [nit] `e2e/create-form-layout.spec.ts` runs only in the desktop project, since the 1280 viewport check cannot pass on a
+  412px device profile and the phone case sets its own viewport. Accepted.
+
+Fixes: none needed.
+
+Checks (feature worktree): `npm run typecheck` clean, `npm run lint` clean, `npm test` 55 files, 695 tests passed. The
+full e2e suite runs on `develop` after the batch merge.
