@@ -223,6 +223,45 @@ describe('owner_link_binds_account API', () => {
     expect((await ownerRow(code))?.owner_user_id).toBe(accountRow?.id);
   });
 
+  it('OL-7b: a signed-in member opening the recovery link gets owner access on the device without attaching', async () => {
+    const { guest, code, ownerKey } = await createAnonymousGroup('Recovery Member Group');
+
+    // The phone account joins the group as a member, so the account is already another member of it.
+    const phone = new Browser(env.env);
+    await signIn(phone, 'sam@example.com');
+    const joined = await phone.call('POST', `/groups/${code}/members`, { name: 'Sam', claim: true });
+    expect(joined.status).toBe(201);
+
+    const before = await ownerRow(code);
+    const auditBefore = await auditCount(code);
+
+    const claim = await phone.call<{ ok: true; attached: boolean }>('POST', `/groups/${code}/owner/claim`, { ownerKey });
+    expect(claim.status).toBe(200);
+    expect(claim.json.attached).toBe(false);
+    expect(phone.getCookie(`tally_owner_${code}`)).toBeTruthy();
+
+    const dto = await phone.call<GroupDto>('GET', `/groups/${code}`);
+    expect(dto.status).toBe(200);
+    expect(dto.json.me.isOwner).toBe(true);
+
+    // The group is not attached and the owner key stays valid; the claim does not move last_activity_at.
+    const after = await ownerRow(code);
+    expect(after?.owner_user_id).toBeNull();
+    expect(after?.owner_key_hash).not.toBe('revoked');
+    expect(after?.last_activity_at).toBe(before?.last_activity_at);
+
+    // Exactly one new audit entry, the owner claim.
+    expect(await auditCount(code)).toBe(auditBefore + 1);
+    const claims = await env.env.DB.prepare('SELECT COUNT(*) AS n FROM audit_log WHERE group_code = ? AND action = ?')
+      .bind(code, 'owner.claim')
+      .first<{ n: number }>();
+    expect(claims?.n).toBe(1);
+
+    // The laptop that created the group keeps owner access too.
+    const laptop = await guest.call<GroupDto>('GET', `/groups/${code}`);
+    expect(laptop.json.me.isOwner).toBe(true);
+  });
+
   it('OL-8: deleting the account of a solo owned group leaves the group without an owner and the key revoked', async () => {
     const alex = new Browser(env.env);
     await signIn(alex, 'alex@example.com');
