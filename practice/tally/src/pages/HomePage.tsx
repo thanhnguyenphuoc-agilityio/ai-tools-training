@@ -46,8 +46,10 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
 
   const currency = CURRENCIES[currencyCode];
   const coarseUnit = currency.roundOptions[currency.roundOptions.length - 1];
-  const accountName = user?.name.trim() ?? '';
+  const accountName = user?.name ?? '';
   const owner = createOwnerName(accountName, useDifferentName, ownerName);
+  // Trimmed: a blank account name shows no checkbox, matching the helper's lock rule.
+  const hasAccountName = accountName.trim() !== '';
 
   // Focus the name field once the person ticks "Use a different name".
   useEffect(() => {
@@ -121,14 +123,14 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                   {t('home.create.accountNameHint')}
                 </p>
               )}
-              {accountName && (
+              {hasAccountName && (
                 <label className="field field--inline">
                   <input
                     type="checkbox"
                     checked={useDifferentName}
                     onChange={(e) => {
                       setUseDifferentName(e.target.checked);
-                      if (e.target.checked) setOwnerName(accountName.slice(0, 40));
+                      if (e.target.checked) setOwnerName(owner.value);
                     }}
                   />
                   {t('home.create.useDifferentName')}

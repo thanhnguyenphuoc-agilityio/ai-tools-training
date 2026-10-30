@@ -105,3 +105,33 @@ Commands and results (run in the feature worktree):
 - `npm run test:hooks`: 29 passed, 0 failed.
 - `npm run e2e`: not run in the worktree, as planned. The batch runs `e2e/create-group-account-name.spec.ts` and the
   five adapted specs (six `yourName` fills across them, seven signed-in fills in total).
+
+## Review
+
+Reviewed by Sonnet (QA tester).
+
+Findings:
+
+- [major] `src/ownerName.ts`: the locked value was `user.name` cut to 40 but not trimmed. The server trims and rejects a
+  blank name (`worker/http.ts` `text`), so an account name of spaces only passed the `required` attribute and then failed
+  on create with `FIELD_REQUIRED`. The same gap let leading or trailing spaces through, which the server would have trimmed
+  silently. Fixed: the helper trims the account name before the lock check and the cut.
+- [nit] `src/pages/HomePage.tsx`: the checkbox was shown for any truthy `user.name`, including spaces, and checking it
+  seeded the typed value from the raw name. Fixed: the checkbox follows the trimmed name, and the seed uses the helper's
+  already-trimmed value.
+
+Checked and left as is:
+
+- The two `home.create.yourName` fills left untouched (`account.spec.ts` line 104, `saved-bank.spec.ts` line 87) run on a
+  signed-out page, so the field is editable there. No change needed.
+- `e2e/create-group-account-name.spec.ts` covers answers (a) to (d), including the account menu label staying unchanged
+  after creating with a different name.
+- No `worker/` or migration change. Permissions stay in `worker/policy.ts`. Both locales carry `useDifferentName` and
+  `accountNameHint`. `field__control--readonly` uses only `--color-muted`.
+
+Checks after the fixes (run in the feature worktree):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 54 files, 662 tests passed (the trim case added one).
+- `npm run e2e`: still not run here. The batch runs the new spec and the five adapted specs.

@@ -27,6 +27,10 @@ describe('createOwnerName', () => {
     expect(createOwnerName('   ', false, 'Sam')).toEqual({ value: 'Sam', locked: false });
   });
 
+  it('trims the account name before locking it', () => {
+    expect(createOwnerName('  Sam Kim  ', false, '')).toEqual({ value: 'Sam Kim', locked: true });
+  });
+
   it('keeps a Vietnamese account name with diacritics', () => {
     expect(createOwnerName(VI_ACCOUNT, false, '')).toEqual({ value: VI_ACCOUNT, locked: true });
   });

@@ -13,6 +13,7 @@ export function createOwnerName(
 ): { value: string; locked: boolean } {
   const account = accountName?.trim() ?? '';
   if (account && !useDifferent) {
+    // Trimmed, because the server trims and rejects a blank name (FIELD_REQUIRED).
     return { value: account.slice(0, OWNER_NAME_MAX), locked: true };
   }
   return { value: typed, locked: false };
