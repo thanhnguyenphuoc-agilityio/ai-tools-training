@@ -58,6 +58,7 @@ test.describe('Account and Dev sign-in (GS-11, GS-15, GS-2)', () => {
     await expect(page1.getByRole('button', { name: t('account.menuLabel', { name: 'founder' }) })).toBeVisible();
 
     await page1.getByLabel(t('home.create.groupName')).fill('Company Retreat');
+    await page1.getByLabel(t('home.create.useDifferentName')).check();
     await page1.getByLabel(t('home.create.yourName')).fill('Alex');
     await page1.getByRole('button', { name: t('home.create.submit') }).click();
 

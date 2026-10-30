@@ -30,4 +30,26 @@
   &__edited {
     white-space: nowrap;
   }
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(2);
+  }
+
+  &__filter {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: space(1);
+  }
+
+  // A hidden expense, shown in "All expenses": the badge is muted so it does not read as a warning.
+  &__hidden {
+    background: var(--color-surface);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+  }
 }

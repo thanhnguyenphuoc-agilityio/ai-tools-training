@@ -119,7 +119,9 @@ function parseMinorUnits(input: string, rules: AmountInputRules, currency: Curre
   const digits = currency.minorDigits;
   let value: number | null = null;
 
-  const suffixes = Object.keys(rules.suffixes).sort((a, b) => b.length - a.length).map(escapeRe);
+  const suffixes = Object.keys(rules.suffixes)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRe);
   const suffixed = suffixes.length ? s.match(new RegExp(`^(\\d+)(?:[.,](\\d+))?(${suffixes.join('|')})$`)) : null;
 
   if (suffixed) {
@@ -242,4 +244,19 @@ export function splitExact(amount: number, parts: ExactPart[]): Map<string, numb
 export function parseShareAmount(input: string, rules: AmountInputRules, currency: CurrencyInfo): number | null {
   if (input.trim() === '') return 0;
   return parseMinorUnits(input, rules, currency);
+}
+
+/**
+ * Keeps only what an amount box accepts while typing or pasting: digits, "." and ",", and the shorthand letters
+ * k, m and b, which are returned in upper case ("150k" -> "150K"). Every other character is dropped, including
+ * spaces, other letters, currency signs and the minus sign. At most one shorthand letter is kept, and only at the
+ * end: the first one ends the value and everything after it is dropped ("1K5" -> "1K", "150KM" -> "150K",
+ * "1.2m3" -> "1.2M"). A letter with no digit before it is dropped ("k150" -> "150", "B" -> ""). Otherwise there is
+ * no validation: "1.5" stays "1.5", and parseAmount decides what is a valid amount. Both separators are kept in every
+ * locale, because parseAmount decides their meaning.
+ */
+export function filterAmountInput(input: string): string {
+  const cleaned = input.replace(/[^0-9.,kmb]/gi, '').toUpperCase();
+  // Drop the letters that have no digit before them, then drop everything after the first letter left.
+  return cleaned.replace(/^[^0-9]*/, (lead) => lead.replace(/[KMB]/g, '')).replace(/([KMB]).*$/, '$1');
 }

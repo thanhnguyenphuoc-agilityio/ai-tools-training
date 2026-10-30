@@ -109,6 +109,30 @@ export function requireCanRemoveMember(me: Identity): void {
 }
 
 /**
+ * Leaving a group (leave_group): a signed-in or device member other than the owner. A guest gets JOIN_FIRST through
+ * requireMember; the owner is refused, because the group must be handed over first. Returns the member id.
+ */
+export function requireCanLeaveGroup(me: Identity): string {
+  const memberId = requireMember(me);
+  if (me.isOwner) {
+    throw new ApiError(409, 'CANNOT_LEAVE_OWNER', 'the group owner cannot leave; hand the group over first');
+  }
+  return memberId;
+}
+
+/** Deleting a group (leave_group): the owner only. Whether other members still exist is checked by the route. */
+export function requireCanDeleteGroup(me: Identity): void {
+  requireOwner(me);
+}
+
+/** Deleting a group is refused while another active member exists (leave_group). Unclaimed members count too. */
+export function requireGroupAlone(otherActive: number): void {
+  if (otherActive > 0) {
+    throw new ApiError(409, 'GROUP_HAS_MEMBERS', 'the group still has other members');
+  }
+}
+
+/**
  * Releasing a wrongly claimed name (wrong_name_claim): the owner only. The route checks the target (owner member,
  * removed, not claimed) itself, because those refusals need the member row.
  */
@@ -133,6 +157,17 @@ export function requireCanEditExpense(me: Identity, expense: { created_by: strin
   const caller = requireMember(me);
   if (!expense.created_by || caller !== expense.created_by) {
     throw new ApiError(403, 'EDIT_NOT_ALLOWED', 'only the author or the group owner can edit this');
+  }
+}
+
+/**
+ * Hiding a paid-toward expense (delete_settled_expense): the author or the owner, the same people who may delete it.
+ * A guest gets JOIN_FIRST through requireMember.
+ */
+export function requireCanHideExpense(me: Identity, expense: { created_by: string | null }): void {
+  if (me.isOwner) return;
+  if (requireMember(me) !== expense.created_by) {
+    throw new ApiError(403, 'HIDE_NOT_ALLOWED', 'only the author or the group owner can hide this');
   }
 }
 

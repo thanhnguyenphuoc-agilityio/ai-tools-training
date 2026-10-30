@@ -60,6 +60,8 @@ export const api = {
   removeMember: (code: string, id: string, reason: string) =>
     call('POST', `${g(code)}/members/${id}/remove`, { reason }),
   releaseMember: (code: string, id: string) => call('POST', `${g(code)}/members/${id}/release`),
+  leaveGroup: (code: string) => call<{ ok: true }>('POST', `${g(code)}/leave`),
+  deleteGroup: (code: string) => call<{ ok: true }>('DELETE', g(code)),
 
   createSession: (code: string, session: NewSession) => call<{ id: string }>('POST', `${g(code)}/sessions`, session),
   updateSession: (code: string, id: string, session: Partial<NewSession>) =>
@@ -70,6 +72,8 @@ export const api = {
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),
   updateExpense: (code: string, id: string, expense: NewExpense) =>
     call<{ id: string; sharesChanged: boolean; changed: boolean }>('PATCH', `${g(code)}/expenses/${id}`, expense),
+  hideExpense: (code: string, id: string, hidden: boolean) =>
+    call<{ ok: true; changed: boolean }>('POST', `${g(code)}/expenses/${id}/hide`, { hidden }),
 
   // Receipt photos (receipt_photos): the body is the image itself, not JSON.
   uploadReceipt: async (

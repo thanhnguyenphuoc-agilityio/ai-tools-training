@@ -1,9 +1,11 @@
 // Loading a group and its members, activity tracking and audit log.
+import { isPaidToward } from '../shared/expenseLock';
 import { GROUP_CODE_RE } from '../shared/groupCode';
 import { computeBalances } from '../shared/settle';
 import type { ExpenseDto, MemberDto, SessionDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
+import { throttleFailure } from './throttle';
 
 export interface GroupRow {
   code: string;
@@ -32,6 +34,8 @@ export interface MemberRow {
   created_at: string;
   removed_at: string | null;
   removed_reason: string | null;
+  /** 1 when the member left the group on their own (leave_group); only meaningful while removed_at is set. */
+  left_group: number;
   /** Never copied into a DTO; only `invited` is derived from it. */
   invite_email?: string | null;
 }
@@ -39,9 +43,13 @@ export interface MemberRow {
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
 export async function loadGroup(c: Ctx): Promise<{ group: GroupRow; me: Identity }> {
   const code = c.req.param('code') ?? '';
-  if (!GROUP_CODE_RE.test(code)) throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
-  const group = await c.env.DB.prepare('SELECT * FROM groups WHERE code = ?').bind(code).first<GroupRow>();
-  if (!group) throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
+  const group = GROUP_CODE_RE.test(code)
+    ? await c.env.DB.prepare('SELECT * FROM groups WHERE code = ?').bind(code).first<GroupRow>()
+    : null;
+  if (!group) {
+    await throttleFailure(c, 'lookup');
+    throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
+  }
   const me = await resolveIdentity(c, code, group);
   return { group, me };
 }
@@ -89,6 +97,20 @@ export const noneRemovedSql = (n: number) =>
   `NOT EXISTS (SELECT 1 FROM members WHERE removed_at IS NOT NULL AND id IN (SELECT value FROM json_each(?${n})))`;
 
 /**
+ * SQL condition, true while the expense bound at `?<expenseParam>` is paid toward (shared/expenseLock.ts): the group
+ * (`?<groupParam>`) has a transfer recorded at or after the expense, involving its payer or a member with a share
+ * above zero. Used inside the UPDATE of an edit, a delete or a hide, so a transfer that commits in between is seen.
+ */
+export const paidTowardSql = (expenseParam: number, groupParam: number) => {
+  const involved = `SELECT payer_id FROM expenses WHERE id = ?${expenseParam}
+    UNION SELECT member_id FROM expense_shares WHERE expense_id = ?${expenseParam} AND amount > 0`;
+  return `EXISTS (SELECT 1 FROM transfers t
+    WHERE t.group_code = ?${groupParam}
+      AND t.created_at >= (SELECT created_at FROM expenses WHERE id = ?${expenseParam})
+      AND (t.from_id IN (${involved}) OR t.to_id IN (${involved})))`;
+};
+
+/**
  * True when a removed member paid the expense or owes a share above zero. Such an expense can no longer be edited
  * or deleted, the same rule as `involvesRemovedMember` in src/expenseRow.ts for the list.
  */
@@ -105,6 +127,15 @@ export async function involvesRemovedMember(db: D1Database, code: string, id: st
     .bind(id, code)
     .first<{ removed: number }>();
   return !!row?.removed;
+}
+
+/** True when the expense is paid toward (shared/expenseLock.ts), read from the stored payer, shares and transfers. */
+export async function isExpensePaidToward(db: D1Database, code: string, id: string): Promise<boolean> {
+  const row = await db
+    .prepare(`SELECT ${paidTowardSql(1, 2)} AS paid`)
+    .bind(id, code)
+    .first<{ paid: number }>();
+  return !!row?.paid;
 }
 
 /**
@@ -166,6 +197,8 @@ export async function loadLedger(
     editedAt: (e.edited_at as string | null) ?? null,
     receipt: receiptByExpense.get(e.id as string) ?? null,
     sessionId: (e.session_id as string | null) ?? null,
+    hiddenAt: (e.hidden_at as string | null) ?? null,
+    paidToward: false,
   }));
   const transfers: TransferDto[] = transferRows.map((t) => ({
     id: t.id as string,
@@ -176,6 +209,7 @@ export async function loadLedger(
     createdAt: t.created_at as string,
     confirmedAt: t.confirmed_at as string | null,
   }));
+  for (const e of expenses) e.paidToward = isPaidToward(e, transfers);
   return { expenses, transfers };
 }
 
@@ -232,6 +266,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
       claimed: m.token_hash !== null || m.user_id !== null,
       removed: true,
       removedReason: m.removed_reason,
+      left: m.left_group === 1,
       bankBin: null,
       accountNo: null,
       accountName: null,
@@ -266,6 +301,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
     claimed,
     removed: false,
     removedReason: m.removed_reason,
+    left: false,
     bankBin,
     accountNo,
     accountName,

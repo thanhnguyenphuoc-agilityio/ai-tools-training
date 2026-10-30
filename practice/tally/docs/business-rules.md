@@ -17,6 +17,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - The key is after `#`, so browsers do not send it to the server and it does not appear in logs.
   - Opening the recovery link on another device restores owner access, until the group is tied to an account.
   - Opening the recovery link while signed in attaches the group and the owner member to that account, without a confirmation step, and shows a toast. The owner key is then revoked (`owner_key_hash = 'revoked'`) and the owner cookie on every device stops granting owner access; each device clears it on its next request to the group.
+    - If the account is already another member of the group, the group is not attached. The recovery link then restores owner access on that device through the owner cookie, as without an account, and the owner key stays valid.
   - An owner who created a group without an account and signs in later on the same device is attached automatically: after sign-in, the interface asks the server to attach each group of the device history that the device holds an owner key for.
   - After attaching, a revoked recovery link answers `403 OWNER_KEY_REVOKED`. A group owned by another account answers `403 GROUP_OWNED_BY_OTHER_ACCOUNT`.
 - When a group is created while signed in, it belongs to the account from the start: no owner key is issued (`ownerKey` is null), `owner_key_hash` is set to `'revoked'`, and no recovery link is shown. The page shows no notice for it; the members tab states that owner access is tied to the account.
@@ -44,6 +45,10 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - **Complete deletion:** deletion removes everything of the group: members, bank details, expenses, shares, transfers and the `audit_log`. Open balances do not prevent deletion (privacy comes first).
   - **Deletion date line:** the group page displays the deletion date (`last_activity_at` plus 10 days) in the viewer's language and time zone. During the last 72 hours before deletion, the line is highlighted with warning colors and an extra prompt to make a change to keep the group.
   - **Deleted groups:** opening a link or recovery link to a deleted group returns "group not found", and the group is automatically removed from that device's recent groups list in local storage.
+  - **Deleting a group** (`leave_group`): the owner can delete the group from the members tab, after a confirmation, while no other active member exists. An unclaimed member added by name counts as a member, so the owner removes or waits for them first. Kept groups can be deleted too.
+    - Deletion is complete, as in automatic deletion: members, bank details, expenses, shares, transfers, sessions, photos and the `audit_log`. A deleted group leaves no audit row, because only leaving is recorded.
+    - Refusals: `403 OWNER_ONLY` for a member or a guest; `409 GROUP_HAS_MEMBERS` while another active member exists (the delete action is then not shown); `404 GROUP_NOT_FOUND` for an unknown code.
+    - Afterwards the device forgets the group (recent groups and the joined groups list), and its links answer "group not found".
   - **Release migration:** the migration shipping this feature sets `last_activity_at` of every existing group to the migration run time, giving each existing group 10 full days.
   - **Kept groups (`lock_groups`):**
     - The owner, signed in, can keep a group so it is never purged. Up to **10 kept groups** per account (`MAX_LOCKED_GROUPS`).
@@ -111,6 +116,17 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - An expense that a removed member paid, or in which they owe a share above zero, can no longer be deleted or edited
     (`EXPENSE_HAS_REMOVED_MEMBER`): deleting or editing it would give them a balance that nobody could settle.
   - The removal is recorded in `audit_log`.
+- **Leaving a group** (`leave_group`):
+  - A member other than the owner can leave on their own from the members tab, after a confirmation. The owner
+    cannot leave (`409 CANNOT_LEAVE_OWNER`); the owner hands the group over first (`transfer_ownership`).
+  - The rules are those of removal: the balance must be zero and no transfer may wait for confirmation
+    (`409 MEMBER_HAS_BALANCE`, with the balance). A guest gets `401 JOIN_FIRST`; leaving twice gets `JOIN_FIRST`
+    too, because the device no longer resolves.
+  - A leave is a soft removal marked as left: the member stays in past expenses and transfers with their name, the
+    removed list shows "left the group" with no reason, and the device and the account become guests. The account
+    leaves the joined groups list and can join again as a new member.
+  - The leave is recorded in `audit_log` as `member.leave`, with the leaver as actor, and moves `last_activity_at`.
+  - A removal by the owner is never shown as left.
 - OPEN QUESTION: what is the maximum number of members in a group? (`large_group_expense_rejected`)
 
 ## Expenses
@@ -120,10 +136,16 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   Floating-point numbers are not used. The maximum is 1,000,000,000 minor units per expense (`MAX_AMOUNT` in
   `shared/currency.ts`), for example 10,000,000 USD or 1,000,000,000 VND.
 - The amount field accepts the input conventions of the interface language:
-  - Vietnamese: `150000`, `150.000`, `150k`, `77.5k`, `1,2tr`, `2m`, `150.000` followed by the dong sign. For
+  - Vietnamese: `150000`, `150.000`, `150K`, `77.5K`, `1,2M`, `2M`, `1B`, `150.000` followed by the dong sign. For
     currencies with decimals (USD): `12,50`, `1.250,50`.
-  - English: `150000`, `150,000`, `150k`, `1.2m`. For USD: `12.50`, `1,250.50`.
+  - English: `150000`, `150,000`, `150K`, `1.2M`, `1B`. For USD: `12.50`, `1,250.50`.
   - For VND, ambiguous values such as `1.5` (without a suffix) are rejected.
+- The amount field and the exact-share fields keep only digits, "." and ",", and at most one shorthand letter, K, M
+  or B, while typing or pasting. The letter is shown in upper case and must come after a digit and at the end: the
+  first letter ends the value and everything after it is dropped (`1K5` becomes `1K`), and a letter with no digit
+  before it is dropped (`k150` becomes `150`). K, M and B mean thousand, million and billion in every locale. The
+  maximum is unchanged, so `1B` is the largest B value accepted for VND, and `1B` is rejected for USD. The older
+  Vietnamese `tr` suffix and the currency marks are still parsed but cannot be typed (`amount_input_filter`).
 - The date is a calendar date chosen by the user (`YYYY-MM-DD`), without a time zone. It defaults to **today in the
   time zone of the device entering the expense**.
 - Split modes:
@@ -176,6 +198,26 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - A real edit is activity: it moves `last_activity_at`. It works the same in a kept group, because a lock only stops
     deletion.
 
+### Paid-toward expenses
+
+- An expense is **paid toward** once the group has a transfer (`sent` or `confirmed`) recorded at or after the
+  expense's creation whose sender or receiver is the expense's payer or a member with a share above zero. Transfers
+  are never deleted, so the state is permanent. Both times are compared as ISO timestamps. Shares of zero do not count.
+- A transfer covers only the expenses that existed when it was recorded. An expense added later can still be edited
+  or deleted; if it is correct, the payer settles the new difference with a new transfer.
+- A paid-toward expense cannot be edited or deleted. The API answers 409 `EXPENSE_PAID_TOWARD` (both for the PATCH and
+  the DELETE). The expense list shows "Kept: already paid toward" in place of Edit and Delete. A removed member on the
+  expense still gives `EXPENSE_HAS_REMOVED_MEMBER`, which is checked first.
+- **Hide and Unhide**: the author or the owner may hide or unhide a paid-toward expense (`requireCanHideExpense` in
+  `worker/policy.ts`). Another member gets 403 `HIDE_NOT_ALLOWED`; a guest gets `JOIN_FIRST`. Hiding an expense that
+  is not paid toward answers 409 `EXPENSE_NOT_PAID_TOWARD`. Hiding or unhiding is recorded in the audit log
+  (`expense.hide`, `expense.unhide`) and moves `last_activity_at`. Repeating the stored state answers
+  `changed: false` and records nothing.
+- Hidden is group-wide and stored on the expense. It affects only the expense list (see the toggle below).
+- **Toggle**: the expense list offers "Visible expenses" (default) and "All expenses". In "All expenses", hidden rows
+  are marked "Hidden". The choice is per viewer and is not stored on the server.
+- A receipt photo changes no money, so attaching or removing one is not affected by the lock.
+
 ### Receipt photo
 
 - An expense has at most one optional receipt photo (`receipt_photos`). Uploading again replaces the old photo, and the
@@ -226,6 +268,9 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   2. The debtor transfers the money in their banking app, then clicks **I have sent it**. The transfer becomes `sent`.
   3. The **recipient** (or the owner) clicks **Confirm received**. The transfer becomes `confirmed`.
 - Only `confirmed` transfers change balances. The app does **not** know when money arrives (no bank connection).
+- Hidden expenses (see "Paid-toward expenses") still count in balances, settle-up suggestions, the summary bar above
+  the tabs (its total spent) and the spreadsheet export. Hiding leaves them out only of the expense list and the total
+  shown in the list header.
 - While a transfer from a payer to a receiver is `sent`, the same pair cannot record another (409 `TRANSFER_PENDING`),
   and the suggestion shows "waiting for confirmation" instead of Pay or Record payment. A transfer is confirmed once;
   a second confirm answers `ALREADY_CONFIRMED`. Existing duplicate `sent` rows are left as they are.
@@ -301,6 +346,13 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
     - On the home page, groups in the account list are omitted from the device history list.
 - Creating a group while signed in assigns `owner_user_id` to the account and links the owner's member. Joining or
   claiming a name while signed in links that member to the account (`members.user_id`).
+- Signed in, the create form shows the account name in the name field, read-only, with an unchecked "Use a different name"
+  checkbox. Checking it makes the field editable and moves focus to it; unchecking restores the account name. Signed out,
+  the form is unchanged (an empty, editable field and no checkbox). The limits are the same (1 to 40 characters, the
+  account name cut to 40). The chosen name never changes the account name (`create_group_account_name`).
+- The create form shows two groups: "Your name" (name field, hint, "Use a different name") and "Currency" (currency,
+  rounding checkbox). The groups stack on phones and sit side by side from tablet width (`md`). Labels and validation
+  are unchanged (`create_form_layout`).
 - **Link to my account:**
   - The button is shown only when a member device token is held, the member is not linked to any account, and the
     account is not already another member of the group. It is never shown to an owner: owners attach their group
@@ -378,7 +430,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Group codes: 12 of 31 characters, about 59.5 bits; about 1.3e-14 chance per guess at 10,000 groups.
   - Owner keys, device tokens and session tokens: 256 bits, stored only as SHA-256.
   - A recovery link stops working once the group is tied to an account.
-  - Throttling failed attempts is tracked as `rate_limit_guessing`.
+  - Failed attempts are throttled per client: at most 20 failed group lookups (`GROUP_NOT_FOUND`) and, separately, 20
+    failed owner recovery attempts (`WRONG_OWNER_KEY`, `OWNER_KEY_REVOKED`) per minute. Over the limit the API answers
+    `429 TOO_MANY_ATTEMPTS`. Successful requests are never counted, so viewing a group and normal use are unaffected.
+  - Pages and API answers send `Referrer-Policy: same-origin`, so group links never leave the site in the Referer
+    header.
 
 ## Interface preferences
 

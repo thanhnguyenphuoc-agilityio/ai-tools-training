@@ -42,6 +42,13 @@ export function createApp() {
     return c.json({ error: 'internal error', code: 'INTERNAL' } satisfies ErrorBody, 500);
   });
 
+  // Group links carry the group code; they never leave the site in the Referer header (rate_limit_guessing).
+  // index.html sets the same policy for the web app's own pages.
+  app.use('*', async (c, next) => {
+    await next();
+    c.header('Referrer-Policy', 'same-origin');
+  });
+
   app.get('/health', (c) => c.json({ ok: true }));
 
   // Live updates: after any group write (or a read that set groupChanged) the open pages of the group are signalled.

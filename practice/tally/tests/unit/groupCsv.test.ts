@@ -22,6 +22,7 @@ const member = (id: string, name: string): MemberDto => ({
   claimed: true,
   removed: false,
   removedReason: null,
+  left: false,
   bankBin: null,
   accountNo: null,
   accountName: null,
@@ -39,6 +40,8 @@ const expense = (e: Partial<ExpenseDto> & Pick<ExpenseDto, 'id' | 'payerId' | 'a
   editedAt: null,
   receipt: null,
   sessionId: null,
+  hiddenAt: null,
+  paidToward: false,
   ...e,
 });
 

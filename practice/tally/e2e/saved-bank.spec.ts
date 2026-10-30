@@ -144,6 +144,7 @@ test.describe('Saved bank details (SB-6, SB-7, SB-9)', () => {
 
     // Create a group
     await page.getByLabel(t('home.create.groupName')).fill('Pat Weekend');
+    await page.getByLabel(t('home.create.useDifferentName')).check();
     await page.getByLabel(t('home.create.yourName')).fill('Pat');
     await page.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(page).toHaveURL(/\/g\/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);

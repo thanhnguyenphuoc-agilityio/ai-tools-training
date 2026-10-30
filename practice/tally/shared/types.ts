@@ -28,6 +28,8 @@ export interface MemberDto extends BankDetails {
   /** Removed by the owner (remove_member). Kept so that past expenses and transfers still show the name. */
   removed: boolean;
   removedReason: string | null;
+  /** Left the group on their own (leave_group), so the removed list says "left the group" and shows no reason. */
+  left: boolean;
   bankSource: 'group' | 'account' | null;
   /** Linked to a signed-in account (boolean only; the account itself is never returned). */
   hasAccount: boolean;
@@ -62,6 +64,10 @@ export interface ExpenseDto {
   receipt: ReceiptDto | null;
   /** The session the cost belongs to (attendance_split); null when it has none. */
   sessionId: string | null;
+  /** Time the expense was hidden from the list (delete_settled_expense); null when visible. Balances still count it. */
+  hiddenAt: string | null;
+  /** True once a transfer involving its payer or a sharing member was recorded after it (shared/expenseLock.ts). */
+  paidToward: boolean;
 }
 
 /** A recurring session with the members present (attendance_split). Times are HH:mm in group-local time. */

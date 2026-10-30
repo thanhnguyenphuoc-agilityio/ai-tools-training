@@ -6,13 +6,20 @@ import { exactSplitDifference, splitAmount, splitExact } from '../../shared/mone
 import type { NewExpense, SplitMode } from '../../shared/types';
 import {
   involvesRemovedMember,
+  isExpensePaidToward,
   loadActiveMemberIds,
   loadGroup,
   noneRemovedSql,
+  paidTowardSql,
   recordChange,
 } from '../groupData';
 import { amount, ApiError, isoDate, now, readJson, shareAmount, text, weight, type AppEnv, type Ctx } from '../http';
-import { requireCanDeleteExpense, requireCanEditExpense, requireMember } from '../policy';
+import {
+  requireCanDeleteExpense,
+  requireCanEditExpense,
+  requireCanHideExpense,
+  requireMember,
+} from '../policy';
 import { deleteExpenseReceipt } from '../receipts';
 
 export const expenseRoutes = new Hono<AppEnv>();
@@ -162,6 +169,9 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
   if (await involvesRemovedMember(c.env.DB, group.code, id)) {
     throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
   }
+  if (await isExpensePaidToward(c.env.DB, group.code, id)) {
+    throw new ApiError(409, 'EXPENSE_PAID_TOWARD', 'someone has already paid toward this expense');
+  }
 
   const { results: shareRows } = await c.env.DB.prepare(
     'SELECT member_id, weight, amount FROM expense_shares WHERE expense_id = ? ORDER BY rowid',
@@ -211,7 +221,8 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
            WHERE m.group_code = ?8 AND m.removed_at IS NOT NULL
              AND (m.id = expenses.payer_id
                   OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?7 AND amount <> 0))
-         )`,
+         )
+         AND NOT ${paidTowardSql(7, 8)}`,
     ).bind(
       parsed.payerId,
       parsed.total,
@@ -256,6 +267,9 @@ expenseRoutes.patch('/:code/expenses/:id', async (c) => {
     if (await involvesRemovedMember(c.env.DB, group.code, id)) {
       throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
     }
+    if (await isExpensePaidToward(c.env.DB, group.code, id)) {
+      throw new ApiError(409, 'EXPENSE_PAID_TOWARD', 'someone has already paid toward this expense');
+    }
     const active = await loadActiveMemberIds(c.env.DB, group.code);
     if (!active.has(parsed.payerId)) throw new ApiError(400, 'PAYER_NOT_IN_GROUP', 'payer is not in this group');
     throw new ApiError(400, 'PARTICIPANT_NOT_IN_GROUP', 'participant is not in this group');
@@ -286,7 +300,8 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
          WHERE m.group_code = ?2 AND m.removed_at IS NOT NULL
            AND (m.id = expenses.payer_id
                 OR m.id IN (SELECT member_id FROM expense_shares WHERE expense_id = ?1 AND amount <> 0))
-       )`,
+       )
+       AND NOT ${paidTowardSql(1, 2)}`,
   )
     .bind(id, group.code, now(), me.memberId ?? 'owner')
     .run();
@@ -295,9 +310,59 @@ expenseRoutes.delete('/:code/expenses/:id', async (c) => {
       .bind(id)
       .first();
     if (!stillThere) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
-    throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
+    if (await involvesRemovedMember(c.env.DB, group.code, id)) {
+      throw new ApiError(409, 'EXPENSE_HAS_REMOVED_MEMBER', 'this expense involves a removed member');
+    }
+    throw new ApiError(409, 'EXPENSE_PAID_TOWARD', 'someone has already paid toward this expense');
   }
   await deleteExpenseReceipt(c.env, id);
   await recordChange(c.env.DB, group.code, me, 'expense.delete', id);
   return c.json({ ok: true });
+});
+
+// delete_settled_expense: the author or the owner hides or shows a paid-toward expense. Hidden expenses leave the
+// list only; balances, suggestions and the export still count them. A photo changes no money, so receipt routes
+// are not involved.
+expenseRoutes.post('/:code/expenses/:id/hide', async (c) => {
+  const { group, me } = await loadGroup(c);
+  const id = c.req.param('id');
+  const body = await readJson(c);
+  if (typeof body.hidden !== 'boolean') throw new ApiError(400, 'FIELD_REQUIRED', 'hidden is required');
+  const hidden = body.hidden;
+  const expense = await c.env.DB.prepare(
+    'SELECT created_by, hidden_at FROM expenses WHERE id = ? AND group_code = ? AND deleted_at IS NULL',
+  )
+    .bind(id, group.code)
+    .first<{ created_by: string | null; hidden_at: string | null }>();
+  if (!expense) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
+  requireCanHideExpense(me, expense);
+
+  // The paid-toward check is part of the UPDATE, so a transfer committed after the read above is still seen.
+  const result = hidden
+    ? await c.env.DB.prepare(
+        `UPDATE expenses SET hidden_at = ?3, hidden_by = ?4
+         WHERE id = ?1 AND group_code = ?2 AND deleted_at IS NULL AND hidden_at IS NULL
+           AND ${paidTowardSql(1, 2)}`,
+      )
+        .bind(id, group.code, now(), me.memberId ?? 'owner')
+        .run()
+    : await c.env.DB.prepare(
+        `UPDATE expenses SET hidden_at = NULL, hidden_by = NULL
+         WHERE id = ?1 AND group_code = ?2 AND deleted_at IS NULL AND hidden_at IS NOT NULL`,
+      )
+        .bind(id, group.code)
+        .run();
+  if (result.meta.changes === 0) {
+    const current = await c.env.DB.prepare(
+      'SELECT hidden_at FROM expenses WHERE id = ? AND group_code = ? AND deleted_at IS NULL',
+    )
+      .bind(id, group.code)
+      .first<{ hidden_at: string | null }>();
+    if (!current) throw new ApiError(404, 'EXPENSE_NOT_FOUND', 'expense not found');
+    // Already in the requested state: nothing is recorded.
+    if ((current.hidden_at !== null) === hidden) return c.json({ ok: true, changed: false });
+    throw new ApiError(409, 'EXPENSE_NOT_PAID_TOWARD', 'only a paid-toward expense can be hidden');
+  }
+  await recordChange(c.env.DB, group.code, me, hidden ? 'expense.hide' : 'expense.unhide', id);
+  return c.json({ ok: true, changed: true });
 });

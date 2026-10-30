@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Settlement } from '../../shared/settle';
 import type { Me, MemberDto } from '../../shared/types';
-import { canEditAccount, canReleaseMember, canSetInviteEmail, canTransferTo, payAction } from '../../src/ownerTools';
+import {
+  canDeleteGroup,
+  canEditAccount,
+  canLeaveGroup,
+  canReleaseMember,
+  canSetInviteEmail,
+  canTransferTo,
+  payAction,
+} from '../../src/ownerTools';
 
 describe('canTransferTo', () => {
   const ownerMe: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
@@ -18,6 +26,7 @@ describe('canTransferTo', () => {
     claimed: true,
     removed: false,
     removedReason: null,
+    left: false,
     bankSource: null,
     hasAccount: true,
     invited: false,
@@ -54,6 +63,7 @@ describe('canSetInviteEmail (member_email_invite)', () => {
     claimed: false,
     removed: false,
     removedReason: null,
+    left: false,
     bankBin: null,
     accountNo: null,
     accountName: null,
@@ -89,6 +99,7 @@ describe('canEditAccount (owner_member_tools)', () => {
     claimed: false,
     removed: false,
     removedReason: null,
+    left: false,
     bankBin: null,
     accountNo: null,
     accountName: null,
@@ -168,6 +179,7 @@ describe('canReleaseMember (wrong_name_claim)', () => {
     claimed: true,
     removed: false,
     removedReason: null,
+    left: false,
     bankBin: null,
     accountNo: null,
     accountName: null,
@@ -190,5 +202,87 @@ describe('canReleaseMember (wrong_name_claim)', () => {
     expect(canReleaseMember(owner, member({ claimed: false }))).toBe(false);
     expect(canReleaseMember(owner, member({ removed: true }))).toBe(false);
     expect(canReleaseMember(owner, member({ isOwner: true }))).toBe(false);
+  });
+});
+
+describe('canLeaveGroup (leave_group)', () => {
+  const owner: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
+  const member: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+  const guest: Me = { memberId: null, isOwner: false, accountLinked: false };
+  const sam = (extra: Partial<MemberDto> = {}): MemberDto => ({
+    id: 'm-sam',
+    name: 'Sam',
+    isOwner: false,
+    claimed: true,
+    removed: false,
+    removedReason: null,
+    left: false,
+    bankBin: null,
+    accountNo: null,
+    accountName: null,
+    bankSource: null,
+    hasAccount: true,
+    invited: false,
+    ...extra,
+  });
+  const alex: MemberDto = { ...sam({ id: 'm-alex', isOwner: true }) };
+
+  it('is true for an active member other than the owner', () => {
+    expect(canLeaveGroup(member, [alex, sam()])).toBe(true);
+  });
+
+  it('is false for the owner, who hands the group over first', () => {
+    expect(canLeaveGroup(owner, [alex, sam()])).toBe(false);
+  });
+
+  it('is false for a guest', () => {
+    expect(canLeaveGroup(guest, [alex, sam()])).toBe(false);
+  });
+
+  it('is false when the member row is removed', () => {
+    expect(canLeaveGroup(member, [alex, sam({ removed: true })])).toBe(false);
+  });
+
+  it('is false when the device member is missing from the list', () => {
+    expect(canLeaveGroup(member, [alex])).toBe(false);
+  });
+});
+
+describe('canDeleteGroup (leave_group)', () => {
+  const owner: Me = { memberId: 'm-alex', isOwner: true, accountLinked: true };
+  const member: Me = { memberId: 'm-sam', isOwner: false, accountLinked: true };
+  const alex: MemberDto = {
+    id: 'm-alex',
+    name: 'Alex',
+    isOwner: true,
+    claimed: true,
+    removed: false,
+    removedReason: null,
+    left: false,
+    bankBin: null,
+    accountNo: null,
+    accountName: null,
+    bankSource: null,
+    hasAccount: true,
+    invited: false,
+  };
+  const other = (extra: Partial<MemberDto>): MemberDto => ({ ...alex, id: 'm-x', name: 'X', isOwner: false, ...extra });
+
+  it('is true for the owner when nobody else is active', () => {
+    expect(canDeleteGroup(owner, [alex])).toBe(true);
+    expect(canDeleteGroup(owner, [alex, other({ removed: true })])).toBe(true);
+  });
+
+  it('is false while an unclaimed member added by name still counts as a member', () => {
+    expect(canDeleteGroup(owner, [alex, other({ claimed: false })])).toBe(false);
+  });
+
+  it('is false while another active claimed member exists', () => {
+    expect(canDeleteGroup(owner, [alex, other({ claimed: true })])).toBe(false);
+  });
+
+  it('is false for a plain member or a guest', () => {
+    expect(canDeleteGroup(member, [alex])).toBe(false);
+    expect(canDeleteGroup({ memberId: null, isOwner: false, accountLinked: false }, [alex])).toBe(false);
   });
 });

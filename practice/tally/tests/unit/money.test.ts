@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '../../shared/currency';
 import {
   exactSplitDifference,
+  filterAmountInput,
   formatAmountInput,
   formatMoney,
   MAX_AMOUNT,
@@ -23,6 +24,32 @@ const DONG = '\u0111';
 const DONG_SIGN = '\u20ab';
 const vi = viLocale.amountInput;
 const en = enLocale.amountInput;
+
+describe('filterAmountInput', () => {
+  it.each([
+    ['150k', '150K'],
+    ['1.2m', '1.2M'],
+    ['2b', '2B'],
+    ['1,2tr', '1,2'],
+    ['abc', ''],
+    [' 30 000 ', '30000'],
+    ['-5000', '5000'],
+    ['150.000 VND', '150.000'],
+    [`150.000${DONG}`, '150.000'],
+    [`150.000${DONG_SIGN}`, '150.000'],
+    ['', ''],
+    ['1.250,50', '1.250,50'],
+    ['1K5', '1K'],
+    ['150KM', '150K'],
+    ['1.2m3', '1.2M'],
+    ['k150', '150'],
+    ['B', ''],
+    ['2KB', '2K'],
+    ['k1k5', '1K'],
+  ])('filters %j to %j', (input, expected) => {
+    expect(filterAmountInput(input)).toBe(expected);
+  });
+});
 
 describe('parseAmount, zero-digit currency (VND)', () => {
   it.each([
@@ -54,6 +81,19 @@ describe('parseAmount, zero-digit currency (VND)', () => {
     expect(parseAmount('1.500k', vi, VND)).toBeNull();
   });
 
+  it('knows the B suffix in both locales for VND', () => {
+    expect(parseAmount('1B', vi, VND)).toBe(1_000_000_000);
+    expect(parseAmount('1b', en, VND)).toBe(1_000_000_000);
+    expect(parseAmount('0,5B', vi, VND)).toBe(500_000_000);
+    expect(parseAmount('1,5B', vi, VND)).toBeNull();
+    expect(parseAmount('2B', vi, VND)).toBeNull();
+  });
+
+  it('parses upper-case shorthand like lower case', () => {
+    expect(parseAmount('150K', en, VND)).toBe(150_000);
+    expect(parseAmount('1,2M', vi, VND)).toBe(1_200_000);
+  });
+
   it('only knows the suffixes of the locale', () => {
     expect(parseAmount('1tr', en, VND)).toBeNull();
     expect(parseAmount('1m', en, VND)).toBe(1_000_000);
@@ -81,6 +121,10 @@ describe('parseAmount, two-digit currency (USD), returns cents', () => {
 
   it.each(['12.505', '1,25', '.5'])('en rejects %s', (input) => {
     expect(parseAmount(input, en, USD)).toBeNull();
+  });
+
+  it('rejects B above the amount limit for USD', () => {
+    expect(parseAmount('1B', en, USD)).toBeNull();
   });
 
   it('does not accept dong signs for other currencies', () => {
@@ -274,22 +318,54 @@ describe('splitExact', () => {
   });
 
   it.each([
-    ['less than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 599 }]],
-    ['more than the amount', [{ memberId: 'a', amount: 400 }, { memberId: 'b', amount: 601 }]],
+    [
+      'less than the amount',
+      [
+        { memberId: 'a', amount: 400 },
+        { memberId: 'b', amount: 599 },
+      ],
+    ],
+    [
+      'more than the amount',
+      [
+        { memberId: 'a', amount: 400 },
+        { memberId: 'b', amount: 601 },
+      ],
+    ],
     ['all zero', [{ memberId: 'a', amount: 0 }]],
   ])('rejects parts that add up to %s', (_, parts) => {
     expect(() => splitExact(1000, parts)).toThrow('add up');
   });
 
   it('rejects negative, fractional and too large parts', () => {
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 1100 }, { memberId: 'b', amount: -100 }])).toThrow();
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 999.5 }, { memberId: 'b', amount: 0.5 }])).toThrow();
-    expect(() => splitExact(MAX_AMOUNT, [{ memberId: 'a', amount: MAX_AMOUNT + 1 }, { memberId: 'b', amount: -1 }])).toThrow();
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 1100 },
+        { memberId: 'b', amount: -100 },
+      ]),
+    ).toThrow();
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 999.5 },
+        { memberId: 'b', amount: 0.5 },
+      ]),
+    ).toThrow();
+    expect(() =>
+      splitExact(MAX_AMOUNT, [
+        { memberId: 'a', amount: MAX_AMOUNT + 1 },
+        { memberId: 'b', amount: -1 },
+      ]),
+    ).toThrow();
     expect(() => splitExact(1000, [{ memberId: 'a', amount: Number.NaN }])).toThrow();
   });
 
   it('rejects duplicate members, empty parts and a bad amount', () => {
-    expect(() => splitExact(1000, [{ memberId: 'a', amount: 500 }, { memberId: 'a', amount: 500 }])).toThrow('duplicate');
+    expect(() =>
+      splitExact(1000, [
+        { memberId: 'a', amount: 500 },
+        { memberId: 'a', amount: 500 },
+      ]),
+    ).toThrow('duplicate');
     expect(() => splitExact(1000, [])).toThrow();
     expect(() => splitExact(0, [{ memberId: 'a', amount: 0 }])).toThrow();
     expect(() => splitExact(10.5, [{ memberId: 'a', amount: 10.5 }])).toThrow();

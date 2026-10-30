@@ -31,6 +31,15 @@
   // Durable Object migrations, not the D1 migrations_dir. Tag v1 creates the SQLite-backed GroupLive class;
   // wrangler deploy applies it on a remote deploy.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupLive"] }],
+  // Throttles failed group lookups and owner key attempts (rate_limit_guessing): 20 failures per client per minute
+  // for each kind. namespace_id is any positive integer unique within the Cloudflare account; no dashboard setup.
+  "ratelimits": [
+    {
+      "name": "GUESS_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 }
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

@@ -162,7 +162,7 @@ test('an invalid amount error follows a language change, examples included', asy
   // The group keeps VND, so the examples are the zero-digit ones in both languages.
   const invalidAmount = (messages: typeof en, examples: string) =>
     messages.expenseForm.invalidAmount.replace('{examples}', examples);
-  await page.getByLabel(t('expenseForm.amount')).fill('abc');
+  await page.getByLabel(t('expenseForm.amount')).fill('1.5');
   await page.getByLabel(t('expenseForm.description')).fill('Snacks');
   await page.getByRole('button', { name: t('expenseForm.submit') }).click();
   await expect(page.locator('.text--error')).toHaveText(

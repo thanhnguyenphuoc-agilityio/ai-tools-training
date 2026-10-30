@@ -309,8 +309,12 @@ describe('editing an expense', () => {
       amount: 20_000,
     });
     expect((await owner.call('POST', `/groups/${code}/transfers/${transfer.id}/confirm`)).status).toBe(200);
+    // The transfer involves Alex and Jamie, so the expense from before it is paid toward (TAL-61). The edit targets an
+    // expense added after the transfer, which is still open.
+    const added = await sam.call('POST', `/groups/${code}/expenses`, newExpense(ids.alex, 90_000, [ids.alex, ids.sam]));
+    expect(added.status).toBe(201);
     expect(
-      (await edit(sam, expenseId, newExpense(ids.alex, 300_000, [ids.alex, ids.sam, ids.jamie]))).status,
+      (await edit(sam, added.json.id, newExpense(ids.alex, 300_000, [ids.alex, ids.sam, ids.jamie]))).status,
     ).toBe(200);
     const group = await getGroup(owner);
     expect(group.transfers).toHaveLength(1);

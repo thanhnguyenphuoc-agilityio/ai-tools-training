@@ -202,6 +202,18 @@ const CASES: Record<string, Case> = {
   'DELETE /groups/:code/expenses/:id': {
     write: (w) => w.owner.call('DELETE', `${w.g}/expenses/${w.expenseId}`),
   },
+  'POST /groups/:code/expenses/:id/hide': {
+    // Hiding is allowed only for a paid-toward expense (TAL-61): a confirmed transfer between its payer and a sharer.
+    prepare: async (w) => {
+      const sent = await w.owner.call<{ id: string }>('POST', `${w.g}/transfers`, {
+        fromId: w.ownerId,
+        toId: w.samId,
+        amount: 1000,
+      });
+      await w.owner.call('POST', `${w.g}/transfers/${sent.json.id}/confirm`);
+    },
+    write: (w) => w.owner.call('POST', `${w.g}/expenses/${w.expenseId}/hide`, { hidden: true }),
+  },
   'POST /groups/:code/expenses/:id/attachments': {
     write: (w) => w.owner.sendBytes('POST', `${w.g}/expenses/${w.expenseId}/attachments`, PNG, 'image/png'),
   },
@@ -229,6 +241,20 @@ const CASES: Record<string, Case> = {
   },
   'POST /groups/:code/transfers': {
     write: (w) => w.sam.call('POST', `${w.g}/transfers`, { toId: w.ownerId, amount: 500 }),
+  },
+  'POST /groups/:code/leave': {
+    // Sam owes nothing once the shared expense is gone, so the leave is allowed.
+    prepare: (w) => w.owner.call('DELETE', `${w.g}/expenses/${w.expenseId}`).then(() => undefined),
+    write: (w) => w.sam.call('POST', `${w.g}/leave`, {}),
+  },
+  'DELETE /groups/:code': {
+    // The owner is alone once Sam and Jamie are removed; the expense goes first so both removals are settled.
+    prepare: async (w) => {
+      await w.owner.call('DELETE', `${w.g}/expenses/${w.expenseId}`);
+      await w.owner.call('POST', `${w.g}/members/${w.samId}/remove`, {});
+      await w.owner.call('POST', `${w.g}/members/${w.jamieId}/remove`, {});
+    },
+    write: (w) => w.owner.call('DELETE', w.g),
   },
   'POST /groups/:code/transfers/:id/confirm': {
     prepare: async (w) => {

@@ -29,6 +29,7 @@ test.describe('transfer_ownership (TO-E2E)', () => {
     // Alex creates a group while signed in; owner access is tied to the account, so no recovery link is shown.
     await signInAs(alex, `alex-${stamp}@example.com`);
     await alex.getByLabel(t('home.create.groupName')).fill('Transfer Trip');
+    await alex.getByLabel(t('home.create.useDifferentName')).check();
     await alex.getByLabel(t('home.create.yourName')).fill('Alex');
     await alex.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(alex.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();
@@ -90,6 +91,7 @@ test.describe('transfer_ownership (TO-E2E)', () => {
 
     await signInAs(alex, `alex-esc-${stamp}@example.com`);
     await alex.getByLabel(t('home.create.groupName')).fill('Escape Trip');
+    await alex.getByLabel(t('home.create.useDifferentName')).check();
     await alex.getByLabel(t('home.create.yourName')).fill('Alex');
     await alex.getByRole('button', { name: t('home.create.submit') }).click();
     await expect(alex.locator('.group-page__head').getByText(t('common.ownerBadge'))).toBeVisible();

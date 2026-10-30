@@ -16,6 +16,7 @@ import {
 } from '../auth';
 import { attachOwnerGroup, tryAttachOwnerGroup } from '../accountLink';
 import { linkInvitedMember } from '../inviteLink';
+import { deleteReceiptObjects } from '../receipts';
 import {
   audit,
   loadActiveMember,
@@ -28,11 +29,14 @@ import {
   toMemberDto,
 } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
+import { throttleFailure } from '../throttle';
 import {
   canAutoLinkInvite,
   canLinkToAccount,
   requireAccount,
+  requireCanDeleteGroup,
   requireCanTransferOwnership,
+  requireGroupAlone,
   requireGroupNotOwnedByOther,
   requireOwner,
   requireOwnerAccount,
@@ -190,18 +194,29 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
     if (me.userId && group.owner_user_id !== null) {
       throw new ApiError(403, 'GROUP_OWNED_BY_OTHER_ACCOUNT', 'group belongs to another account');
     }
+    await throttleFailure(c, 'owner');
     throw new ApiError(403, 'OWNER_KEY_REVOKED', 'this recovery link was revoked because the group is now linked to an account');
   }
 
-  if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+  if ((await sha256Hex(key)) !== group.owner_key_hash) {
+    await throttleFailure(c, 'owner');
+    throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+  }
 
   if (me.userId) {
-    const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
-    clearOwnerCookie(c, group.code);
-    if (changed) {
-      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+    try {
+      const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
+      clearOwnerCookie(c, group.code);
+      if (changed) {
+        await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+      }
+      return c.json({ ok: true, attached: true });
+    } catch (err: unknown) {
+      // The account is already another member of the group, so it is not attached (recovery_link_signed_in_member).
+      // The owner key still restores owner access on this device through the owner cookie, as without an account.
+      // Other refusals (owned by another account, owner member linked elsewhere) still answer their errors.
+      if (!(err instanceof ApiError && err.code === 'ACCOUNT_ALREADY_MEMBER')) throw err;
     }
-    return c.json({ ok: true, attached: true });
   }
 
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
@@ -342,6 +357,50 @@ groupRoutes.post('/:code/lock', async (c) => {
 
   await recordChange(c.env.DB, group.code, me, 'group.lock', null);
   return c.json({ ok: true, changed: true });
+});
+
+// Delete a group (leave_group): the owner, while no other active member exists (unclaimed members count). Kept
+// groups can be deleted too. The guard is one statement, so a join that commits before it blocks the delete and a join
+// after it finds no group. The rows go by ON DELETE CASCADE (as purge_inactive_groups); the receipt photos are not in
+// D1, so they are deleted from R2 after the rows, and a failure there is logged.
+groupRoutes.delete('/:code', async (c) => {
+  const { group, me } = await loadGroup(c);
+  requireCanDeleteGroup(me);
+
+  // Deleted by the guarded statement, or refused. When nothing is deleted and the group still exists but no other
+  // active member is left (one was removed meanwhile), the statement runs once more; otherwise the refusal is final.
+  let deleted = false;
+  for (let attempt = 0; attempt < 2 && !deleted; attempt++) {
+    const rows = await c.env.DB.prepare(
+      `DELETE FROM groups WHERE code = ?1
+         AND NOT EXISTS (SELECT 1 FROM members WHERE group_code = ?1 AND is_owner = 0 AND removed_at IS NULL)
+       RETURNING code`,
+    )
+      .bind(group.code)
+      .all<{ code: string }>();
+    deleted = rows.results.length > 0;
+    if (deleted) break;
+
+    const stillThere = await c.env.DB.prepare('SELECT 1 AS found FROM groups WHERE code = ?')
+      .bind(group.code)
+      .first<{ found: number }>();
+    if (!stillThere) throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
+    const other = await c.env.DB.prepare(
+      'SELECT COUNT(*) AS total FROM members WHERE group_code = ? AND is_owner = 0 AND removed_at IS NULL',
+    )
+      .bind(group.code)
+      .first<{ total: number }>();
+    requireGroupAlone(other?.total ?? 0);
+  }
+  if (!deleted) throw new ApiError(409, 'GROUP_HAS_MEMBERS', 'the group still has other members');
+
+  try {
+    await deleteReceiptObjects(c.env.RECEIPTS, `${group.code}/`);
+  } catch (err) {
+    console.error(`Failed to delete receipt photos of deleted group ${group.code}`, err);
+  }
+  clearOwnerCookie(c, group.code);
+  return c.json({ ok: true });
 });
 
 // Unlock a group: restarts inactivity timer.

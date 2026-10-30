@@ -13,6 +13,7 @@ const member = (id: string, name: string): MemberDto => ({
   accountName: null,
   removed: false,
   removedReason: null,
+  left: false,
   bankSource: null,
   hasAccount: false,
   invited: false,

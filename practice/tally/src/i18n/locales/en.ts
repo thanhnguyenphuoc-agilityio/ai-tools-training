@@ -36,6 +36,8 @@ export const en = {
       groupNamePlaceholder: 'Weekend trip',
       yourName: 'Your name',
       yourNamePlaceholder: 'Alex',
+      useDifferentName: 'Use a different name',
+      accountNameHint: 'From your account. This name is used only in this group.',
       currency: 'Currency',
       roundCoarse: 'Round each share to {unit}',
       submit: 'Create group',
@@ -101,10 +103,10 @@ export const en = {
   expenseForm: {
     title: 'Add an expense',
     amount: 'Amount',
-    amountPlaceholder: '150k',
+    amountPlaceholder: '150K',
     invalidAmount: 'Invalid amount. Examples: {examples}.',
-    amountExamples: '150000, 150,000, 150k, 1.2m',
-    amountExamplesDecimal: '12, 12.50, 1,250.50, 1.5k',
+    amountExamples: '150000, 150,000, 150K, 1.2M',
+    amountExamplesDecimal: '12, 12.50, 1,250.50, 1.5K',
     paidBy: 'Paid by',
     description: 'Description',
     descriptionPlaceholder: 'Dinner, first night',
@@ -147,6 +149,15 @@ export const en = {
     editLabel: 'Edit "{description}"',
     edited: 'Edited',
     sessionBadge: 'Session {label}',
+    paidTowardLocked: 'Kept: already paid toward',
+    hide: 'Hide',
+    hideLabel: 'Hide "{description}"',
+    unhide: 'Show again',
+    unhideLabel: 'Show "{description}" again',
+    hiddenBadge: 'Hidden',
+    filterLabel: 'Show',
+    showVisible: 'Visible expenses',
+    showAll: 'All expenses',
   },
   expenses: {
     receipt: {
@@ -224,6 +235,7 @@ export const en = {
     removeHint: 'Their expenses stay in the history.',
     removeReason: 'Reason (optional)',
     removed: 'removed',
+    left: 'left the group',
     release: 'Release',
     releaseLabel: 'Release the name {name}',
     releaseConfirm: 'Release {name}? The device that uses this name becomes a guest, and the name can be claimed again.',
@@ -231,6 +243,20 @@ export const en = {
     editAccountLabel: 'Edit the receiving account of {name}',
     bankTitleFor: 'Receiving account of {name}',
     bankHintFor: 'Used to build the VietQR code when others pay this member. Anyone with the group link can see it.',
+  },
+  leaveGroup: {
+    action: 'Leave group',
+    title: 'Leave {group}?',
+    message: 'You stay in past expenses and transfers. This device and your account become guests.',
+    confirm: 'Leave',
+    hasBalance: 'You still owe or are owed money. Settle up before leaving.',
+  },
+  deleteGroup: {
+    action: 'Delete group',
+    title: 'Delete {group}?',
+    message:
+      'Everything in this group is deleted for good: expenses, transfers, sessions, photos and history. Its links stop working.',
+    confirm: 'Delete',
   },
   memberInvite: {
     emailLabel: 'Email (optional)',
@@ -270,9 +296,13 @@ export const en = {
     sessionSaved: 'Session saved.',
     sessionDeleted: 'Session deleted.',
     expenseDeleted: 'Expense deleted.',
+    expenseHidden: 'Expense hidden.',
+    expenseUnhidden: 'Expense shown again.',
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
     memberReleased: '{name} can be claimed again.',
+    leftGroup: 'You left the group.',
+    groupDeleted: 'The group was deleted.',
     ownerAttached: 'Group attached to your account.',
     bankSaved: 'Your bank details were saved.',
     settingsSaved: 'Group settings were saved.',
@@ -432,6 +462,8 @@ export const en = {
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
+    CANNOT_LEAVE_OWNER: 'The group owner cannot leave. Hand the group over to another member first.',
+    GROUP_HAS_MEMBERS: 'The group still has other members. Only an owner who is alone can delete it.',
     EXPENSE_HAS_REMOVED_MEMBER:
       'This expense involves a member who has been removed from the group, so it can no longer be edited or deleted.',
     ALREADY_MEMBER: 'This device is already a member of the group.',
@@ -455,6 +487,11 @@ export const en = {
     INVALID_SESSION_TIME: 'Session times must be in HH:mm format (00:00-23:59) and start time cannot equal end time.',
     SESSION_NOT_FOUND: 'Session not found.',
     SESSION_HAS_EXPENSES: 'Cannot delete a session that has expenses.',
+    EXPENSE_PAID_TOWARD:
+      'Someone has already paid toward this expense, so it can no longer be edited or deleted. You can hide it instead.',
+    EXPENSE_NOT_PAID_TOWARD: 'Only an expense that someone has paid toward can be hidden.',
+    HIDE_NOT_ALLOWED: 'Only the person who added it or the group owner can hide this.',
+    TOO_MANY_ATTEMPTS: 'Too many failed attempts. Wait a minute and try again.',
   } satisfies Record<ErrorCode, string>,
 };
 
@@ -465,7 +502,7 @@ export const enLocale: LocaleBundle = {
   defaultCurrency: 'USD',
   amountInput: {
     decimalSeparator: '.',
-    suffixes: { k: 1_000, m: 1_000_000 },
+    suffixes: { k: 1_000, m: 1_000_000, b: 1_000_000_000 },
     currencyMarks: { VND: ['vnd', '₫'] },
   },
 };
