@@ -136,10 +136,15 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   Floating-point numbers are not used. The maximum is 1,000,000,000 minor units per expense (`MAX_AMOUNT` in
   `shared/currency.ts`), for example 10,000,000 USD or 1,000,000,000 VND.
 - The amount field accepts the input conventions of the interface language:
-  - Vietnamese: `150000`, `150.000`, `150k`, `77.5k`, `1,2tr`, `2m`, `150.000` followed by the dong sign. For
+  - Vietnamese: `150000`, `150.000`, `150K`, `77.5K`, `1,2M`, `2M`, `1B`, `150.000` followed by the dong sign. For
     currencies with decimals (USD): `12,50`, `1.250,50`.
-  - English: `150000`, `150,000`, `150k`, `1.2m`. For USD: `12.50`, `1,250.50`.
+  - English: `150000`, `150,000`, `150K`, `1.2M`, `1B`. For USD: `12.50`, `1,250.50`.
   - For VND, ambiguous values such as `1.5` (without a suffix) are rejected.
+- The amount field and the exact-share fields keep only digits, "." and ",", and the shorthand letters K, M and B,
+  while typing or pasting. The letters are shown in upper case. K, M and B mean thousand, million and billion in
+  every locale. The maximum is unchanged, so `1B` is the largest B value accepted for VND, and `1B` is rejected for
+  USD. The older Vietnamese `tr` suffix and the currency marks are still parsed but cannot be typed
+  (`amount_input_filter`).
 - The date is a calendar date chosen by the user (`YYYY-MM-DD`), without a time zone. It defaults to **today in the
   time zone of the device entering the expense**.
 - Split modes:
