@@ -100,8 +100,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
               maxLength={80}
             />
           </label>
-          <div className="columns">
-            <div className="stack">
+          <div className="home-page__groups">
+            <div className="fieldset stack stack--tight home-page__group">
               <label className="field">
                 <span className="field__label">{t('home.create.yourName')}</span>
                 <input
@@ -137,23 +137,29 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                 </label>
               )}
             </div>
-            <label className="field">
-              <span className="field__label">{t('home.create.currency')}</span>
-              <select className="field__control" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-                {Object.keys(CURRENCIES).map((c) => (
-                  <option key={c} value={c}>
-                    {currencyName(c)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="fieldset stack stack--tight home-page__group">
+              <label className="field">
+                <span className="field__label">{t('home.create.currency')}</span>
+                <select
+                  className="field__control"
+                  value={currencyCode}
+                  onChange={(e) => setCurrencyCode(e.target.value)}
+                >
+                  {Object.keys(CURRENCIES).map((c) => (
+                    <option key={c} value={c}>
+                      {currencyName(c)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {coarseUnit > 1 && (
+                <label className="field field--inline">
+                  <input type="checkbox" checked={roundCoarse} onChange={(e) => setRoundCoarse(e.target.checked)} />
+                  {t('home.create.roundCoarse', { unit: money(coarseUnit, currency) })}
+                </label>
+              )}
+            </div>
           </div>
-          {coarseUnit > 1 && (
-            <label className="field field--inline">
-              <input type="checkbox" checked={roundCoarse} onChange={(e) => setRoundCoarse(e.target.checked)} />
-              {t('home.create.roundCoarse', { unit: money(coarseUnit, currency) })}
-            </label>
-          )}
           <div className="cluster">
             <button className="button" disabled={busy}>
               {t('home.create.submit')}
@@ -223,7 +229,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                       navigate(`/g/${h.code}`);
                     }}
                   >
-                    <span className="text text--strong">{h.name}</span> <span className="text text--muted text--mono">{h.code}</span>
+                    <span className="text text--strong">{h.name}</span>{' '}
+                    <span className="text text--muted text--mono">{h.code}</span>
                   </a>
                   <span className="cluster">
                     <span className="text text--muted text--small">{dateTime(h.visitedAt)}</span>
