@@ -35,3 +35,12 @@ Viewing an existing group and normal use stay unaffected.
 - `worker/app.ts` and `index.html`: `Referrer-Policy: same-origin`.
 - Tests: `tests/api/rate-limit-guessing.test.ts` through Miniflare's `ratelimits`.
 - Docs: `docs/business-rules.md` (security section), `docs/design.md` (`rate_limit_guessing`).
+
+## Review
+
+- Typecheck, lint and 655 Vitest tests pass; e2e 156 passed (three specs that failed during a parallel dev server
+  restart pass when run alone).
+- `wrangler deploy --dry-run` lists `env.GUESS_LIMITER (20 requests/60s)`. On the local dev server, 20 lookups of a
+  missing group answer 404 and the 21st answers 429 `TOO_MANY_ATTEMPTS`; API answers carry
+  `Referrer-Policy: same-origin`.
+- Moved to done at the human's request; it ships with the next release.
