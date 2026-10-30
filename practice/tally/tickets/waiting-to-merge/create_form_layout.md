@@ -74,3 +74,34 @@ From the product owner (human), given with the request:
 10. Docs in the same branch: one bullet under "Accounts (optional sign-in)" in `docs/business-rules.md` and a section
     `### create_form_layout (built)` in `docs/design.md` placed after `### create_group_account_name (built)`.
 11. Ticket: the next free ID in `tickets/README.md` becomes `TAL-66`, since this batch adds TAL-64 and TAL-65.
+
+## Merge request
+
+Branch `feat/create_form_layout` into `develop`. Depends on `create_group_account_name`, already on `develop`. It shares
+the same three docs and the ticket README with `amount_input_filter` (TAL-65) in different sections; merge this first.
+
+What changed:
+
+- `src/pages/HomePage.tsx`: the `div.columns` wrapper is replaced by `div.home-page__groups`. The first group is
+  `div.fieldset.stack.stack--tight.home-page__group` ("Your name": name field, hint, "Use a different name"). The second
+  is the same classes ("Currency": currency select, rounding checkbox when `coarseUnit > 1`, moved in from below the
+  columns). Labels, state, handlers and i18n keys are unchanged.
+- `src/pages/HomePage.scss`: `&__groups` grid with `gap: space(3)`; `@include up(md)` sets two equal columns and
+  `align-items: start`; `&__group` sets `margin: 0` and `min-width: 0`. No colours.
+- `e2e/create-form-layout.spec.ts` (new): (a) 1280x900 group tops equal within 1px and the currency group holds the select
+  and a checkbox; (b) 375x800 the currency group starts below the name group; (c) the form still creates a group.
+- `docs/business-rules.md`: one bullet under "Accounts (optional sign-in)". `docs/design.md`: section
+  `create_form_layout (built)` after `create_group_account_name (built)`.
+- `tickets/README.md`: next free ID `TAL-66` (this batch adds TAL-64 and TAL-65).
+- Formatting: Prettier reflowed one unrelated line in `HomePage.tsx` (the recent-groups `<span>` pair), which already failed
+  Prettier on `develop`. No behaviour change.
+
+Commands and results (feature worktree):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 55 files, 695 tests passed on the second run. The first run had two Miniflare API timeouts (`member-invite`
+  MEI-7 and `saved-bank` SB-4) and one `ECONNRESET`; both are the known flake, and neither touches the create form.
+- `npm run test:hooks`: 32 pass, 0 fail.
+- `npm run e2e`: not run in the worktree, as planned. The batch runs `e2e/create-form-layout.spec.ts` and
+  `e2e/create-group-account-name.spec.ts`, plus the existing create-form specs that must pass unchanged.
