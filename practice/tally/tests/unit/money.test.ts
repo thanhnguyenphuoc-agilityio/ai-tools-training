@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CURRENCIES } from '../../shared/currency';
 import {
   exactSplitDifference,
+  filterAmountInput,
   formatAmountInput,
   formatMoney,
   MAX_AMOUNT,
@@ -23,6 +24,26 @@ const DONG = '\u0111';
 const DONG_SIGN = '\u20ab';
 const vi = viLocale.amountInput;
 const en = enLocale.amountInput;
+
+describe('filterAmountInput', () => {
+  it.each([
+    ['150k', '150K'],
+    ['1.2m', '1.2M'],
+    ['2b', '2B'],
+    ['1,2tr', '1,2'],
+    ['abc', 'B'],
+    [' 30 000 ', '30000'],
+    ['-5000', '5000'],
+    ['150.000 VND', '150.000'],
+    [`150.000${DONG}`, '150.000'],
+    [`150.000${DONG_SIGN}`, '150.000'],
+    ['', ''],
+    ['1.250,50', '1.250,50'],
+    ['1K5', '1K5'],
+  ])('filters %j to %j', (input, expected) => {
+    expect(filterAmountInput(input)).toBe(expected);
+  });
+});
 
 describe('parseAmount, zero-digit currency (VND)', () => {
   it.each([
@@ -54,6 +75,19 @@ describe('parseAmount, zero-digit currency (VND)', () => {
     expect(parseAmount('1.500k', vi, VND)).toBeNull();
   });
 
+  it('knows the B suffix in both locales for VND', () => {
+    expect(parseAmount('1B', vi, VND)).toBe(1_000_000_000);
+    expect(parseAmount('1b', en, VND)).toBe(1_000_000_000);
+    expect(parseAmount('0,5B', vi, VND)).toBe(500_000_000);
+    expect(parseAmount('1,5B', vi, VND)).toBeNull();
+    expect(parseAmount('2B', vi, VND)).toBeNull();
+  });
+
+  it('parses upper-case shorthand like lower case', () => {
+    expect(parseAmount('150K', en, VND)).toBe(150_000);
+    expect(parseAmount('1,2M', vi, VND)).toBe(1_200_000);
+  });
+
   it('only knows the suffixes of the locale', () => {
     expect(parseAmount('1tr', en, VND)).toBeNull();
     expect(parseAmount('1m', en, VND)).toBe(1_000_000);
@@ -81,6 +115,10 @@ describe('parseAmount, two-digit currency (USD), returns cents', () => {
 
   it.each(['12.505', '1,25', '.5'])('en rejects %s', (input) => {
     expect(parseAmount(input, en, USD)).toBeNull();
+  });
+
+  it('rejects B above the amount limit for USD', () => {
+    expect(parseAmount('1B', en, USD)).toBeNull();
   });
 
   it('does not accept dong signs for other currencies', () => {
