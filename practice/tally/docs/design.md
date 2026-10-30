@@ -281,7 +281,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0012_sessions.sql` (`attendance_split`) is the newest migration, after `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0013_expense_hidden.sql` (`delete_settled_expense`) is the newest migration, after `0012_sessions.sql` (`attendance_split`), `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -757,7 +757,8 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `expense.unhide`, which audits and moves `last_activity_at`. The live signal comes from the middleware.
 - **Receipts:** the receipt photo routes are unchanged. A photo changes no money, so it is not blocked by the lock.
 - **Client:** `api.hideExpense(code, id, hidden)` in `src/api.ts`. `ExpenseList` keeps `showAll` in component state
-  (per viewer, not sent). Its rows are `showAll ? expenses : expenses without hiddenAt`, and the header total sums
+  (per viewer, not sent); when no expense is hidden any more the toggle disappears and `showAll` resets, so the
+  next hide starts from the visible list. Its rows are `showAll ? expenses : expenses without hiddenAt`, and the header total sums
   those rows. A paid-toward row shows `expenseList.paidTowardLocked` and, for a viewer who may delete, a Hide or Unhide
   icon button (`eyeOff`, `eye` in `Icon.tsx`). Hiding needs no dialog; an error is shown next to the list.
 - **Purge:** hidden expenses are removed with the group, as every other expense row is.
