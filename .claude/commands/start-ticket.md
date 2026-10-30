@@ -20,7 +20,7 @@ Start work on the ticket `$ARGUMENTS` in `practice/tally/tickets/`.
 3. Choose the branch name: `fix/$ARGUMENTS` for `type::bug` or for a rejected ticket (one with `## Feedback`),
    otherwise `feat/$ARGUMENTS`. Create it from an up-to-date `develop`. If the session should keep the main
    checkout free, use a git worktree under `.scratch/wt/<branch-with-dash>` instead of switching branches.
-4. `git mv` the ticket to `tickets/in-progress/` and set `Assignee` to `Developer (trainee)`.
+4. `git mv` the ticket to `tickets/in-progress/` and set `Assignee` to `Haiku (developer)`.
 5. Read the ticket, `docs/business-rules.md` and the ticket's section in `docs/design.md`. For a `type::bug`
    ticket, add `## Reproduce` (steps, expected and actual result) and `## Analysis` (likely cause and affected
    code) if they are missing, as `tickets/README.md` requires; seeded bugs may come straight from `backlog/`

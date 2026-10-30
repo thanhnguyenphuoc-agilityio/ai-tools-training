@@ -155,3 +155,6 @@ Checks (feature worktree):
 - `npm run lint`: clean.
 - `npm test`: 54 files, 688 tests passed.
 - `e2e/leave-group.spec.ts`: run with the batch e2e on `develop`.
+
+Confirmed by the human on `develop`. Moved to done on 2026-10-30.
+Released in release/2026-10-30.
