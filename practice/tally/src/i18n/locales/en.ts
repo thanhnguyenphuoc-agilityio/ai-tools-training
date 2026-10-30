@@ -455,6 +455,10 @@ export const en = {
     INVALID_SESSION_TIME: 'Session times must be in HH:mm format (00:00-23:59) and start time cannot equal end time.',
     SESSION_NOT_FOUND: 'Session not found.',
     SESSION_HAS_EXPENSES: 'Cannot delete a session that has expenses.',
+    EXPENSE_PAID_TOWARD:
+      'Someone has already paid toward this expense, so it can no longer be edited or deleted. You can hide it instead.',
+    EXPENSE_NOT_PAID_TOWARD: 'Only an expense that someone has paid toward can be hidden.',
+    HIDE_NOT_ALLOWED: 'Only the person who added it or the group owner can hide this.',
   } satisfies Record<ErrorCode, string>,
 };
 

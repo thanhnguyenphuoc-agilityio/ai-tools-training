@@ -70,6 +70,8 @@ export const api = {
   deleteExpense: (code: string, id: string) => call('DELETE', `${g(code)}/expenses/${id}`),
   updateExpense: (code: string, id: string, expense: NewExpense) =>
     call<{ id: string; sharesChanged: boolean; changed: boolean }>('PATCH', `${g(code)}/expenses/${id}`, expense),
+  hideExpense: (code: string, id: string, hidden: boolean) =>
+    call<{ ok: true; changed: boolean }>('POST', `${g(code)}/expenses/${id}/hide`, { hidden }),
 
   // Receipt photos (receipt_photos): the body is the image itself, not JSON.
   uploadReceipt: async (

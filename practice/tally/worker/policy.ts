@@ -136,6 +136,17 @@ export function requireCanEditExpense(me: Identity, expense: { created_by: strin
   }
 }
 
+/**
+ * Hiding a paid-toward expense (delete_settled_expense): the author or the owner, the same people who may delete it.
+ * A guest gets JOIN_FIRST through requireMember.
+ */
+export function requireCanHideExpense(me: Identity, expense: { created_by: string | null }): void {
+  if (me.isOwner) return;
+  if (requireMember(me) !== expense.created_by) {
+    throw new ApiError(403, 'HIDE_NOT_ALLOWED', 'only the author or the group owner can hide this');
+  }
+}
+
 /** Recording "I sent money": only for yourself, unless you are the owner. */
 export function requireCanRecordTransfer(me: Identity, fromId: string): void {
   const caller = requireMember(me);

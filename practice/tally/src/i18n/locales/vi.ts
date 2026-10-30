@@ -435,6 +435,10 @@ export const vi: Messages = {
     INVALID_SESSION_TIME: 'Giờ buổi sinh hoạt phải theo định dạng HH:mm (00:00-23:59) và giờ bắt đầu không được trùng giờ kết thúc.',
     SESSION_NOT_FOUND: 'Không tìm thấy buổi sinh hoạt.',
     SESSION_HAS_EXPENSES: 'Không thể xoá buổi sinh hoạt đã có chi phí.',
+    EXPENSE_PAID_TOWARD:
+      'Đã có người thanh toán cho khoản chi này nên không thể sửa hoặc xoá được nữa. Bạn có thể ẩn nó.',
+    EXPENSE_NOT_PAID_TOWARD: 'Chỉ có thể ẩn khoản chi đã có người thanh toán.',
+    HIDE_NOT_ALLOWED: 'Chỉ người thêm khoản này hoặc trưởng nhóm mới ẩn được.',
   },
 };
 
