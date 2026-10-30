@@ -5,6 +5,7 @@ import { computeBalances } from '../shared/settle';
 import type { ExpenseDto, MemberDto, SessionDto, TransferDto } from '../shared/types';
 import { resolveIdentity, type Identity } from './auth';
 import { ApiError, now, type Ctx } from './http';
+import { throttleFailure } from './throttle';
 
 export interface GroupRow {
   code: string;
@@ -40,9 +41,13 @@ export interface MemberRow {
 /** Loads the group named by the :code route param and who is calling. 404 if missing. */
 export async function loadGroup(c: Ctx): Promise<{ group: GroupRow; me: Identity }> {
   const code = c.req.param('code') ?? '';
-  if (!GROUP_CODE_RE.test(code)) throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
-  const group = await c.env.DB.prepare('SELECT * FROM groups WHERE code = ?').bind(code).first<GroupRow>();
-  if (!group) throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
+  const group = GROUP_CODE_RE.test(code)
+    ? await c.env.DB.prepare('SELECT * FROM groups WHERE code = ?').bind(code).first<GroupRow>()
+    : null;
+  if (!group) {
+    await throttleFailure(c, 'lookup');
+    throw new ApiError(404, 'GROUP_NOT_FOUND', 'group not found');
+  }
   const me = await resolveIdentity(c, code, group);
   return { group, me };
 }

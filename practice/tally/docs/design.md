@@ -772,6 +772,23 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   icon button (`eyeOff`, `eye` in `Icon.tsx`). Hiding needs no dialog; an error is shown next to the list.
 - **Purge:** hidden expenses are removed with the group, as every other expense row is.
 
+### rate_limit_guessing (built)
+
+- **Binding:** `GUESS_LIMITER`, a Workers Rate Limiting binding in `wrangler.jsonc` (`ratelimits`, namespace `1001`,
+  20 per 60 seconds). No npm dependency, no external service and no dashboard setup; `wrangler deploy` creates it.
+  `Env.GUESS_LIMITER` is optional: without it nothing is limited, so existing tests run unchanged.
+- **Counting:** `worker/throttle.ts` `throttleFailure(c, kind)` calls `limit({ key: "<kind>:<client IP>" })` only on a
+  failure, before the usual error is thrown. Over the limit it throws `429 TOO_MANY_ATTEMPTS` instead. The client is
+  `cf-connecting-ip`. Kinds: `lookup` (every `loadGroup` that answers `GROUP_NOT_FOUND`, malformed codes included, so
+  every route under `/groups/:code` and the live WebSocket endpoint are covered) and `owner`
+  (`POST /groups/:code/owner/claim` answering `WRONG_OWNER_KEY` or `OWNER_KEY_REVOKED`).
+- **Known limit:** the binding counts per Cloudflare location and is eventually consistent, so the limit is
+  approximate. That is acceptable for defense in depth; the codes and keys are not guessable on their own.
+- **Referrer-Policy:** a middleware in `worker/app.ts` sets `Referrer-Policy: same-origin` on every API answer, and
+  `index.html` has `<meta name="referrer" content="same-origin">` for the web app's pages.
+- **Tests:** `tests/api/rate-limit-guessing.test.ts` runs the binding through Miniflare (`ratelimits`) with a limit of
+  3: lookups, other routes, per-client separation, owner keys, separate kinds, missing binding, the header.
+
 ## 7. Ticket workflow
 
 1. Branch `feat/<ticket_name>` or `fix/<ticket_name>` from `develop`; move the ticket to `tickets/in-progress/` (see `tickets/README.md`).

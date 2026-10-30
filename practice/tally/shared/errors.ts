@@ -68,6 +68,7 @@ export const ERROR_CODES = [
   'EXPENSE_PAID_TOWARD',
   'EXPENSE_NOT_PAID_TOWARD',
   'HIDE_NOT_ALLOWED',
+  'TOO_MANY_ATTEMPTS',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

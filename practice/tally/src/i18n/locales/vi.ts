@@ -450,6 +450,7 @@ export const vi: Messages = {
       'Đã có người thanh toán cho khoản chi này nên không thể sửa hoặc xoá được nữa. Bạn có thể ẩn nó.',
     EXPENSE_NOT_PAID_TOWARD: 'Chỉ có thể ẩn khoản chi đã có người thanh toán.',
     HIDE_NOT_ALLOWED: 'Chỉ người thêm khoản này hoặc trưởng nhóm mới ẩn được.',
+    TOO_MANY_ATTEMPTS: 'Bạn đã thử sai quá nhiều lần. Hãy đợi một phút rồi thử lại.',
   },
 };
 

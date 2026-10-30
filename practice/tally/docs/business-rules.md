@@ -402,7 +402,11 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - Group codes: 12 of 31 characters, about 59.5 bits; about 1.3e-14 chance per guess at 10,000 groups.
   - Owner keys, device tokens and session tokens: 256 bits, stored only as SHA-256.
   - A recovery link stops working once the group is tied to an account.
-  - Throttling failed attempts is tracked as `rate_limit_guessing`.
+  - Failed attempts are throttled per client: at most 20 failed group lookups (`GROUP_NOT_FOUND`) and, separately, 20
+    failed owner recovery attempts (`WRONG_OWNER_KEY`, `OWNER_KEY_REVOKED`) per minute. Over the limit the API answers
+    `429 TOO_MANY_ATTEMPTS`. Successful requests are never counted, so viewing a group and normal use are unaffected.
+  - Pages and API answers send `Referrer-Policy: same-origin`, so group links never leave the site in the Referer
+    header.
 
 ## Interface preferences
 
