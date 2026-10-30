@@ -125,3 +125,8 @@ Fixes: none needed.
 
 Checks (feature worktree): `npm run typecheck` clean, `npm run lint` clean, `npm test` 55 files, 695 tests passed. The
 full e2e suite runs on `develop` after the batch merge.
+
+Batch review (Opus, AI team lead): on `develop` the full e2e run stopped at collection, because the `beforeEach` in
+`e2e/create-form-layout.spec.ts` took `_fixtures` as its first argument and Playwright requires object destructuring
+there. Fixed on `fix/batch-review-2026-10-30` with `test.info().project.name`, as in `join-as-account.spec.ts`. The full
+e2e suite then passed: 173 passed, 5 skipped.
