@@ -282,6 +282,56 @@ describe('deleting a group', () => {
     expect(res.json.code).toBe('GROUP_HAS_MEMBERS');
     expect(await count('groups', 'code')).toBe(1);
   });
+
+  it('deletes when the last other member is removed between the refused statement and the count', async () => {
+    await remove(owner, ids.jamie);
+    const raced = owner.withEnv({
+      ...env.env,
+      DB: interleave(env.env.DB, /SELECT 1 AS found FROM groups/, () =>
+        env.env.DB.prepare("UPDATE members SET removed_at = '2026-10-10T00:00:00.000Z' WHERE id = ?")
+          .bind(ids.sam)
+          .run(),
+      ),
+    });
+    const res = await deleteGroup(raced);
+    expect(res.status).toBe(200);
+    expect(await count('groups', 'code')).toBe(0);
+  });
+
+  it('keeps the group and the new member when a join commits right before the second statement', async () => {
+    await remove(owner, ids.jamie);
+    // Sam is removed before the count (so the statement runs again), Riley joins just before that second run.
+    const removeSam = () =>
+      env.env.DB.prepare("UPDATE members SET removed_at = '2026-10-10T00:00:00.000Z' WHERE id = ?").bind(ids.sam).run();
+    const joinRiley = () =>
+      env.env.DB.prepare(
+        "INSERT INTO members (id, group_code, name, created_at) VALUES ('late-member', ?, 'Riley', '2026-10-10T00:00:00.000Z')",
+      )
+        .bind(code)
+        .run();
+    const base = interleave(env.env.DB, /SELECT 1 AS found FROM groups/, removeSam);
+    let deletes = 0;
+    const db = new Proxy(base, {
+      get(target, prop) {
+        if (prop === 'prepare') {
+          return (sql: string) => {
+            if (/DELETE FROM groups/.test(sql) && ++deletes === 2) {
+              return interleave(target, /DELETE FROM groups/, joinRiley).prepare(sql);
+            }
+            return target.prepare(sql);
+          };
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const res = await deleteGroup(owner.withEnv({ ...env.env, DB: db }));
+    expect(deletes).toBe(2);
+    expect(res.status).toBe(409);
+    expect(res.json.code).toBe('GROUP_HAS_MEMBERS');
+    expect(await count('groups', 'code')).toBe(1);
+    expect(await count('members')).toBe(4);
+  });
 });
 
 describe('migration 0014_member_left', () => {
