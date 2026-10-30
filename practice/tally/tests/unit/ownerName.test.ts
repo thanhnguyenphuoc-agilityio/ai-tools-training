@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createOwnerName } from '../../src/ownerName';
 
-// "Nguyễn Minh" with diacritics, written as escapes.
-const VI_ACCOUNT = 'Nguyễn Minh';
+// "Nguy\u1ec5n Minh" with diacritics, written as escapes.
+const VI_ACCOUNT = 'Nguy\u1ec5n Minh';
 
 describe('createOwnerName', () => {
   it('signed out: shows the typed value, unlocked', () => {
