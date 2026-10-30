@@ -196,14 +196,19 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
   if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
 
   if (me.userId) {
-    const { attached, memberId } = await tryAttachOwnerGroup(c.env.DB, group, me);
-    if (attached) {
+    try {
+      const { changed, memberId } = await attachOwnerGroup(c.env.DB, group, me);
       clearOwnerCookie(c, group.code);
-      await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+      if (changed) {
+        await recordChange(c.env.DB, group.code, me, 'group.link', memberId);
+      }
       return c.json({ ok: true, attached: true });
+    } catch (err: unknown) {
+      // The account is already another member of the group, so it is not attached (recovery_link_signed_in_member).
+      // The owner key still restores owner access on this device through the owner cookie, as without an account.
+      // Other refusals (owned by another account, owner member linked elsewhere) still answer their errors.
+      if (!(err instanceof ApiError && err.code === 'ACCOUNT_ALREADY_MEMBER')) throw err;
     }
-    // The account is already another member of the group, so it is not attached. The owner key still
-    // restores owner access on this device through the owner cookie, as it does without an account.
   }
 
   setGroupCookie(c, group.code, ownerCookieName(group.code), key);
