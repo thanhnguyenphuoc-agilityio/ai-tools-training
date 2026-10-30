@@ -31,7 +31,9 @@ export function ExpenseList({
   const [hideError, setHideError] = useState<UiMessage | null>(null);
   const nameOf = (id: string | null) => memberName(group.members, id, t('common.unknownMember'));
   const anyHidden = group.expenses.some((e) => e.hiddenAt);
-  const rows = showAll ? group.expenses : group.expenses.filter((e) => !e.hiddenAt);
+  // With nothing hidden the toggle is gone, so a stale "All expenses" choice must not carry over to the next hide.
+  if (showAll && !anyHidden) setShowAll(false);
+  const rows = showAll && anyHidden ? group.expenses : group.expenses.filter((e) => !e.hiddenAt);
   const total = rows.reduce((sum, e) => sum + e.amount, 0);
 
   async function confirmDelete(expense: ExpenseDto) {
@@ -74,7 +76,7 @@ export function ExpenseList({
         <div className="expense-list__filter" role="group" aria-label={t('expenseList.filterLabel')}>
           <button
             type="button"
-            className="button button--small"
+            className={showAll ? 'button button--small button--ghost' : 'button button--small'}
             aria-pressed={!showAll}
             onClick={() => setShowAll(false)}
           >
@@ -82,7 +84,7 @@ export function ExpenseList({
           </button>
           <button
             type="button"
-            className="button button--small"
+            className={showAll ? 'button button--small' : 'button button--small button--ghost'}
             aria-pressed={showAll}
             onClick={() => setShowAll(true)}
           >
