@@ -161,3 +161,5 @@ Findings:
 
 Checks in the worktree: `npm run typecheck` passed, `npm run lint` passed, `npm test` 52 files, 647 tests passed;
 e2e `hide-expense`, `edit-expense`, `receipts`, `attendance` and `csv-export` passed on desktop and mobile.
+
+Confirmed by the human on local `develop`. Moved to done on 2026-10-30; deployed from `develop`.

@@ -105,3 +105,5 @@ Findings:
 
 Checks in the worktree: `npm run typecheck` passed, `npm run lint` passed, `npm test` 50 files, 626 tests passed (a
 first run had 3 Miniflare timeouts under load and passed on rerun). The batch runs the full e2e suite on `develop`.
+
+Confirmed by the human on local `develop`. Moved to done on 2026-10-30; deployed from `develop`.
