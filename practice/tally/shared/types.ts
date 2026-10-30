@@ -28,6 +28,8 @@ export interface MemberDto extends BankDetails {
   /** Removed by the owner (remove_member). Kept so that past expenses and transfers still show the name. */
   removed: boolean;
   removedReason: string | null;
+  /** Left the group on their own (leave_group), so the removed list says "left the group" and shows no reason. */
+  left: boolean;
   bankSource: 'group' | 'account' | null;
   /** Linked to a signed-in account (boolean only; the account itself is never returned). */
   hasAccount: boolean;

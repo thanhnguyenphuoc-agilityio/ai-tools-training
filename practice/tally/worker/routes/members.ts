@@ -1,7 +1,15 @@
 // Joining a group, adding people by name, claiming a name, releasing a claimed name, bank details, removing a member.
 import { Hono } from 'hono';
 import { memberCookieName, randomToken, setGroupCookie, sha256Hex } from '../auth';
-import { loadActiveMember, loadGroup, loadMember, loadMembers, memberSettlement, recordChange } from '../groupData';
+import {
+  loadActiveMember,
+  loadGroup,
+  loadMember,
+  loadMembers,
+  memberSettlement,
+  recordChange,
+  type MemberRow,
+} from '../groupData';
 import {
   ApiError,
   bankDetails,
@@ -15,6 +23,7 @@ import {
 } from '../http';
 import {
   requireCanEditMember,
+  requireCanLeaveGroup,
   requireCanReleaseMember,
   requireCanRemoveMember,
   requireCanSetInviteEmail,
@@ -29,6 +38,50 @@ const sameName = (a: string, b: string) => a.toLocaleLowerCase('vi') === b.toLoc
 
 const alreadyMember = () =>
   new ApiError(409, 'ACCOUNT_ALREADY_MEMBER', 'your account is already a member of this group');
+
+/**
+ * Soft removal, shared by remove (the owner removes a member) and leave (the member leaves). The row stays, so past
+ * expenses and transfers keep the name. user_id and invite_email are cleared, so the account can join again. The
+ * member must have a zero balance and no transfer waiting for confirmation; a member who still owes or is owed money
+ * settles up first, and a debt is never written off or moved.
+ */
+async function softRemove(
+  db: D1Database,
+  code: string,
+  member: MemberRow,
+  reason: string | null,
+  left: boolean,
+): Promise<void> {
+  const { balance, pending } = await memberSettlement(db, code, member.id);
+  if (balance !== 0 || pending) {
+    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
+  }
+
+  // The guard is repeated in the UPDATE so that two simultaneous removals cannot both win.
+  const removedAt = now();
+  const result = await db
+    .prepare(
+      'UPDATE members SET removed_at = ?, removed_reason = ?, left_group = ?, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL',
+    )
+    .bind(removedAt, reason, left ? 1 : 0, member.id)
+    .run();
+  if (result.meta.changes === 0) {
+    throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
+  }
+  // D1 has no interactive transaction, so an expense or transfer may have committed between the check above and
+  // the UPDATE. From the UPDATE on, new writes refuse the member (noneRemovedSql), so one more look at the ledger
+  // sees everything: if the member is no longer settled up, the removal is undone.
+  const after = await memberSettlement(db, code, member.id);
+  if (after.balance !== 0 || after.pending) {
+    await db
+      .prepare(
+        'UPDATE members SET removed_at = NULL, removed_reason = NULL, left_group = 0, user_id = ? WHERE id = ? AND removed_at = ?',
+      )
+      .bind(member.user_id, member.id, removedAt)
+      .run();
+    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
+  }
+}
 
 // claim=true: "this is me", anyone with the link joins and gets a device token.
 // claim=false: an existing member adds someone else by name (claimable later).
@@ -157,36 +210,23 @@ memberRoutes.post('/:code/members/:id/remove', async (c) => {
   const blank = typeof body.reason === 'string' && body.reason.trim() === '';
   const reason = blank ? null : optionalText(body.reason, 'reason', 200);
 
-  // A member who still owes or is owed money settles up first: a debt is never written off or moved.
-  const { balance, pending } = await memberSettlement(c.env.DB, group.code, member.id);
-  if (balance !== 0 || pending) {
-    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance });
+  await softRemove(c.env.DB, group.code, member, reason, false);
+  await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
+  return c.json({ ok: true });
+});
+
+// A member leaves on their own (leave_group). It is a removal with left_group set, so the removed list shows
+// "left the group" and no reason; the device and the account become guests. The owner must hand the group over first.
+memberRoutes.post('/:code/leave', async (c) => {
+  const { group, me } = await loadGroup(c);
+  const memberId = requireCanLeaveGroup(me);
+  const member = await loadActiveMember(c.env.DB, group.code, memberId);
+  if (member.is_owner === 1) {
+    throw new ApiError(409, 'CANNOT_LEAVE_OWNER', 'the group owner cannot leave; hand the group over first');
   }
 
-  // The guard is repeated in the UPDATE so that two simultaneous removals cannot both win.
-  // user_id is cleared so the account can join again as a new member.
-  const removedAt = now();
-  const result = await c.env.DB.prepare(
-    'UPDATE members SET removed_at = ?, removed_reason = ?, user_id = NULL, invite_email = NULL WHERE id = ? AND removed_at IS NULL',
-  )
-    .bind(removedAt, reason, member.id)
-    .run();
-  if (result.meta.changes === 0) {
-    throw new ApiError(409, 'MEMBER_REMOVED', 'this member has been removed from the group');
-  }
-  // D1 has no interactive transaction, so an expense or transfer may have committed between the check above and
-  // the UPDATE. From the UPDATE on, new writes refuse the member (noneRemovedSql), so one more look at the ledger
-  // sees everything: if the member is no longer settled up, the removal is undone.
-  const after = await memberSettlement(c.env.DB, group.code, member.id);
-  if (after.balance !== 0 || after.pending) {
-    await c.env.DB.prepare(
-      'UPDATE members SET removed_at = NULL, removed_reason = NULL, user_id = ? WHERE id = ? AND removed_at = ?',
-    )
-      .bind(member.user_id, member.id, removedAt)
-      .run();
-    throw new ApiError(409, 'MEMBER_HAS_BALANCE', 'settle up before removing this member', { balance: after.balance });
-  }
-  await recordChange(c.env.DB, group.code, me, 'member.remove', member.id);
+  await softRemove(c.env.DB, group.code, member, null, true);
+  await recordChange(c.env.DB, group.code, me, 'member.leave', member.id);
   return c.json({ ok: true });
 });
 

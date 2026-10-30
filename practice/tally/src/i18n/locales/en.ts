@@ -233,6 +233,7 @@ export const en = {
     removeHint: 'Their expenses stay in the history.',
     removeReason: 'Reason (optional)',
     removed: 'removed',
+    left: 'left the group',
     release: 'Release',
     releaseLabel: 'Release the name {name}',
     releaseConfirm: 'Release {name}? The device that uses this name becomes a guest, and the name can be claimed again.',
@@ -240,6 +241,20 @@ export const en = {
     editAccountLabel: 'Edit the receiving account of {name}',
     bankTitleFor: 'Receiving account of {name}',
     bankHintFor: 'Used to build the VietQR code when others pay this member. Anyone with the group link can see it.',
+  },
+  leaveGroup: {
+    action: 'Leave group',
+    title: 'Leave {group}?',
+    message: 'You stay in past expenses and transfers. This device and your account become guests.',
+    confirm: 'Leave',
+    hasBalance: 'You still owe or are owed money. Settle up before leaving.',
+  },
+  deleteGroup: {
+    action: 'Delete group',
+    title: 'Delete {group}?',
+    message:
+      'Everything in this group is deleted for good: expenses, transfers, sessions, photos and history. Its links stop working.',
+    confirm: 'Delete',
   },
   memberInvite: {
     emailLabel: 'Email (optional)',
@@ -284,6 +299,8 @@ export const en = {
     memberAdded: '{name} was added to the group.',
     memberRemoved: '{name} was removed from the group.',
     memberReleased: '{name} can be claimed again.',
+    leftGroup: 'You left the group.',
+    groupDeleted: 'The group was deleted.',
     ownerAttached: 'Group attached to your account.',
     bankSaved: 'Your bank details were saved.',
     settingsSaved: 'Group settings were saved.',
@@ -443,6 +460,8 @@ export const en = {
     MEMBER_REMOVED: 'This member has been removed from the group.',
     MEMBER_HAS_BALANCE: 'This member still owes or is owed money. Settle up before removing them.',
     CANNOT_REMOVE_OWNER: 'The group owner cannot be removed.',
+    CANNOT_LEAVE_OWNER: 'The group owner cannot leave. Hand the group over to another member first.',
+    GROUP_HAS_MEMBERS: 'The group still has other members. Only an owner who is alone can delete it.',
     EXPENSE_HAS_REMOVED_MEMBER:
       'This expense involves a member who has been removed from the group, so it can no longer be edited or deleted.',
     ALREADY_MEMBER: 'This device is already a member of the group.',
