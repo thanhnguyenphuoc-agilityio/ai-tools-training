@@ -13,6 +13,8 @@ export interface Env {
   DEV_LOGIN?: string;
   /** Live updates (group_live_updates). Optional: without it nothing is signalled and the live endpoint answers 404. */
   GROUP_LIVE?: DurableObjectNamespace;
+  /** Throttles failed group lookups and owner key attempts (rate_limit_guessing). Optional: without it nothing is limited. */
+  GUESS_LIMITER?: RateLimit;
 }
 
 export interface UserRow {
@@ -39,7 +41,7 @@ export type Ctx = Context<AppEnv>;
 
 export class ApiError extends Error {
   constructor(
-    public status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 500,
+    public status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 429 | 500,
     public code: ErrorCode,
     message: string,
     public params?: ErrorParams,

@@ -28,6 +28,7 @@ import {
   toMemberDto,
 } from '../groupData';
 import { ApiError, currency, now, readJson, roundTo, text, type AppEnv } from '../http';
+import { throttleFailure } from '../throttle';
 import {
   canAutoLinkInvite,
   canLinkToAccount,
@@ -190,10 +191,14 @@ groupRoutes.post('/:code/owner/claim', async (c) => {
     if (me.userId && group.owner_user_id !== null) {
       throw new ApiError(403, 'GROUP_OWNED_BY_OTHER_ACCOUNT', 'group belongs to another account');
     }
+    await throttleFailure(c, 'owner');
     throw new ApiError(403, 'OWNER_KEY_REVOKED', 'this recovery link was revoked because the group is now linked to an account');
   }
 
-  if ((await sha256Hex(key)) !== group.owner_key_hash) throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+  if ((await sha256Hex(key)) !== group.owner_key_hash) {
+    await throttleFailure(c, 'owner');
+    throw new ApiError(403, 'WRONG_OWNER_KEY', 'wrong owner key');
+  }
 
   if (me.userId) {
     try {

@@ -5,7 +5,7 @@
 | ID | `TAL-51` |
 | Labels | `type::improvement`, `priority::low`, `area::security` |
 | Reporter | Opus (AI team lead) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | - |
 | Related | `group_link_guessing` |
 
@@ -23,3 +23,15 @@ Viewing an existing group and normal use stay unaffected.
 - Use the Cloudflare Workers Rate Limiting binding configured in wrangler; no new npm dependency and no external
   service. API tests run it through Miniflare.
 - Also send `Referrer-Policy: same-origin` so group links never leave the site in the Referer header.
+
+## Plan
+
+- `wrangler.jsonc`: a `GUESS_LIMITER` rate limiting binding, 20 per 60 seconds; `Env.GUESS_LIMITER` optional.
+- `worker/throttle.ts`: `throttleFailure(c, kind)` counts one failure per client IP and kind; over the limit it
+  throws `429 TOO_MANY_ATTEMPTS`.
+- `worker/groupData.ts` `loadGroup`: counts a `lookup` failure before `GROUP_NOT_FOUND` (malformed codes included).
+- `worker/routes/groups.ts` owner claim: counts an `owner` failure before `WRONG_OWNER_KEY` and `OWNER_KEY_REVOKED`.
+- `shared/errors.ts` and both locales: `TOO_MANY_ATTEMPTS`.
+- `worker/app.ts` and `index.html`: `Referrer-Policy: same-origin`.
+- Tests: `tests/api/rate-limit-guessing.test.ts` through Miniflare's `ratelimits`.
+- Docs: `docs/business-rules.md` (security section), `docs/design.md` (`rate_limit_guessing`).
