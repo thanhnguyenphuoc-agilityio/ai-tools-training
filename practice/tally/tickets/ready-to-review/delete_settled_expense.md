@@ -141,3 +141,23 @@ Commands and results (run in the feature worktree):
 - `npm run test:hooks`: 29 passed, 0 failed.
 - `npm run e2e`: not run in this branch. The batch runs it, including `e2e/hide-expense.spec.ts` and the regression
   specs (edit-expense, receipts, attendance, csv-export).
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- Rule, SQL and pure function match the Decision: `paidTowardSql` and `isPaidToward` use the same involved set (payer
+  plus shares above zero), the same `>=` boundary and both transfer sides. DELETE and PATCH check it inside the UPDATE,
+  with the removed-member code first; the hide route keeps permissions in `worker/policy.ts`.
+- The expense list kept the "All expenses" choice after the last hidden expense was shown again. The toggle then
+  disappeared, and the next hide left the row on screen with no way to switch. Fixed: `showAll` resets once nothing is
+  hidden, and the e2e spec covers a second hide.
+- The two toggle buttons looked identical; the pressed one is now the solid button and the other uses `button--ghost`.
+- `e2e/hide-expense.spec.ts` matched the toast text twice (the live region and the visible toast) and the hidden badge
+  as a substring of the toast. It now uses `.toasts__text` and `.expense-list__hidden`, as other specs do.
+- `docs/design.md` still named `0012_sessions.sql` as the newest migration; it now names `0013_expense_hidden.sql`.
+
+Checks in the worktree: `npm run typecheck` passed, `npm run lint` passed, `npm test` 52 files, 647 tests passed;
+e2e `hide-expense`, `edit-expense`, `receipts`, `attendance` and `csv-export` passed on desktop and mobile.
