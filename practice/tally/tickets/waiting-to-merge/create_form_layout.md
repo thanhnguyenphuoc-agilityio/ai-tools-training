@@ -5,7 +5,7 @@
 | ID | `TAL-64` |
 | Labels | `type::improvement`, `priority::medium`, `area::ui` |
 | Reporter | Product owner (human) |
-| Assignee | - |
+| Assignee | Haiku (developer) |
 | Depends on | `create_group_account_name` |
 | Related | - |
 
@@ -89,7 +89,8 @@ What changed:
 - `src/pages/HomePage.scss`: `&__groups` grid with `gap: space(3)`; `@include up(md)` sets two equal columns and
   `align-items: start`; `&__group` sets `margin: 0` and `min-width: 0`. No colours.
 - `e2e/create-form-layout.spec.ts` (new): (a) 1280x900 group tops equal within 1px and the currency group holds the select
-  and a checkbox; (b) 375x800 the currency group starts below the name group; (c) the form still creates a group.
+  and a checkbox; (b) 375x800 the currency group starts below the name group; (c) the form still creates a group. The
+  describe skips the mobile project (Pixel 7 is 412px, below `md`), because the viewport is set inside the test.
 - `docs/business-rules.md`: one bullet under "Accounts (optional sign-in)". `docs/design.md`: section
   `create_form_layout (built)` after `create_group_account_name (built)`.
 - `tickets/README.md`: next free ID `TAL-66` (this batch adds TAL-64 and TAL-65).
