@@ -13,4 +13,20 @@
   &__hint {
     margin-bottom: space(3);
   }
+
+  // Your name and Currency groups: stacked on phones, side by side from md with aligned tops.
+  &__groups {
+    display: grid;
+    gap: space(3);
+
+    @include up(md) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+  }
+
+  &__group {
+    margin: 0;
+    min-width: 0;
+  }
 }

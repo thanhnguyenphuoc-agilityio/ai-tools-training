@@ -699,6 +699,13 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
 - Styles: modifier `field__control--readonly` in `src/styles/blocks/_field.scss` (muted text, dashed border; theme custom properties only). A hint (`home.create.accountNameHint`) is shown under the locked field.
 - Tests: `tests/unit/ownerName.test.ts`; `e2e/create-group-account-name.spec.ts` (cases a to d); the specs that fill `home.create.yourName` on a signed-in page (`account.spec.ts`, `joined-groups.spec.ts`, `owner-link-binds-account.spec.ts`, `saved-bank.spec.ts`, `transfer-ownership.spec.ts`) tick the checkbox first.
 
+### create_form_layout (built)
+
+- Markup only in `src/pages/HomePage.tsx`: the old `div.columns` wrapper is replaced by `div.home-page__groups`, which holds two `div.fieldset.stack.stack--tight.home-page__group` boxes. The first is "Your name" (name `label.field`, `p#owner-name-hint`, "Use a different name" checkbox). The second is "Currency" (currency `label.field`, then the rounding checkbox when `coarseUnit > 1`, moved in from below the columns).
+- No real `fieldset` and no `legend`: each existing label keeps wrapping its input, so `getByLabel(t('home.create.yourName'))` and `getByLabel(t('home.create.currency'))` still resolve. The visible field label is the group heading. No state, handler, attribute, id or i18n key changed.
+- Styles in `src/pages/HomePage.scss` under `.home-page`: `&__groups` is a grid with `gap: space(3)`, stacked by default; `@include up(md)` sets `repeat(2, minmax(0, 1fr))` and `align-items: start` so tops align and each box keeps its height. `&__group` sets `margin: 0` and `min-width: 0`. Border, radius and padding come from the `.fieldset` block (theme custom properties only). The `lg` layout needs no rule: the create card is 3fr of the 3fr/2fr grid there.
+- Tests: `e2e/create-form-layout.spec.ts`. Signed out: (a) at 1280x900 the two group tops match within 1px and the currency group holds the select and a checkbox; (b) at 375x800 the currency group starts at or below the name group's bottom; (c) the form still creates a group. Existing specs that use these labels are unchanged.
+
 ### wrong_name_claim (built)
 
 - No migration. A released member has `token_hash`, `user_id` and `invite_email` set to NULL, the same state as a member
