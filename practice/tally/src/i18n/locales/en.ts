@@ -36,6 +36,8 @@ export const en = {
       groupNamePlaceholder: 'Weekend trip',
       yourName: 'Your name',
       yourNamePlaceholder: 'Alex',
+      useDifferentName: 'Use a different name',
+      accountNameHint: 'From your account. This name is used only in this group.',
       currency: 'Currency',
       roundCoarse: 'Round each share to {unit}',
       submit: 'Create group',
