@@ -22,6 +22,7 @@ const member = (id: string, name: string): MemberDto => ({
   claimed: true,
   removed: false,
   removedReason: null,
+  left: false,
   bankBin: null,
   accountNo: null,
   accountName: null,

@@ -282,7 +282,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
 - **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`). When the account is already another member of the group, the attach is refused and the claim falls back to the owner cookie with `owner.claim` (`recovery_link_signed_in_member`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
-- **Migration numbers:** `0013_expense_hidden.sql` (`delete_settled_expense`) is the newest migration, after `0012_sessions.sql` (`attendance_split`), `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
+- **Migration numbers:** `0014_member_left.sql` (`leave_group`) is the newest migration, after `0013_expense_hidden.sql` (`delete_settled_expense`), `0012_sessions.sql` (`attendance_split`), `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
 - **Tests:** `tests/unit/rules.test.ts`, `tests/api/purge.test.ts`, `tests/api/activity-reset.test.ts`, `e2e/purge.spec.ts`.
 
@@ -530,6 +530,47 @@ Built. Rules in `docs/business-rules.md`, "Editing an expense".
   to the user or the first current member. The suggested transfers (`src/settleView.ts`) are computed between current members only,
   and a removed member with a non-zero balance (which the rules prevent) is named in a note instead. The CSV export keeps a share column for every member, removed ones included, because
   their past shares are part of the history.
+
+### leave_group (built)
+
+- Rules: `docs/business-rules.md`, Members ("Leaving a group (leave_group)") and Groups ("Deleting a group (leave_group)").
+- Data: migration `0014_member_left.sql` adds `members.left_group INTEGER NOT NULL DEFAULT 0`. A leave is a removal with
+  `left_group = 1`; an existing removed row keeps `left_group = 0` and is never shown as left. `MemberRow` in
+  `groupData.ts` carries the column; `toMemberDto` sets `MemberDto.left` (removed and `left_group = 1`) in both branches.
+- Policy (`worker/policy.ts`): `requireCanLeaveGroup(me)` (a member is required, so a guest gets `JOIN_FIRST`; the owner
+  gets `CANNOT_LEAVE_OWNER`; returns the member id), `requireCanDeleteGroup(me)` (`requireOwner`, so `OWNER_ONLY`),
+  `requireGroupAlone(otherActive)` (`GROUP_HAS_MEMBERS` above 0).
+- Leave route: `POST /groups/:code/leave` in `worker/routes/members.ts`, no body. The soft-removal block of the remove
+  route is one local helper, `softRemove(db, code, member, reason, left)`, used by both routes: the balance and pending
+  check, the guarded `UPDATE ... WHERE removed_at IS NULL` with its `meta.changes` check, the second balance check after
+  the update, and the undo, which resets `removed_at`, `removed_reason` and `left_group`. Leave passes no reason and
+  `left = true`, clears `user_id` and `invite_email`, then records `member.leave` with the leaver as actor. The owner's
+  remove passes `left = false`, so an owner removal never reads as left.
+- Race: an expense or transfer that commits between the check and the UPDATE is caught by the second balance check, which
+  undoes the removal with `MEMBER_HAS_BALANCE` (test: an expense interleaved before `UPDATE members SET removed_at`).
+- Delete route: `DELETE /groups/:code` in `worker/routes/groups.ts`. The group is loaded (`GROUP_NOT_FOUND`), the owner is
+  required, then one guarded statement: `DELETE FROM groups WHERE code = ?1 AND NOT EXISTS (SELECT 1 FROM members WHERE
+  group_code = ?1 AND is_owner = 0 AND removed_at IS NULL) RETURNING code`. The condition is the one
+  `countSharedOwnedGroups` uses in `worker/accountDelete.ts`, so account deletion and group deletion agree. The rows go by
+  `ON DELETE CASCADE`, as in `purge_inactive_groups`. `locked_at` is ignored, so a kept group can be deleted. When nothing
+  is returned, a group that still exists gets its other active members counted and `GROUP_HAS_MEMBERS`; a group that no
+  longer exists gets `GROUP_NOT_FOUND`. If no other member is left by then, the statement runs once more, so a removal
+  committed in between does not refuse an alone owner. A join that commits before the statement blocks it; a join after
+  it finds no group (test: a member inserted before `DELETE FROM groups` answers `GROUP_HAS_MEMBERS`).
+- R2: a cascade does not reach the receipt photos. After the rows are gone, `deleteReceiptObjects(env.RECEIPTS, "<code>/")`
+  removes every object under the group prefix (receipt keys are `<code>/<expenseId>/<id>`, `shared/receipts.ts`). A failure
+  is logged in a try/catch, as in `worker/cleanup.ts`, and does not fail the request. The owner cookie is cleared with
+  `clearOwnerCookie`; a member cookie may stay, since it no longer resolves.
+- Audit: a deleted group leaves no audit row, because the `audit_log` goes with it. Only leaving is recorded, as `member.leave`.
+- Live updates: the middleware in `worker/app.ts` signals `/groups/:code/*` after writes. The live test lists both new
+  routes (`POST /groups/:code/leave`, `DELETE /groups/:code`); the route-coverage test fails when a route is missing.
+- Client: `src/api.ts` (`leaveGroup`, `deleteGroup`); `src/ownerTools.ts` (`canLeaveGroup`, `canDeleteGroup`, mirroring the
+  policy and the server's alone check); `LeaveGroupDialog.tsx` and `DeleteGroupDialog.tsx` on `ConfirmDialog` with
+  `useDialog`. `MembersPanel` shows the leave button (ghost, for the leaver only), the delete button (danger, for the alone
+  owner only), and "left the group" for left rows. `GroupPage` passes `onDeleted`, which forgets the group and navigates
+  home; the joined groups list refetches on mount.
+- Tests: `tests/api/leave-group.test.ts` (leave, refusals, race, owner regression, delete, kept group, R2 cleanup, delete
+  race, the migration default), `tests/unit/ownerTools.test.ts`, the live route list in `tests/api/live.test.ts`.
 
 ### ui_redesign
 

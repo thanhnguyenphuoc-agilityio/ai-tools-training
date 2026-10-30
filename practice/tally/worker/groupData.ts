@@ -34,6 +34,8 @@ export interface MemberRow {
   created_at: string;
   removed_at: string | null;
   removed_reason: string | null;
+  /** 1 when the member left the group on their own (leave_group); only meaningful while removed_at is set. */
+  left_group: number;
   /** Never copied into a DTO; only `invited` is derived from it. */
   invite_email?: string | null;
 }
@@ -264,6 +266,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
       claimed: m.token_hash !== null || m.user_id !== null,
       removed: true,
       removedReason: m.removed_reason,
+      left: m.left_group === 1,
       bankBin: null,
       accountNo: null,
       accountName: null,
@@ -298,6 +301,7 @@ export const toMemberDto = (m: MemberRow): MemberDto => {
     claimed,
     removed: false,
     removedReason: m.removed_reason,
+    left: false,
     bankBin,
     accountNo,
     accountName,

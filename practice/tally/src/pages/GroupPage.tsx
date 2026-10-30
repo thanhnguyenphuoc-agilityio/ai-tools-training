@@ -273,7 +273,16 @@ export function GroupPage({ code, navigate }: { code: string; navigate: Navigate
         />
       )}
       {tab === 'settle' && <SettlePanel group={group} onChanged={reload} />}
-      {tab === 'members' && <MembersPanel group={group} onChanged={reload} />}
+      {tab === 'members' && (
+        <MembersPanel
+          group={group}
+          onChanged={reload}
+          onDeleted={() => {
+            forgetGroup(code);
+            navigate('/');
+          }}
+        />
+      )}
     </div>
   );
 }

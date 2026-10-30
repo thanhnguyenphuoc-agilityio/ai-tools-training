@@ -10,6 +10,7 @@ const member = (id: string, extra: Partial<MemberDto> = {}): MemberDto => ({
   claimed: true,
   removed: false,
   removedReason: null,
+  left: false,
   bankBin: null,
   accountNo: null,
   accountName: null,

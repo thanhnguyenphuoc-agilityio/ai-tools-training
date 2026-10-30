@@ -4,17 +4,34 @@ import { BANKS, findBank, type GroupDto, type MemberDto } from '../../shared/typ
 import { useAccount } from '../account';
 import { api } from '../api';
 import { useI18n, type UiMessage } from '../i18n';
-import { canEditAccount, canReleaseMember, canSetInviteEmail, canTransferTo } from '../ownerTools';
+import {
+  canDeleteGroup,
+  canEditAccount,
+  canLeaveGroup,
+  canReleaseMember,
+  canSetInviteEmail,
+  canTransferTo,
+} from '../ownerTools';
 import { useToast } from '../toast';
 import { Icon } from './Icon';
 import { InviteEmailDialog } from './InviteEmailDialog';
+import { DeleteGroupDialog } from './DeleteGroupDialog';
 import { KeepGroup } from './KeepGroup';
+import { LeaveGroupDialog } from './LeaveGroupDialog';
 import { ReleaseMemberDialog } from './ReleaseMemberDialog';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
 import { TransferOwnerDialog } from './TransferOwnerDialog';
 import './MembersPanel.scss';
 
-export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged: () => void }) {
+export function MembersPanel({
+  group,
+  onChanged,
+  onDeleted,
+}: {
+  group: GroupDto;
+  onChanged: () => void;
+  onDeleted: () => void;
+}) {
   const { t, message } = useI18n();
   const notify = useToast();
   const [newName, setNewName] = useState('');
@@ -25,6 +42,8 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
   const [transferringMember, setTransferringMember] = useState<MemberDto | null>(null);
   const [invitingMember, setInvitingMember] = useState<MemberDto | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const me = group.members.find((m) => m.id === group.me.memberId);
   const active = group.members.filter((m) => !m.removed);
   const removed = group.members.filter((m) => m.removed);
@@ -133,11 +152,25 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
           {removed.map((m) => (
             <li key={m.id} className="list__item cluster">
               <span className="text text--muted">{m.name}</span>
-              <span className="badge">{t('members.removed')}</span>
+              <span className="badge">{m.left ? t('members.left') : t('members.removed')}</span>
               {m.removedReason && <span className="text text--muted text--small">{m.removedReason}</span>}
             </li>
           ))}
         </ul>
+        {(canLeaveGroup(group.me, group.members) || canDeleteGroup(group.me, group.members)) && (
+          <div className="cluster">
+            {canLeaveGroup(group.me, group.members) && (
+              <button className="button button--ghost" onClick={() => setLeaving(true)}>
+                {t('leaveGroup.action')}
+              </button>
+            )}
+            {canDeleteGroup(group.me, group.members) && (
+              <button className="button button--danger" onClick={() => setDeleting(true)}>
+                {t('deleteGroup.action')}
+              </button>
+            )}
+          </div>
+        )}
         {group.me.memberId && (
           <form
             className="stack member-add"
@@ -213,6 +246,25 @@ export function MembersPanel({ group, onChanged }: { group: GroupDto; onChanged:
           onChanged={() => {
             notify('toast.ownerTransferred', { name: transferringMember.name });
             onChanged();
+          }}
+        />
+      )}
+
+      {leaving && (
+        <LeaveGroupDialog
+          group={group}
+          onClose={() => setLeaving(false)}
+          onChanged={onChanged}
+        />
+      )}
+
+      {deleting && (
+        <DeleteGroupDialog
+          group={group}
+          onClose={() => setDeleting(false)}
+          onDeleted={() => {
+            setDeleting(false);
+            onDeleted();
           }}
         />
       )}
