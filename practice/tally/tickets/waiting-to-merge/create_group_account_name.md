@@ -72,3 +72,36 @@ From the product owner (human), given with the request:
 6. Docs in the same branch: one bullet under "Accounts (optional sign-in)" in `docs/business-rules.md`, and a section
    `### create_group_account_name (built)` in `docs/design.md` placed directly after `### join_as_account (built)`.
 7. Ticket: `TAL-64` as the next free ID in `tickets/README.md`.
+
+## Merge request
+
+Branch `feat/create_group_account_name` into `develop`. No dependency on other open branches; it changes only the client
+and shares four files with `leave_group` (the `home.create` block in the locales, one bullet in `business-rules.md`
+and one section in `design.md`), each in a different region.
+
+What changed:
+
+- `src/ownerName.ts` (new): `createOwnerName(accountName, useDifferent, typed)` returns `{ value, locked }`.
+- `src/pages/HomePage.tsx`: the name field shows the account name, read-only, when signed in. The "Use a different name"
+  checkbox appears under it when the account name is non-empty. Checking it focuses the field and seeds it with the
+  account name cut to 40; unchecking restores the account name. Submit sends the helper value as `ownerName`.
+- `src/styles/blocks/_field.scss`: modifier `field__control--readonly` (theme custom properties only).
+- `src/i18n/locales/en.ts`, `vi.ts`: `home.create.useDifferentName` and `home.create.accountNameHint`.
+- `tests/unit/ownerName.test.ts` (new): the five cases from the plan, plus a Vietnamese account name written with escapes.
+- `e2e/create-group-account-name.spec.ts` (new): cases (a) to (d).
+- `e2e/account.spec.ts`, `joined-groups.spec.ts`, `owner-link-binds-account.spec.ts`, `saved-bank.spec.ts`,
+  `transfer-ownership.spec.ts`: seven signed-in fills now tick the checkbox first.
+- `docs/business-rules.md`: one bullet in "Accounts (optional sign-in)". `docs/design.md`: section
+  `create_group_account_name (built)` before `wrong_name_claim`.
+- No server, API or migration change. `POST /groups` already accepts `ownerName` (1 to 40 characters) and does not write
+  `users.name`.
+- `tickets/README.md`: next free ID `TAL-64` (this batch adds TAL-62 and TAL-63).
+
+Commands and results (run in the feature worktree):
+
+- `npm run typecheck`: clean.
+- `npm run lint`: clean.
+- `npm test`: 54 files, 661 tests passed.
+- `npm run test:hooks`: 29 passed, 0 failed.
+- `npm run e2e`: not run in the worktree, as planned. The batch runs `e2e/create-group-account-name.spec.ts` and the
+  five adapted specs (six `yourName` fills across them, seven signed-in fills in total).
