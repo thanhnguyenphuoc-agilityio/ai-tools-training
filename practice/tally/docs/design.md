@@ -209,7 +209,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
   - `POST /groups/:code/link` attaches a device member to the account (`linkToAccount`). It records `member.link`
     (target: the linked member) with `recordChange`, so linking moves `last_activity_at`. The owner branch was removed
     in `owner_link_binds_account`: an owner member is refused with `403 OWNER_ONLY`.
-  - The owner is attached by `attachOwnerGroup`, which is used by `POST /groups/:code/owner/claim` (signed in, valid key),
+  - The owner is attached by `attachOwnerGroup`, which is used by `POST /groups/:code/owner/claim` (signed in, valid key)
+    through `attachOwnerGroup` in a try/catch that falls back only for `ACCOUNT_ALREADY_MEMBER`,
     `POST /groups/:code/owner/attach` (`tryAttachOwnerGroup`, the known refusals answer `attached: false`) and the lock route.
     It records `group.link` (target: the owner member) with `recordChange`.
   - "Both or nothing" for an owner: each of the two `UPDATE`s in the `db.batch` also requires the other row to be free
@@ -279,7 +280,7 @@ Built. Rules in `docs/business-rules.md` (Groups, Automatic deletion).
   so that no group is deleted by the first run.
 - **Activity:** only changes move `last_activity_at` (through `recordChange` in `worker/groupData.ts`); viewing and recovery links no longer do.
 - **Group settings:** `PATCH /groups/:code` answers `{ ok: true, changed }`. A request that repeats the stored values answers `changed: false`, writes nothing and adds no audit entry; the settings form then shows no "saved" message.
-- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`).
+- **Recovery link:** `POST /groups/:code/owner/claim` reads the body before it loads the group. Answering 404 for a deleted group before the body is consumed makes the Vite dev proxy fail with "fetch failed", so a malformed body on a missing group answers 400 `INVALID_JSON`, and a valid request for a deleted group answers 404 `GROUP_NOT_FOUND` (the client then forgets the group). Without an account the claim is audited with `audit()` only; signed in, it attaches the group (`group.link`, see `owner_link_binds_account`). When the account is already another member of the group, the attach is refused and the claim falls back to the owner cookie with `owner.claim` (`recovery_link_signed_in_member`).
   - Known dev-only limit: reading the body first reduces the Vite/undici "fetch failed" on an early 404 but does not remove it. There is no Vite proxy in production, so production is not affected.
 - **Migration numbers:** `0012_sessions.sql` (`attendance_split`) is the newest migration, after `0011_attachments.sql` (`receipt_photos`) and `0010_expense_edits.sql` (`edit_expense`). `group_live_updates` adds no D1 migration. They are indicative: a branch takes the next free number when it creates its migration, never edits one that has been pushed, and updates this section if the number differs.
 - **UI:** `<GroupExpiry>` component (`src/components/GroupExpiry.tsx`, `GroupExpiry.scss`) renders the deletion date (`GroupDto.expiresAt`), highlighted during the last 72 hours; for a kept group (`GroupDto.locked`) it renders the kept line instead, without the highlight.
@@ -589,6 +590,14 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   member's `user_id` in one `db.batch`, with the same `EXISTS` guards as before, then reads back to choose the refusal.
   `tryAttachOwnerGroup` maps `GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE` and `ACCOUNT_ALREADY_MEMBER` to
   `attached: false`. The claim route answers `attached: true` when it attached, `OWNER_KEY_REVOKED` for a revoked key with no account, and `GROUP_OWNED_BY_OTHER_ACCOUNT` for a revoked key held by another account.
+- **Recovery link while signed in as another member (`recovery_link_signed_in_member`):** the claim route uses
+  `attachOwnerGroup` in a try/catch. Only the `ACCOUNT_ALREADY_MEMBER` refusal falls back: the other refusals
+  (`GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE`) still answer their errors, as in `owner_link_binds_account`.
+  The group stays unattached and the owner key stays
+  valid. The route then runs the signed-out path: it sets the owner cookie, audits `owner.claim` with `audit()` (no
+  `last_activity_at` change) and answers `{ ok: true, attached: false }`. A live key means `owner_user_id` is NULL, so the
+  "already attached to me" case cannot reach this branch. If another account attaches the group after `loadGroup`, the key
+  is already revoked, and the cookie set here grants nothing because auth compares it with the revoked hash.
 - **Device history:** after sign-in, `afterSignIn()` (`src/account.tsx`) runs `attachDeviceGroups` (`src/ownerAttach.ts`) over
   the device history: one `POST /groups/:code/owner/attach` per group, sequential, failures ignored, then `refresh()`.
 - **Lock:** `POST /groups/:code/lock` keeps `requireOwnerAccount` first, then `requireGroupNotOwnedByOther`, then attaches

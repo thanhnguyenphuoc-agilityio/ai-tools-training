@@ -17,6 +17,7 @@ Undecided points are marked **OPEN QUESTION**. They are not to be guessed; they 
   - The key is after `#`, so browsers do not send it to the server and it does not appear in logs.
   - Opening the recovery link on another device restores owner access, until the group is tied to an account.
   - Opening the recovery link while signed in attaches the group and the owner member to that account, without a confirmation step, and shows a toast. The owner key is then revoked (`owner_key_hash = 'revoked'`) and the owner cookie on every device stops granting owner access; each device clears it on its next request to the group.
+    - If the account is already another member of the group, the group is not attached. The recovery link then restores owner access on that device through the owner cookie, as without an account, and the owner key stays valid.
   - An owner who created a group without an account and signs in later on the same device is attached automatically: after sign-in, the interface asks the server to attach each group of the device history that the device holds an owner key for.
   - After attaching, a revoked recovery link answers `403 OWNER_KEY_REVOKED`. A group owned by another account answers `403 GROUP_OWNED_BY_OTHER_ACCOUNT`.
 - When a group is created while signed in, it belongs to the account from the start: no owner key is issued (`ownerKey` is null), `owner_key_hash` is set to `'revoked'`, and no recovery link is shown. The page shows no notice for it; the members tab states that owner access is tied to the account.
