@@ -39,3 +39,21 @@ export function payAction(
 export function canReleaseMember(me: Me, member: MemberDto): boolean {
   return me.isOwner && !member.removed && !member.isOwner && member.claimed;
 }
+
+/**
+ * Leaving the group (leave_group): a member of this device other than the owner, who is still active. Mirrors
+ * requireCanLeaveGroup in worker/policy.ts; a guest sees no action, and the owner hands the group over first.
+ */
+export function canLeaveGroup(me: Me, members: MemberDto[]): boolean {
+  if (me.memberId === null || me.isOwner) return false;
+  const self = members.find((m) => m.id === me.memberId);
+  return !!self && !self.removed && !self.isOwner;
+}
+
+/**
+ * Deleting the group (leave_group): the owner, while no other member is active. Unclaimed members count as members,
+ * as in the server check (requireGroupAlone). Mirrors requireCanDeleteGroup and the guarded DELETE in worker/routes/groups.ts.
+ */
+export function canDeleteGroup(me: Me, members: MemberDto[]): boolean {
+  return me.isOwner && !members.some((m) => !m.removed && !m.isOwner);
+}
