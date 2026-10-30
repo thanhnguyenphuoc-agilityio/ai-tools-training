@@ -1,19 +1,8 @@
-export const meta = {
-  name: 'ticket-batch-core',
-  description: 'Shared engine for ticket-batch-thorough and ticket-batch-fast (pass mode in args)',
-  whenToUse: 'Call through ticket-batch-thorough or ticket-batch-fast, not directly',
-  phases: [
-    { title: 'Plan', model: 'opus' },
-    { title: 'Build', model: 'haiku' },
-    { title: 'Review', model: 'sonnet' },
-    { title: 'Batch review', model: 'opus' },
-    { title: 'Integrate', model: 'opus' },
-  ],
-}
+// Shared body of ticket-batch-thorough.js and ticket-batch-fast.js. build.mjs prepends each workflow's meta and MODE;
+// edit this file, then run "node .claude/workflow-src/build.mjs" from the repository root.
 
 /*
  * args:
- *   mode       'thorough' | 'fast' (set by the wrapper workflows)
  *   date       today's date, yyyy-mm-dd (scripts cannot read the clock)
  *   tickets    [{ name, id, branch, answers? }] in merge order. name is the ticket file name without .md,
  *              branch is feat/<name> or fix/<name>, answers is an optional "## Answers" text from the product owner.
@@ -29,7 +18,6 @@ const A = args || {}
 if (!A.date || !Array.isArray(A.tickets) || !A.tickets.length) {
   return { error: 'args.date (yyyy-mm-dd) and args.tickets [{name, id, branch}] are required' }
 }
-const MODE = A.mode === 'thorough' ? 'thorough' : 'fast'
 const TICKETS = A.tickets
 const CHUNK = Math.max(1, A.chunkSize || 6)
 const FIX_BRANCH = A.fixBranch || `fix/batch-review-${A.date}`
@@ -43,7 +31,7 @@ const ticketSource = t => A.ticketsDir
 const listOf = ts => ts.map(t => `- ${t.id} ${t.name} (branch ${t.branch}, worktree ${wtOf(t.branch)})`).join('\n')
 
 const COMMON = `
-Commit identity: the repository's configured git user (git config user.name and user.email in the main checkout), as author and committer on every commit and merge. Never an AI identity. No Co-Authored-By trailer, no "Generated with" footer. Small conventional commits (feat:, fix:, test:, docs:, docs(tickets):, style:) like the existing history.
+Commit identity: read git config user.name and user.email once in the main checkout, then pass them explicitly with -c user.name="..." -c user.email="..." on every commit and merge (never rely on the worktree's config), as author and committer. Never an AI identity. No Co-Authored-By trailer, no "Generated with" footer. Small conventional commits (feat:, fix:, test:, docs:, docs(tickets):, style:) like the existing history.
 Commit dates: set GIT_AUTHOR_DATE and GIT_COMMITTER_DATE (equal) on every commit and merge to the actual current local time, read with "date '+%F %T %z'" right before committing: real seconds, never :00, never in the future. Dates fall on ${A.date} inside working hours 08:30-12:00 or 13:30-17:30 +0700 and stay monotonic. If the current time is outside those windows, use a time a few minutes before the end of the last window that has started today, later than the previous commit, with uneven seconds.
 Never push, never add remotes, never delete branches, never touch main. Never commit package-lock.json at the repository root, playwright.local.config.ts or anything under .scratch/. Add no npm dependency.
 Never run Prettier on Markdown files or whole folders; only the format-on-edit hook formats code files.
@@ -186,6 +174,7 @@ ${mergeSteps(order, fixWt)}`,
     { label: 'batch-review', phase: 'Batch review', model: 'opus', schema: BATCH_SCHEMA })
 } else {
   // Fast mode with more than one chunk: one Opus reviewer per chunk, then one Opus lead merges everything in order.
+  // The merge agent stays in the Batch review phase so the fast workflow keeps three phases.
   phase('Batch review')
   chunkReviews = await parallel(chunks.map((chunk, c) => () => agent(`${COMMON}
 You are an Opus AI team lead reviewing chunk ${c + 1} of ${chunks.length} of a ticket batch. develop was ${baseCommit} when the batch started. Your tickets:
@@ -198,13 +187,12 @@ ${reviewSteps('Opus (AI team lead)')}
 Return tickets (one review per ticket) and merged as an empty list.`,
     { label: `batch-review:${c + 1}`, phase: 'Batch review', model: 'opus', schema: CHUNK_SCHEMA })))
   const ready = chunkReviews.filter(Boolean).flatMap(r => r.tickets).filter(r => r.ready).map(r => r.name)
-  phase('Integrate')
   batch = await agent(`${COMMON}
 You are the Opus AI team lead integrating a reviewed ticket batch. develop was ${baseCommit} when the batch started. Tickets:
 ${listOf(TICKETS)}
 Chunk reviews (tickets are in tickets/ready-to-review/ on their branches when ready): ${JSON.stringify(chunkReviews)}
 ${mergeSteps(order.filter(n => ready.includes(n)), fixWt)}`,
-    { label: 'integrate', phase: 'Integrate', model: 'opus', schema: BATCH_SCHEMA })
+    { label: 'integrate', phase: 'Batch review', model: 'opus', schema: BATCH_SCHEMA })
 }
 
 return {
