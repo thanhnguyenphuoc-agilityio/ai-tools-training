@@ -96,3 +96,30 @@ Steps:
     `remove_member` and the migration-numbers bullet only).
 
 Verification before the merge request: typecheck, lint, unit and API tests, and the hook tests. The batch runs e2e.
+
+## Merge request
+
+Branch `feat/leave_group` into `develop`.
+
+A non-owner member can leave from the members tab, and an owner who is the only active member can delete the group.
+
+- Migration `0014_member_left.sql` adds `members.left_group`. Leaving is a soft removal through the shared `softRemove`
+  helper (`POST /groups/:code/leave`): zero balance and no pending sent transfer, `left_group = 1`, no reason, `user_id`
+  and `invite_email` cleared, `member.leave` recorded with the leaver as actor. The owner gets `CANNOT_LEAVE_OWNER`.
+- `DELETE /groups/:code` is one guarded statement: no other member with `is_owner = 0` and `removed_at` null (unclaimed
+  members count). Child rows cascade; receipt photos under `<code>/` are deleted from R2. A kept group can be deleted.
+  Another active member gets `GROUP_HAS_MEMBERS`.
+- Policy lives in `worker/policy.ts` (`requireCanLeaveGroup`, `requireCanDeleteGroup`, `requireGroupAlone`). The client
+  mirrors it in `ownerTools.ts` and adds `LeaveGroupDialog` and `DeleteGroupDialog` on the members tab. A left row shows
+  "left the group". After a delete the device forgets the group and goes home.
+- New error codes `CANNOT_LEAVE_OWNER` and `GROUP_HAS_MEMBERS` are translated in both locales. Docs: Members and Groups
+  in `docs/business-rules.md`, and "leave_group (built)" in `docs/design.md` after `remove_member`.
+
+Verification, run in the worktree on 2026-10-30:
+
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `npm test`: 54 files, 686 tests. The first run had 2 timeouts (`account.test.ts` GS-3, `transfer-ownership.test.ts`
+  TO-1) with a Miniflare `ECONNRESET`; a rerun of those files plus `leave-group.test.ts` passed (59 tests).
+- `npm run test:hooks`: 29 tests, 0 failed.
+- `e2e/leave-group.spec.ts` is new and is left for the batch e2e run.
