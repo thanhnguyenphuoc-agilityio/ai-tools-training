@@ -502,6 +502,39 @@ Observations (positive / negative):
 - Browser subagents passed part of the checklist first, which left the human the steps that needed a second
   person or a phone.
 
+## Day 15: 2026-10-30
+
+Goal: close the capstone: ship the last fixes and features, automate review on GitHub, align the docs and release.
+Left over from the previous day: the Day 14 port (done on Day 14).
+Shipped (merge requests, artifacts, screenshots):
+- Merged into `develop` through the ticket-batch workflows: `recovery_link_signed_in_member` (`TAL-60`),
+  `delete_settled_expense` (`TAL-61`), `rate_limit_guessing`, `create_group_account_name` (`TAL-62`), `leave_group`
+  (`TAL-63`, migration `0014_member_left.sql`), `create_form_layout` (`TAL-64`) and `amount_input_filter`
+  (`TAL-65`). The batch review fixed an e2e spec that stopped collection on `develop`; the full suite then passed
+  (711 unit and API tests, 173 e2e passed, 5 skipped).
+- `chore/workflow-phase-display` merged: the thorough and fast workflows are generated from `.claude/workflow-src/`,
+  and each declares only the phases it reaches.
+- Pull request #62: after the human tested `amount_input_filter`, the amount fields keep one K, M or B letter, only
+  at the end of the value.
+- Pull request #61: `.github/workflows/claude.yml` (a Claude review of each new pull request) and
+  `claude-mention.yml` (a reply to `@claude`), with the subscription token as a repository secret.
+- The GitHub Projects board synced: 62 tickets, `TAL-64` and `TAL-65` created, the four tested tickets closed.
+- `release/2026-10-30`: the human tested `TAL-62` to `TAL-65` and confirmed them; the tickets moved to `done/`, the
+  README files and `CLAUDE.md` were aligned with the project, and the release was merged into `develop` and `main`
+  and deployed to Cloudflare.
+Observations (positive / negative):
+- On pull requests #62 and #63 the Claude workflows did nothing. GitHub runs comment-triggered workflows from the
+  default branch, which is `main`, and the action refuses a workflow file that differs from the default branch copy;
+  the review run still showed "success". The log, not the run status, showed the cause.
+- A reaction from the Claude app on a comment looked like a reply in progress; it only meant the app saw the comment.
+- The human's test of the amount filter found a rule that the ticket had left open (where the shorthand letter may
+  appear); the fix took one small branch.
+For the retro:
+- A green run is not a result: read the log of a new automation once before trusting its status.
+- Workflows that react to events live on the default branch; a new one is tested only after it reaches it.
+Open before the next day:
+- [ ] Retro and demo of the capstone
+
 ## For the retro
 
 -

@@ -130,3 +130,6 @@ Batch review (Opus, AI team lead): on `develop` the full e2e run stopped at coll
 `e2e/create-form-layout.spec.ts` took `_fixtures` as its first argument and Playwright requires object destructuring
 there. Fixed on `fix/batch-review-2026-10-30` with `test.info().project.name`, as in `join-as-account.spec.ts`. The full
 e2e suite then passed: 173 passed, 5 skipped.
+
+Confirmed by the human on `develop`. Moved to done on 2026-10-30.
+Released in release/2026-10-30.
