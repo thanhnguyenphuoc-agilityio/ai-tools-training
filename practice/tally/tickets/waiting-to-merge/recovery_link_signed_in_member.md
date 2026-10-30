@@ -42,17 +42,20 @@ ready-to-review.
 
 ## Plan
 
-1. Claim route (`worker/routes/groups.ts`, `POST /:code/owner/claim`, signed-in branch): call `tryAttachOwnerGroup`
-   instead of `attachOwnerGroup`. When the group is attached, clear the owner cookie, record `group.link` and answer
-   `{ ok: true, attached: true }` as today. When the attach is refused because the account is already another member,
-   fall through to the signed-out path: set the owner cookie, `audit(... 'owner.claim')` and answer
-   `{ ok: true, attached: false }`. A short code comment explains the fall-through. `worker/accountLink.ts`,
-   `worker/policy.ts` and `worker/auth.ts` are not changed.
+1. Claim route (`worker/routes/groups.ts`, `POST /:code/owner/claim`, signed-in branch): call `attachOwnerGroup` in a
+   try/catch. When the group is attached, clear the owner cookie, record `group.link` and answer
+   `{ ok: true, attached: true }` as today. When the refusal is `ACCOUNT_ALREADY_MEMBER` only, fall through to the
+   signed-out path: set the owner cookie, `audit(... 'owner.claim')` and answer `{ ok: true, attached: false }`. Other
+   refusals are rethrown unchanged, so `MEMBER_LINKED_ELSEWHERE` and `GROUP_OWNED_BY_OTHER_ACCOUNT` still answer 409 and
+   403. A short code comment explains the fall-through. `worker/accountLink.ts`, `worker/policy.ts` and `worker/auth.ts`
+   are not changed. (`tryAttachOwnerGroup` maps all three refusals to `attached: false`, which would hide the
+   `MEMBER_LINKED_ELSEWHERE` answer covered by `account.test.ts`, so the route does not use it.)
 2. Test `OL-7b` in `tests/api/owner-link-binds-account.test.ts`, placed after OL-7: a signed-in member opens a valid
    recovery link. It fails on `develop` with 409 `ACCOUNT_ALREADY_MEMBER` and passes after step 1.
 3. Docs: `docs/business-rules.md` (owner key bullets: the refused attach falls back to the owner cookie, and
    `ACCOUNT_ALREADY_MEMBER` is not an answer of the recovery link) and `docs/design.md` (`owner_link_binds_account`
-   section, "Recovery link" note, `tryAttachOwnerGroup` callers).
+   section, "Recovery link" note, and the `attachOwnerGroup` callers: the claim route falls back only for
+   `ACCOUNT_ALREADY_MEMBER`).
 4. UI: no change. `GroupPage.tsx` shows the attach toast only when `attached` is true, and `reload()` then shows owner
    access. No locale change.
 5. Verify with `npm run typecheck`, `npm run lint`, `npm test`. The e2e spec `e2e/owner-link-binds-account.spec.ts`
@@ -74,3 +77,21 @@ From the product owner (human):
 1. Option (a): when the attach is refused because the account is already another member, the recovery link still
    restores owner access on the device through the owner cookie, without attaching, and answers
    `{ ok: true, attached: false }`. The owner key is not revoked.
+
+## Merge request
+
+Branch `fix/recovery_link_signed_in_member` into `develop`.
+
+`POST /groups/:code/owner/claim` now calls `attachOwnerGroup` in a try/catch. A signed-in account that is already
+another member of the group is not attached: the route falls through to the signed-out path, sets the owner cookie,
+audits `owner.claim` and answers `{ ok: true, attached: false }`. The owner key stays valid and `last_activity_at` does
+not move. `MEMBER_LINKED_ELSEWHERE` and `GROUP_OWNED_BY_OTHER_ACCOUNT` still answer 409 and 403. The new API test is
+`OL-7b` in `tests/api/owner-link-binds-account.test.ts`. No UI or locale change.
+
+Verification, run in the worktree on 2026-10-30:
+
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `npm test`: 50 files, 626 tests passed.
+- `npm run test:hooks`: 29 tests, 0 failed.
+- `e2e/owner-link-binds-account.spec.ts` is unchanged and is left for the batch e2e run.

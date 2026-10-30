@@ -210,8 +210,8 @@ A future rule such as "a closed group is read-only" (not planned; `lock_groups` 
     (target: the linked member) with `recordChange`, so linking moves `last_activity_at`. The owner branch was removed
     in `owner_link_binds_account`: an owner member is refused with `403 OWNER_ONLY`.
   - The owner is attached by `attachOwnerGroup`, which is used by `POST /groups/:code/owner/claim` (signed in, valid key)
-    through `tryAttachOwnerGroup`, `POST /groups/:code/owner/attach` (`tryAttachOwnerGroup`, the known refusals answer
-    `attached: false`) and the lock route.
+    through `attachOwnerGroup` in a try/catch that falls back only for `ACCOUNT_ALREADY_MEMBER`,
+    `POST /groups/:code/owner/attach` (`tryAttachOwnerGroup`, the known refusals answer `attached: false`) and the lock route.
     It records `group.link` (target: the owner member) with `recordChange`.
   - "Both or nothing" for an owner: each of the two `UPDATE`s in the `db.batch` also requires the other row to be free
     for this account (`EXISTS` subquery), so a request that lost a race changes neither `groups.owner_user_id` nor
@@ -591,7 +591,9 @@ Built. `useDialog` keeps `Tab` and `Shift+Tab` inside the panel, closes on `Esca
   `tryAttachOwnerGroup` maps `GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE` and `ACCOUNT_ALREADY_MEMBER` to
   `attached: false`. The claim route answers `attached: true` when it attached, `OWNER_KEY_REVOKED` for a revoked key with no account, and `GROUP_OWNED_BY_OTHER_ACCOUNT` for a revoked key held by another account.
 - **Recovery link while signed in as another member (`recovery_link_signed_in_member`):** the claim route uses
-  `tryAttachOwnerGroup`. When the refusal is `ACCOUNT_ALREADY_MEMBER`, the group stays unattached and the owner key stays
+  `attachOwnerGroup` in a try/catch. Only the `ACCOUNT_ALREADY_MEMBER` refusal falls back: the other refusals
+  (`GROUP_OWNED_BY_OTHER_ACCOUNT`, `MEMBER_LINKED_ELSEWHERE`) still answer their errors, as in `owner_link_binds_account`.
+  The group stays unattached and the owner key stays
   valid. The route then runs the signed-out path: it sets the owner cookie, audits `owner.claim` with `audit()` (no
   `last_activity_at` change) and answers `{ ok: true, attached: false }`. A live key means `owner_user_id` is NULL, so the
   "already attached to me" case cannot reach this branch. If another account attaches the group after `loadGroup`, the key
