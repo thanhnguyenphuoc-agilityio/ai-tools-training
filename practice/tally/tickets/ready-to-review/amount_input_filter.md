@@ -101,3 +101,23 @@ How it was tested:
 - Unit tests for `money.test.ts` ran alone before the commit: 109 pass. A later run passed again: 109 tests.
 - `npx playwright test` for `exact-split`, `language-picker`, `edit-expense` and `amount-input-filter`: 28 passed
   (desktop and mobile). The invalid-amount case in `language-picker` fills `1.5`.
+
+## Review
+
+Reviewed by Opus (AI team lead).
+
+Findings:
+
+- No blocker or major finding. `filterAmountInput` is a pure regex filter with upper-casing, applied only to the amount
+  and exact-share `onChange` handlers; weight inputs and edit-mode prefill are untouched. The `b` suffix stays inside
+  `MAX_AMOUNT`: VND `1B` parses, `1,5B` and `2B` return null, USD `1B` returns null. Both locales carry the same keys,
+  `vi.ts` keeps `tr` for parsing and has no BOM.
+- [nit] A Vietnamese user who types `1,2tr` out of habit now sees `1,2`, which `parseAmount` rejects for VND; the error
+  shows the new `1,2M` example. This is the behaviour the ticket asks for.
+- [nit] The caret moves to the end when a character is dropped (controlled input). Recorded in `docs/design.md`;
+  accepted.
+
+Fixes: none needed.
+
+Checks (feature worktree): `npm run typecheck` clean, `npm run lint` clean, `npm test` 55 files, 711 tests passed. The
+full e2e suite runs on `develop` after the batch merge.
