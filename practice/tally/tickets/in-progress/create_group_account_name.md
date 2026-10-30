@@ -1,0 +1,74 @@
+# Prefill the owner name when a signed-in person creates a group
+
+| Field | Value |
+|---|---|
+| ID | `TAL-62` |
+| Labels | `type::improvement`, `priority::medium`, `area::auth` |
+| Reporter | Product owner (human) |
+| Assignee | Haiku (developer) |
+| Depends on | `google_sign_in` |
+| Related | `join_as_account` |
+
+## Description
+
+A signed-in person who creates a group is still asked to type their name, although the account already holds it.
+The name field should be filled with the account name. A "Use a different name" checkbox makes the field
+editable, so the person can still pick another name for this group.
+
+## Answers
+
+From the product owner (human), given with the request:
+
+1. When signed in, the create form shows the account name in the name field, read-only, with an unchecked "Use a
+   different name" checkbox.
+2. Checking the box makes the field editable (focus moves to it). Unchecking it restores the account name.
+3. A signed-out person sees the form as today: an empty, editable name field and no checkbox.
+4. The same name limits apply as today (1 to 40 characters). The name chosen here does not change the account
+   name.
+
+## Acceptance criteria
+
+- The create form's name field is prefilled with the account name when a person is signed in. The field is read-only
+  and shows a hint while locked.
+- A "Use a different name" checkbox appears under the field only when signed in with a non-empty account name. It is
+  unchecked by default.
+- Checking the box makes the field editable and moves focus to it. The field starts from the account name cut to 40
+  characters. Unchecking it restores the account name.
+- Signed out, the form is unchanged: an empty, editable name field and no checkbox.
+- The name sent on create is the locked account name, or the typed name when the box is checked. The limits stay 1 to 40
+  characters. The server is unchanged and the account name is never changed by this form.
+- Signing out while the box is checked leaves an editable field with the typed value and no checkbox.
+- Signing in while the form is open switches the field to the account name.
+- All text comes from `home.create` in `src/i18n/locales/en.ts` and `vi.ts`.
+
+## Plan
+
+1. Helper `createOwnerName(accountName, useDifferent, typed)` in a new `src/ownerName.ts` (pure, no React import). It
+   returns `{ value, locked }`. When the trimmed account name is non-empty and the box is unchecked, it returns the
+   account name cut to 40 characters and `locked: true`. Otherwise it returns the typed value and `locked: false`.
+2. `src/pages/HomePage.tsx`:
+   - Read `user` from `useAccount()`; add state `useDifferentName` (false) and a ref on the name input.
+   - Field `value` and `readOnly` come from the helper. `onChange` updates the typed state only when not locked.
+   - Submit sends the helper's `value` as `ownerName`.
+   - Show the checkbox (`label.field.field--inline`, `input type="checkbox"`, `t('home.create.useDifferentName')`) only
+     when the account name is non-empty. Place it directly under the name input so the `.columns` layout still works on
+     phones.
+   - Checking the box sets the state, sets the typed name to the account name cut to 40, and focuses the input in an
+     effect after the state update. Unchecking clears the state; the helper restores the account name.
+3. `src/styles/blocks/_field.scss`: modifier `field__control--readonly` with a muted background or text from existing
+   custom properties in `src/styles/base/_themes.scss`. Applied only when locked.
+4. `src/i18n/locales/en.ts` and `vi.ts`, inside the `home.create` block next to `yourName`: `useDifferentName` and
+   `accountNameHint` (shown under the locked field). Both locales keep the same keys. `vi.ts` stays UTF-8 without BOM.
+5. Tests:
+   - `tests/unit/ownerName.test.ts`: signed out gives typed and unlocked; signed in with an unchecked box gives the
+     account name, locked; signed in with a checked box gives typed, unlocked; a 41-character account name is cut to 40;
+     a blank account name gives typed, unlocked. A Vietnamese name is written with `\uXXXX` escapes.
+   - `e2e/create-group-account-name.spec.ts`: cases (a) to (d) from the answers. Helpers `devSignIn`, `uniqueEmail` and
+     `setAccountName` are copied from `e2e/join-as-account.spec.ts`. The created member keeps the account name, or the
+     typed name when the box is checked; the account menu label is unchanged.
+   - Adapt the six specs that fill `home.create.yourName` on a signed-in page (`account.spec.ts`,
+     `owner-link-binds-account.spec.ts`, `joined-groups.spec.ts`, `transfer-ownership.spec.ts`, `saved-bank.spec.ts`).
+     Each fill is preceded by a check of the checkbox when the field is read-only. No restructuring.
+6. Docs in the same branch: one bullet under "Accounts (optional sign-in)" in `docs/business-rules.md`, and a section
+   `### create_group_account_name (built)` in `docs/design.md` placed directly after `### join_as_account (built)`.
+7. Ticket: `TAL-64` as the next free ID in `tickets/README.md`.
